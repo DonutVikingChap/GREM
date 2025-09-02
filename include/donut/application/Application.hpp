@@ -266,7 +266,7 @@ public:
 	 * \return the latest tick information.
 	 */
 	[[nodiscard]] TickInfo getLatestTickInfo() const noexcept {
-		return tickInfo;
+		return latestTickInfo;
 	}
 
 	/**
@@ -275,7 +275,7 @@ public:
 	 * \return the latest frame information.
 	 */
 	[[nodiscard]] FrameInfo getLatestFrameInfo() const noexcept {
-		return frameInfo;
+		return latestFrameInfo;
 	}
 
 protected:
@@ -370,8 +370,8 @@ private:
 	Clock::time_point latestFrameCountTime{};
 	unsigned lastSecondFrameCount = 0u;
 	unsigned frameCounter = 0u;
-	TickInfo tickInfo{};
-	FrameInfo frameInfo{};
+	TickInfo latestTickInfo{};
+	FrameInfo latestFrameInfo{};
 	Clock::duration frameRateLimiterSleepBias{};
 	bool frameRateLimiterSleepEnabled = false;
 	bool running = false;

@@ -28,11 +28,11 @@ void Application::run() {
 	latestFrameCountTime = startTime;
 	lastSecondFrameCount = 0u;
 	frameCounter = 0u;
-	tickInfo.processedTickCount = 0;
-	tickInfo.processedTickTime = {};
-	frameInfo.tickInterpolationAlpha = 0.0f;
-	frameInfo.elapsedTime = {};
-	frameInfo.deltaTime = {};
+	latestTickInfo.processedTickCount = 0;
+	latestTickInfo.processedTickTime = {};
+	latestFrameInfo.tickInterpolationAlpha = 0.0f;
+	latestFrameInfo.elapsedTime = {};
+	latestFrameInfo.deltaTime = {};
 	running = true;
 
 #ifdef __EMSCRIPTEN__
@@ -71,7 +71,7 @@ void Application::quit() {
 
 void Application::setFrameRateParameters(float tickRate, float minFrameRate, float maxFrameRate) {
 	tickInterval = (tickRate <= 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / tickRate});
-	tickInfo.tickInterval = duration_cast<decltype(tickInfo.tickInterval)::Duration>(tickInterval);
+	latestTickInfo.tickInterval = duration_cast<decltype(latestTickInfo.tickInterval)::Duration>(tickInterval);
 	minFrameInterval = (maxFrameRate == 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / maxFrameRate});
 	maxTicksPerFrame =
 		(tickRate <= 0.0f)                                   ? Clock::rep{0}
@@ -109,24 +109,24 @@ void Application::runFrame() {
 		frameCounter = 0;
 	}
 
-	frameInfo.elapsedTime = duration_cast<Time<float>::Duration>(currentTime - startTime);
-	frameInfo.deltaTime = duration_cast<Time<float>::Duration>(deltaTime);
+	latestFrameInfo.elapsedTime = duration_cast<Time<float>::Duration>(currentTime - startTime);
+	latestFrameInfo.deltaTime = duration_cast<Time<float>::Duration>(deltaTime);
 
-	update(frameInfo);
+	update(latestFrameInfo);
 	if (maxTicksPerFrame > 0) {
 		const Clock::duration timeSinceLatestTick = currentTime - latestTickProcessingEndTime;
 		for (Clock::rep ticksToProcess = std::min(timeSinceLatestTick / tickInterval, maxTicksPerFrame); ticksToProcess > 0; --ticksToProcess) {
-			tick(tickInfo);
-			++tickInfo.processedTickCount;
-			tickInfo.processedTickTime += tickInfo.tickInterval;
+			tick(latestTickInfo);
+			++latestTickInfo.processedTickCount;
+			latestTickInfo.processedTickTime += latestTickInfo.tickInterval;
 			latestTickProcessingEndTime += tickInterval;
 		}
 	}
 
-	frameInfo.tickInterpolationAlpha =
-		std::min(1.0f, duration_cast<Time<float>::Duration>(currentTime - latestTickProcessingEndTime) / Time<float>::Duration{tickInfo.tickInterval});
+	latestFrameInfo.tickInterpolationAlpha =
+		std::min(1.0f, duration_cast<Time<float>::Duration>(currentTime - latestTickProcessingEndTime) / Time<float>::Duration{latestTickInfo.tickInterval});
 
-	display(tickInfo, frameInfo);
+	display(latestTickInfo, latestFrameInfo);
 }
 
 } // namespace donut::application
