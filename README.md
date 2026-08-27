@@ -4,35 +4,27 @@ GREM is a modular, cross-platform C++ library for building games, game engines a
 
 ![Example Screenshots](examples/examples.png)
 
-<small>
-
 > Screenshots of the example projects [fps](examples/fps/main.cpp), [asset_viewer](tools/asset_viewer/main.cpp), [tiles](examples/tiles/main.cpp) and [physics](examples/physics/main.cpp), running on a 2020-era Linux PC (5800X + RX 6800XT).<br>
 > The examples contain third-party assets credited in [examples/data/CREDITS.md](examples/data/CREDITS.md).<br>
 > The 3D scene in the upper left screenshot is adapted from [Amazon Lumberyard Bistro, Open Research Content Archive (ORCA)](http://developer.nvidia.com/orca/amazon-lumberyard-bistro), used under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-</small>
-
 ## Examples
 
-**rectangle**: Basic application that renders a rectangle | [Code (~80 lines)](examples/rectangle/main.cpp) | [Run in browser (2 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-rectangle.html)
+**rectangle**: Basic application that renders a rectangle | [Code (~80 lines)](examples/rectangle/main.cpp) | [Run in browser (2 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-rectangle.html)<sup>1</sup>
 
-**physics**: 2D physics toy with draggable objects | [Code (~500 lines)](examples/physics/main.cpp) | [Run in browser (5 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-physics.html)
+**physics**: 2D physics toy with draggable objects | [Code (~500 lines)](examples/physics/main.cpp) | [Run in browser (5 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-physics.html)<sup>1</sup>
 
-**tiles**: Tile-based top-down 2D pixel art game with basic player collision code that renders animated tiles and sprite objects in a dynamically paintable GPU-resident sparse tilemap, sampled in a fullscreen shader from an array of JSON-configured tileset images | [Code (~3500 lines)](examples/tiles/main.cpp) | [Run in browser\* (4 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-tiles.html)<br>
-<small>*Note: Uses ~0.5 to ~4 GB VRAM depending on zoom level.</small>
+**tiles**: Tile-based top-down 2D pixel art game with basic player collision code that renders animated tiles and sprite objects in a dynamically paintable GPU-resident sparse tilemap, sampled in a fullscreen shader from an array of JSON-configured tileset images | [Code (~3500 lines)](examples/tiles/main.cpp) | [Run in browser\* (4 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-tiles.html)<sup>1, 2</sup>
 
-**fps**: Multiplayer FPS prototype with basic weapon handling, fully networked 3D physics, snapshot-based client-predicted server-authoritative netcode with subticked player commands, lag-compensated hit detection with bullet drop and short-range hitscan, splitscreen support with up to 9 local players per client by default, JSON-based runtime entity definitions and a multithreaded ECS architecture comprised of dynamically loaded game systems | [Code (~21000 lines)](examples/fps/main.cpp) | [Run in browser\*\* (20 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-fps.html)<br>
-<small>**Note: The web build is WebAssembly/WebGL 2-based, single-threaded, and runs a listen server over an emulated socket that supports local splitscreen multiplayer only (Players -> Add Local Player). A basic sandbox [flat map (debug variant)](examples/data/fps/maps/flatland.json5) is included. Press X to switch fire modes and G to spawn boxes! See [configuration/player1.json](examples/data/fps/configuration/player1.json) for more controls. (Be careful of accidentally closing the tab with Ctrl+W when crouching.)</small>
+**fps**: Multiplayer FPS prototype with basic weapon handling, fully networked 3D physics, snapshot-based client-predicted server-authoritative netcode with subticked player commands, lag-compensated hit detection with bullet drop and short-range hitscan, splitscreen support with up to 9 local players per client by default, JSON-based runtime entity definitions and a multithreaded ECS architecture comprised of dynamically loaded game systems | [Code (~21000 lines)](examples/fps/main.cpp) | [Run in browser\*\* (20 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-fps.html)<sup>1, 3</sup>
 
-**test_game**: Single-file demo of various features | [Code (~700 lines)](examples/test_game/main.cpp) | [Run in browser (16 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-test_game.html)
+**test_game**: Single-file demo of various features | [Code (~700 lines)](examples/test_game/main.cpp) | [Run in browser (16 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-test_game.html)<sup>1</sup>
 
-**asset_viewer**: IMGUI-based tool for inspecting asset files | [Code (~3000 lines)](tools/asset_viewer/main.cpp) | [Run in browser (7 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-asset-viewer.html)
+**asset_viewer**: IMGUI-based tool for inspecting asset files | [Code (~3000 lines)](tools/asset_viewer/main.cpp) | [Run in browser (7 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-asset-viewer.html)<sup>1</sup>
 
-<small>
-
-> The web builds contain code from the libraries listed in [ThirdPartyLegalNotices.md](https://donutvikingchap.github.io/GREM/bin/ThirdPartyLegalNotices.md).
-
-</small>
+> <sup>1</sup>The web builds contain compiled code from the libraries listed in [ThirdPartyLegalNotices.md](https://donutvikingchap.github.io/GREM/bin/ThirdPartyLegalNotices.md).<br>
+> <sup>2</sup>The tiles example uses ~0.5 to ~4 GB VRAM depending on zoom level.<br>
+> <sup>3</sup>This web build of the FPS example is WebAssembly/WebGL 2-based, single-threaded, and runs a listen server over an emulated socket that supports local splitscreen multiplayer only (Players -> Add Local Player). A basic sandbox [flat map (debug variant)](examples/data/fps/maps/flatland.json5) is included. Press X to switch fire modes and G to spawn boxes! See [configuration/player1.json](examples/data/fps/configuration/player1.json) for more controls. (Be careful of accidentally closing the tab with Ctrl+W when crouching.)
 
 ## Features
 
