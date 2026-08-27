@@ -35,7 +35,7 @@ jobs:
         run: cmake --preset emscripten-release
 
       - name: Build
-        run: cmake --build --preset emscripten-release
+        run: cmake --build --preset emscripten-release -DGREM_BUILD_DOCS=ON
 
       - name: Install
         run: cmake --install build/emscripten-release
