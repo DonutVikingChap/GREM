@@ -447,10 +447,10 @@ private:
 	phys::Simulation2D simulation;
 	phys::EntityRegistry2D lastSimulationState = simulation.registry;
 	phys::DebugVisualization2D debugVisualization{};
-	phys::EntityID leftWallObjectID = createWallObject(-90.0f * phys::DEGREES);
-	phys::EntityID rightWallObjectID = createWallObject(90.0f * phys::DEGREES);
-	phys::EntityID floorObjectID = createWallObject(0.0f * phys::DEGREES);
-	phys::EntityID ceilingObjectID = createWallObject(180.0f * phys::DEGREES);
+	phys::EntityID leftWallObjectID = createWallObject(-90_degrees);
+	phys::EntityID rightWallObjectID = createWallObject(90_degrees);
+	phys::EntityID floorObjectID = createWallObject(0_degrees);
+	phys::EntityID ceilingObjectID = createWallObject(180_degrees);
 	Offset2D lastWindowPosition = window.getPosition();
 	phys::EntityID cursorObjectID = createCursorObject();
 	phys::EntityID cursorJointID{};
