@@ -20,7 +20,7 @@ Each main module is optional and can be disabled through CMake options as descri
 
 GREM provides example code in the `examples/` directory, included with the repository, that shows how various features of the library work and are intended to be used. The examples are listed here, ordered by increasing complexity, along with the added functionality they demonstrate over their previously listed examples.
 
-### `examples/rectangle`
+### examples/rectangle
 
 This example is ~80 lines long and implements a basic application that renders a rectangle.
 
@@ -36,7 +36,7 @@ This example is ~80 lines long and implements a basic application that renders a
 
 </details>
 
-### `examples/physics`
+### examples/physics
 
 This example is ~500 lines long and implements a basic 2D physics toy.
 
@@ -62,7 +62,7 @@ This example is ~500 lines long and implements a basic 2D physics toy.
 
 </details>
 
-### `examples/test_game`
+### examples/test_game
 
 This example game is ~700 lines long and is used to test some basic features of the library.
 
@@ -88,7 +88,7 @@ This example game is ~700 lines long and is used to test some basic features of 
 
 </details>
 
-### `examples/tiles`
+### examples/tiles
 
 This example is ~3500 lines split across 19 files and implements a tile-based 2D game.
 
@@ -109,7 +109,7 @@ This example is ~3500 lines split across 19 files and implements a tile-based 2D
 
 </details>
 
-### `examples/fps`
+### examples/fps
 
 This example is ~21000 lines split across 81 files and implements a basic FPS game prototype with online multiplayer support.
 
@@ -407,7 +407,7 @@ To specify which backend to use, set the `GREM_GRAPHICS_BACKEND` CMake option to
 
 While both the OpenGL and Vulkan implementations support a common subset of features that enable the full `graphics_2d` and `graphics_3d` modules to work, they have some different pros and cons:
 
-### Advantages of the `OpenGL` backend
+### Advantages of the OpenGL backend
 
 - Required for web builds (translates to WebGL).
 - Better compatibility with mobile GPUs released around 2013-2023 (ES profile) and desktop GPUs released around 2008-2012 (Core profile).
@@ -416,7 +416,7 @@ While both the OpenGL and Vulkan implementations support a common subset of feat
 - Produces a slightly smaller program executable.
 - Compiles faster on the initial build of the graphics module.
 
-### Advantages of the `Vulkan` backend
+### Advantages of the Vulkan backend
 
 - Lower CPU and GPU overhead when rendering many instances (enabling higher frame rates).
 - Better compatibility with new GPUs and driver versions (potentially more future-proof).
