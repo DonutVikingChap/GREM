@@ -79,12 +79,14 @@ ForEachMacros:
 
 IncludeBlocks: Regroup
 IncludeCategories:
-    - Regex: "^<donut/"
+    - Regex: "^<GREM/build_config.hpp>$"
       Priority: 1
-    - Regex: "^<"
-      Priority: 3
-    - Regex: ".*"
+    - Regex: "^<GREM/"
       Priority: 2
+    - Regex: "^<"
+      Priority: 4
+    - Regex: ".*"
+      Priority: 3
 IncludeIsMainRegex: "(_test)?$"
 
 IndentCaseLabels: true

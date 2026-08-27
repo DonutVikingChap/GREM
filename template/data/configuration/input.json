@@ -1,0 +1,29 @@
+{
+    "bindings": {
+        "key_return": "confirm",
+        "key_space": "confirm",
+        "key_escape": "cancel",
+        "key_w": "move_up",
+        "key_s": "move_down",
+        "key_a": "move_left",
+        "key_d": "move_right",
+        "key_arrow_up": "move_up",
+        "key_arrow_down": "move_down",
+        "key_arrow_left": "move_left",
+        "key_arrow_right": "move_right",
+        "mouse_button_left": "confirm",
+        "mouse_button_right": "cancel",
+        "controller_button_south": "confirm",
+        "controller_button_east": "cancel",
+        "controller_button_dpad_up": "move_up",
+        "controller_button_dpad_down": "move_down",
+        "controller_button_dpad_left": "move_left",
+        "controller_button_dpad_right": "move_right",
+        "controller_axis_left_trigger": "cancel",
+        "controller_axis_right_trigger": "confirm",
+        "controller_axis_left_stick_up": "move_up",
+        "controller_axis_left_stick_down": "move_down",
+        "controller_axis_left_stick_left": "move_left",
+        "controller_axis_left_stick_right": "move_right"
+    }
+}

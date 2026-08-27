@@ -1,132 +1,217 @@
-#include <donut/Time.hpp>
-#include <donut/application/Application.hpp>
+// SPDX-FileCopyrightText: 2026 Ivar Härnqvist
+// SPDX-License-Identifier: MIT
 
-//
+#include <GREM/build_config.hpp>
+
+#include <GREM/application/Application.hpp>
+#include <GREM/core/fundamentals.hpp>
+#include <GREM/core/profiling.hpp>
+#include <GREM/core/system/Clock.hpp>
+#include <GREM/core/system/Thread.hpp>
+
 #ifdef __EMSCRIPTEN__
-#include <cstdio>       // stderr, std::fprintf
+#include <GREM/core/Error.hpp>
+#include <GREM/core/formatting.hpp>
+
 #include <emscripten.h> // emscripten_...
-#include <exception>    // std::exception
 #endif
-//
 
-#include <algorithm> // std::min
-#include <chrono>    // std::chrono::...
-#include <thread>    // std::this_thread::...
+namespace grem::application {
 
-namespace donut::application {
+Application::Application(const ApplicationOptions& options)
+	: minFrameTime(max(options.minFrameTime, Duration{}))
+	, maxFrameTime(max(options.maxFrameTime, Duration{}))
+	, maxAccumulatedTickTime(max(options.maxAccumulatedTickTime, Duration{}))
+	, latestTickInfo{.tickInterval = max(options.tickInterval, Duration{}), .totalProcessedTickCount = 0, .totalProcessedTickTime{}}
+	, frameRateLimiterSleepEnabled(options.frameRateLimiterSleepEnabled) {
+	updateMaxTicksPerFrame();
 
-Application::Application(const ApplicationOptions& options) {
-	setFrameRateParameters(options.tickRate, options.minFrameRate, options.maxFrameRate);
-	setFrameRateLimiterSleepEnabled(options.frameRateLimiterSleepEnabled);
-	setFrameRateLimiterSleepBias(options.frameRateLimiterSleepBias);
+	GREM_PROFILER_SET_THREAD_INFO("Main thread", 0, ThreadID{});
+	GREM_PROFILER_BEGIN_FRAME();
 }
 
 void Application::run() {
+	GREM_PROFILER_END_FRAME();
+
 	startTime = Clock::now();
-	latestFrameTime = startTime;
+	latestFrameBeginTime = startTime;
 	latestTickProcessingEndTime = startTime;
 	latestFrameCountTime = startTime;
+	frameRateLimiterSleepError.reset();
 	lastSecondFrameCount = 0u;
 	frameCounter = 0u;
-	latestTickInfo.processedTickCount = 0;
-	latestTickInfo.processedTickTime = {};
+	latestTickInfo.totalProcessedTickCount = 0;
+	latestTickInfo.totalProcessedTickTime = {};
 	latestFrameInfo.tickInterpolationAlpha = 0.0f;
-	latestFrameInfo.elapsedTime = {};
+	latestFrameInfo.startTime = startTime;
+	latestFrameInfo.totalElapsedTime = {};
 	latestFrameInfo.deltaTime = {};
-	running = true;
+	running = !quitting;
 
 #ifdef __EMSCRIPTEN__
-	constexpr auto run_emscripten_frame = [](void* arg) -> void {
-		Application* const application = static_cast<Application*>(arg);
-		try {
-			application->runFrame();
-		} catch (const std::exception& e) {
-			std::fprintf(stderr, "Fatal error: %s\n", e.what());
-			application->quit();
-		} catch (...) {
-			std::fprintf(stderr, "Fatal error!\n");
-			application->quit();
-		}
-		if (!application->isRunning()) {
-			application->~Application();
-			emscripten_cancel_main_loop();
-		}
-	};
-	emscripten_set_main_loop_arg(run_emscripten_frame, this, 0, 1);
+	if (isRunning()) {
+		constexpr auto runEmscriptenFrame = [](void* arg) -> void {
+			Application* const application = static_cast<Application*>(arg);
+			try {
+				application->runFrame();
+			} catch (...) {
+				eprintln("Fatal error: {}", Error::formatCurrentExceptionMessage());
+				application->running = false;
+			}
+			if (!application->isRunning()) {
+				application->~Application();
+				EM_ASM(FS.syncfs(false, function(err){}););
+				emscripten_cancel_main_loop();
+			}
+		};
+		emscripten_set_main_loop_arg(runEmscriptenFrame, this, 0, 1);
+	}
 #else
 	while (isRunning()) {
 		try {
 			runFrame();
 		} catch (...) {
-			quit();
+			running = false;
 			throw;
 		}
 	}
 #endif
 }
 
-void Application::quit() {
+void Application::quit() noexcept {
 	running = false;
+	quitting = true;
 }
 
-void Application::setFrameRateParameters(float tickRate, float minFrameRate, float maxFrameRate) {
-	tickInterval = (tickRate <= 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / tickRate});
-	latestTickInfo.tickInterval = duration_cast<decltype(latestTickInfo.tickInterval)::Duration>(tickInterval);
-	minFrameInterval = (maxFrameRate == 0.0f) ? Clock::duration{} : ceil<Clock::duration>(Time<float>::Duration{1.0f / maxFrameRate});
-	maxTicksPerFrame =
-		(tickRate <= 0.0f)                                   ? Clock::rep{0}
-		: (minFrameRate <= 0.0f || tickRate <= minFrameRate) ? Clock::rep{1}
-		: (maxFrameRate <= 0.0f || minFrameRate <= maxFrameRate)
-			? static_cast<Clock::rep>(tickRate / minFrameRate)
-			: static_cast<Clock::rep>(tickRate / maxFrameRate);
+void Application::resetTickTimer() noexcept {
 	latestTickProcessingEndTime = Clock::now();
 }
 
-void Application::setFrameRateLimiterSleepEnabled(bool frameRateLimiterSleepEnabled) {
-	this->frameRateLimiterSleepEnabled = frameRateLimiterSleepEnabled;
+void Application::setTickInterval(Duration newTickInterval) noexcept {
+	latestTickInfo.tickInterval = max(newTickInterval, Duration{});
+	updateMaxTicksPerFrame();
 }
 
-void Application::setFrameRateLimiterSleepBias(std::chrono::steady_clock::duration frameRateLimiterSleepBias) {
-	this->frameRateLimiterSleepBias = frameRateLimiterSleepBias;
+void Application::setMinFrameTime(Duration newMinFrameTime) noexcept {
+	minFrameTime = max(newMinFrameTime, Duration{});
+	updateMaxTicksPerFrame();
+}
+
+void Application::setMaxFrameTime(Duration newMaxFrameTime) noexcept {
+	maxFrameTime = max(newMaxFrameTime, Duration{});
+	updateMaxTicksPerFrame();
+}
+
+void Application::setMaxAccumulatedTickTime(Duration newMaxAccumulatedTickTime) noexcept {
+	maxAccumulatedTickTime = max(newMaxAccumulatedTickTime, Duration{});
+}
+
+void Application::setFrameRateLimiterSleepEnabled(bool newFrameRateLimiterSleepEnabled) noexcept {
+	frameRateLimiterSleepEnabled = newFrameRateLimiterSleepEnabled;
+}
+
+void Application::updateMaxTicksPerFrame() noexcept {
+	if (latestTickInfo.tickInterval <= Duration{}) {
+		maxTicksPerFrame = Clock::rep{0};
+	} else if (maxFrameTime <= Duration{} || maxFrameTime <= latestTickInfo.tickInterval) {
+		maxTicksPerFrame = Clock::rep{1};
+	} else if (minFrameTime > Duration{} && maxFrameTime <= minFrameTime) {
+		maxTicksPerFrame = minFrameTime / latestTickInfo.tickInterval;
+	} else {
+		maxTicksPerFrame = maxFrameTime / latestTickInfo.tickInterval;
+	}
 }
 
 void Application::runFrame() {
-	const Clock::time_point currentTime = Clock::now();
-	const Clock::duration deltaTime = currentTime - latestFrameTime;
-	if (deltaTime < minFrameInterval) {
-		if (frameRateLimiterSleepEnabled) {
-			std::this_thread::sleep_until(latestFrameTime + minFrameInterval - frameRateLimiterSleepBias);
+	const TimePoint waitEndTime = latestFrameBeginTime + minFrameTime;
+	TimePoint currentTime = Clock::now();
+#ifndef __EMSCRIPTEN__
+	if (frameRateLimiterSleepEnabled) {
+		constexpr float EXPONENTIAL_MOVING_AVERAGE_ALPHA = 0.05f;
+		constexpr float BIAS_COEFFICIENT = 1.5f;
+		constexpr Duration MAX_BIAS = Milliseconds{30};
+		constexpr Duration MAX_REASONABLE_ERROR_MEASUREMENT = Milliseconds{100};
+
+		const Duration frameRateLimiterSleepBias = clamp(duration_cast<Duration>(frameRateLimiterSleepError.get() * BIAS_COEFFICIENT), Duration{}, MAX_BIAS);
+		const Duration desiredSleepDuration = waitEndTime - currentTime;
+		const Duration specifiedSleepDuration = desiredSleepDuration - frameRateLimiterSleepBias;
+		if (specifiedSleepDuration > Duration{}) {
+			const TimePoint sleepStartTime = currentTime;
+			sleepFor(specifiedSleepDuration);
+			currentTime = Clock::now();
+
+			const Duration actualSleepDuration = currentTime - sleepStartTime;
+			const Duration sleepDurationError = actualSleepDuration - specifiedSleepDuration;
+			if (sleepDurationError > Duration{} && sleepDurationError < MAX_REASONABLE_ERROR_MEASUREMENT) {
+				frameRateLimiterSleepError.update(duration_cast<FloatMilliseconds>(sleepDurationError), EXPONENTIAL_MOVING_AVERAGE_ALPHA);
+			}
 		}
-		return;
+	}
+#endif
+
+	GREM_PROFILER_BEGIN_FRAME();
+
+	{
+		GREM_PROFILE_BLOCK("Busy wait for update time");
+		while (currentTime < waitEndTime) {
+			currentTime = Clock::now();
+		}
 	}
 
-	latestFrameTime = currentTime;
-
 	++frameCounter;
-	if (currentTime - latestFrameCountTime >= std::chrono::seconds{1}) {
+	if (currentTime - latestFrameCountTime >= Seconds{1}) {
 		latestFrameCountTime = currentTime;
 		lastSecondFrameCount = frameCounter;
 		frameCounter = 0;
 	}
 
-	latestFrameInfo.elapsedTime = duration_cast<Time<float>::Duration>(currentTime - startTime);
-	latestFrameInfo.deltaTime = duration_cast<Time<float>::Duration>(deltaTime);
+	latestFrameInfo.startTime = currentTime;
+	latestFrameInfo.totalElapsedTime = currentTime - startTime;
+	latestFrameInfo.deltaTime = currentTime - latestFrameBeginTime;
+	latestFrameBeginTime = currentTime;
 
-	update(latestFrameInfo);
-	if (maxTicksPerFrame > 0) {
-		const Clock::duration timeSinceLatestTick = currentTime - latestTickProcessingEndTime;
-		for (Clock::rep ticksToProcess = std::min(timeSinceLatestTick / tickInterval, maxTicksPerFrame); ticksToProcess > 0; --ticksToProcess) {
-			tick(latestTickInfo);
-			++latestTickInfo.processedTickCount;
-			latestTickInfo.processedTickTime += latestTickInfo.tickInterval;
-			latestTickProcessingEndTime += tickInterval;
-		}
+	{
+		GREM_PROFILE_BLOCK("Update");
+		update(latestFrameInfo);
 	}
 
-	latestFrameInfo.tickInterpolationAlpha =
-		std::min(1.0f, duration_cast<Time<float>::Duration>(currentTime - latestTickProcessingEndTime) / Time<float>::Duration{latestTickInfo.tickInterval});
+	if (!running) {
+		return;
+	}
 
-	display(latestTickInfo, latestFrameInfo);
+	if (maxTicksPerFrame > 0) {
+		Duration timeSinceLatestTick = currentTime - latestTickProcessingEndTime;
+		while (maxAccumulatedTickTime > Duration{} && timeSinceLatestTick > maxAccumulatedTickTime) {
+			{
+				GREM_PROFILE_BLOCK("Skip tick");
+				skipTick(latestTickInfo.tickInterval);
+			}
+			latestTickProcessingEndTime += latestTickInfo.tickInterval;
+			timeSinceLatestTick = currentTime - latestTickProcessingEndTime;
+		}
+
+		for (Clock::rep ticksToProcess = min(timeSinceLatestTick / latestTickInfo.tickInterval, maxTicksPerFrame); ticksToProcess-- > 0;) {
+			{
+				GREM_PROFILE_BLOCK("Tick");
+				tick(latestTickInfo);
+			}
+			++latestTickInfo.totalProcessedTickCount;
+			latestTickInfo.totalProcessedTickTime += latestTickInfo.tickInterval;
+			latestTickProcessingEndTime += latestTickInfo.tickInterval;
+		}
+
+		latestFrameInfo.tickInterpolationAlpha =
+			min(1.0f, duration_cast<FloatSeconds>(currentTime - latestTickProcessingEndTime) / duration_cast<FloatSeconds>(latestTickInfo.tickInterval));
+	} else {
+		latestFrameInfo.tickInterpolationAlpha = 0.0f;
+	}
+
+	{
+		GREM_PROFILE_BLOCK("Display");
+		display(latestFrameInfo);
+	}
+
+	GREM_PROFILER_END_FRAME();
 }
 
-} // namespace donut::application
+} // namespace grem::application

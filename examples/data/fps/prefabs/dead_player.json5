@@ -1,0 +1,8 @@
+{
+    name: "Dead Player",
+    entities: [
+        {
+            EntityType: "DEAD_PLAYER",
+        },
+    ],
+}

@@ -1,0 +1,5 @@
+{
+    tileSize: 16,
+    layers: ["GRASS", "AIR", "AIR", "AIR"],
+    spawnpoint: [0, 0, 1],
+}

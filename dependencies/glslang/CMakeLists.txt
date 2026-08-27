@@ -1,0 +1,71 @@
+message(STATUS "Configuring glslang...")
+
+set(BUILD_EXTERNAL OFF)
+set(BUILD_WERROR OFF)
+set(ENABLE_SPIRV ON)
+set(ENABLE_GLSLANG_BINARIES OFF)
+set(ENABLE_GLSLANG_JS OFF)
+set(ENABLE_HLSL OFF)
+set(ENABLE_RTTI ON)
+set(ENABLE_EXCEPTIONS ON)
+set(ENABLE_OPT ON)
+set(ALLOW_EXTERNAL_SPIRV_TOOLS ON)
+set(BUILD_SHARED_LIBS OFF)
+
+FetchContent_Declare(glslang
+	GIT_REPOSITORY https://github.com/KhronosGroup/glslang
+	GIT_TAG a8d28bd082bff18ffbe80996e922b012f915cf07 # 16.5.0
+	EXCLUDE_FROM_ALL
+	SYSTEM)
+
+FetchContent_MakeAvailable(glslang)
+
+file(READ "${glslang_SOURCE_DIR}/LICENSE.txt" GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS)
+string(REPLACE "\r\n" "\n" GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS "${GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS}")
+string(REGEX MATCH "--------------------------------------------------------------------------------\n3-Clause BSD License.*END OF TERMS AND CONDITIONS\n\n--------------------------------------------------------------------------------\n" GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS "${GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS}")
+
+file(READ "${glslang_SOURCE_DIR}/LICENSE.txt" GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS)
+string(REPLACE "\r\n" "\n" GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS "${GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS}")
+string(REGEX MATCH "The preprocessor has the core licenses stated above, plus additional licences:.*" GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS "${GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS}")
+
+set(GREM_GLSLANG_CORE_TITLE "glslang (16.5.0)" PARENT_SCOPE)
+set(GREM_GLSLANG_CORE_USE "Used by GREM." PARENT_SCOPE)
+set(GREM_GLSLANG_CORE_LINK "https://github.com/KhronosGroup/glslang/tree/a8d28bd082bff18ffbe80996e922b012f915cf07" PARENT_SCOPE)
+set(GREM_GLSLANG_CORE_COPYRIGHT "\
+Copyright (C) 2015-2018 Google, Inc.\n\
+Copyright (C) <various other dates and companies>\n\
+\n\
+All rights reserved.\n\
+\n\
+Copyright 2020 The Khronos Group Inc" PARENT_SCOPE)
+set(GREM_GLSLANG_CORE_LICENSES "${GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS}" PARENT_SCOPE)
+
+set(GREM_GLSLANG_PREPROCESSOR_TITLE "glslang preprocessor (16.5.0)" PARENT_SCOPE)
+set(GREM_GLSLANG_PREPROCESSOR_USE "Part of glslang." PARENT_SCOPE)
+set(GREM_GLSLANG_PREPROCESSOR_LINK "https://github.com/KhronosGroup/glslang/tree/a8d28bd082bff18ffbe80996e922b012f915cf07/glslang/MachineIndependent/preprocessor" PARENT_SCOPE)
+set(GREM_GLSLANG_PREPROCESSOR_COPYRIGHT "\
+Copyright (c) 2002, NVIDIA Corporation.\n\
+\n\
+Copyright (c) 2014-2016 The Khronos Group Inc." PARENT_SCOPE)
+set(GREM_GLSLANG_PREPROCESSOR_LICENSES "${GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS}" PARENT_SCOPE)
+
+set(GREM_DEPENDENCY_PREFIXES ${GREM_DEPENDENCY_PREFIXES}
+	GREM_GLSLANG_CORE
+	GREM_GLSLANG_PREPROCESSOR
+	PARENT_SCOPE)
+
+target_compile_options(glslang PRIVATE
+	$<$<OR:$<C_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:GNU>>:-Wno-maybe-uninitialized -Wno-array-bounds -Wno-stringop-overread>
+	$<$<OR:$<C_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:Clang>>:-Wno-deprecated-enum-enum-conversion -Wno-unknown-warning-option>)
+
+set_target_properties(glslang PROPERTIES
+	CXX_STANDARD "${CMAKE_CXX_STANDARD}"
+	CXX_STANDARD_REQUIRED "${CMAKE_CXX_STANDARD_REQUIRED}"
+	CXX_EXTENSIONS "${CMAKE_CXX_EXTENSIONS}")
+
+set_target_properties(SPIRV PROPERTIES
+	CXX_STANDARD "${CMAKE_CXX_STANDARD}"
+	CXX_STANDARD_REQUIRED "${CMAKE_CXX_STANDARD_REQUIRED}"
+	CXX_EXTENSIONS "${CMAKE_CXX_EXTENSIONS}")
+
+set(GREM_GRAPHICS_PRIVATE_DEPENDENCIES ${GREM_GRAPHICS_PRIVATE_DEPENDENCIES} glslang SPIRV PARENT_SCOPE)

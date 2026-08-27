@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>App</title>
+        <style>
+            html,
+            body {
+                background-color: #1a2020;
+                color: #f4f8f8;
+                height: 100%;
+                overflow: hidden;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            canvas {
+                background-color: black;
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                outline: 0 !important;
+                box-shadow: none !important;
+            }
+            .loading {
+                display: block;
+                margin: 42vh auto;
+                text-align: center;
+            }
+            .spinner {
+                height: 50px;
+                width: 50px;
+                margin: 0 auto;
+                -webkit-animation: rotation 0.8s linear infinite;
+                -moz-animation: rotation 0.8s linear infinite;
+                -o-animation: rotation 0.8s linear infinite;
+                animation: rotation 0.8s linear infinite;
+                border-left: 10px solid rgb(0, 150, 240);
+                border-right: 10px solid rgb(0, 150, 240);
+                border-bottom: 10px solid rgb(0, 150, 240);
+                border-top: 10px solid rgb(100, 0, 200);
+                border-radius: 100%;
+                background-color: rgb(200, 100, 250);
+            }
+            @-webkit-keyframes rotation {
+                from {
+                    -webkit-transform: rotate(0deg);
+                }
+                to {
+                    -webkit-transform: rotate(360deg);
+                }
+            }
+            @-moz-keyframes rotation {
+                from {
+                    -moz-transform: rotate(0deg);
+                }
+                to {
+                    -moz-transform: rotate(360deg);
+                }
+            }
+            @-o-keyframes rotation {
+                from {
+                    -o-transform: rotate(0deg);
+                }
+                to {
+                    -o-transform: rotate(360deg);
+                }
+            }
+            @keyframes rotation {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="loading">
+            <figure style="overflow: visible" id="spinner">
+                <div class="spinner"></div>
+            </figure>
+            <div id="status">Downloading...</div>
+            <progress value="0" max="100" id="progress" hidden="1"></progress>
+        </div>
+        <canvas
+            id="canvas"
+            style="visibility: hidden"
+            oncontextmenu="event.preventDefault()"
+            tabindex="-1"
+        ></canvas>
+        <script type="text/javascript">
+            var statusElement = document.getElementById("status")
+            var progressElement = document.getElementById("progress")
+            var spinnerElement = document.getElementById("spinner")
+            var canvasElement = document.getElementById("canvas")
+
+            canvasElement.addEventListener(
+                "webglcontextlost",
+                (e) => e.preventDefault(),
+                false
+            )
+
+            function resizeCanvas() {
+                canvasElement.width = window.innerWidth
+                canvasElement.height = window.innerHeight
+            }
+
+            resizeCanvas()
+
+            var Module = {
+                preRun: [
+                    function () {
+                        addRunDependency("syncfs")
+                        FS.mkdirTree("/home/web_user/.local/share")
+                        FS.mount(
+                            IDBFS,
+                            { autoPersist: true },
+                            "/home/web_user/.local/share"
+                        )
+                        FS.syncfs(true, function (err) {
+                            if (err) throw err
+                            removeRunDependency("syncfs")
+                        })
+                    },
+                ],
+                print(...args) {
+                    console.log(...args)
+                },
+                canvas: canvasElement,
+                setStatus(text) {
+                    Module.setStatus.last ??= { time: Date.now(), text: "" }
+                    if (text === Module.setStatus.last.text) return
+                    var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/)
+                    var now = Date.now()
+                    if (m && now - Module.setStatus.last.time < 30) return
+                    Module.setStatus.last.time = now
+                    Module.setStatus.last.text = text
+                    if (m) {
+                        text = m[1]
+                        progressElement.value = parseInt(m[2]) * 100
+                        progressElement.max = parseInt(m[4]) * 100
+                        progressElement.hidden = false
+                        spinnerElement.hidden = false
+                    } else {
+                        progressElement.value = null
+                        progressElement.max = null
+                        progressElement.hidden = true
+                        if (!text) {
+                            spinnerElement.hidden = true
+                            canvasElement.style.visibility = "visible"
+                        }
+                    }
+                    statusElement.innerHTML = text
+                },
+                totalDependencies: 0,
+                monitorRunDependencies(left) {
+                    this.totalDependencies = Math.max(
+                        this.totalDependencies,
+                        left
+                    )
+                    Module.setStatus(
+                        left
+                            ? "Preparing... (" +
+                                  (this.totalDependencies - left) +
+                                  "/" +
+                                  this.totalDependencies +
+                                  ")"
+                            : "All downloads complete."
+                    )
+                },
+            }
+            Module.setStatus("Downloading...")
+            window.onerror = () => {
+                Module.setStatus("Exception thrown, see JavaScript console")
+                spinnerElement.style.display = "none"
+                canvasElement.style.visibility = "hidden"
+                Module.setStatus = (text) => {
+                    if (text) console.error("[post-exception status] " + text)
+                }
+            }
+            window.addEventListener("resize", resizeCanvas)
+        </script>
+        {{{ SCRIPT }}}
+    </body>
+</html>

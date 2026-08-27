@@ -1,4 +1,4 @@
-name: Generate Doxygen Documentation Pages
+name: Generate Documentation Pages
 
 on:
   push:
@@ -23,29 +23,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
+
+      - name: Setup Emscripten SDK
+        uses: emscripten-core/setup-emsdk@v16
 
       - name: Install Doxygen
         run: sudo apt-get install doxygen graphviz -y
-        
+
+      - name: Configure
+        run: cmake --preset emscripten-release
+
+      - name: Build
+        run: cmake --build --preset emscripten-release
+
+      - name: Install
+        run: cmake --install build/emscripten-release
+
       - name: Generate Documentation
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DDONUT_ENABLE_LIBRARY=OFF -DDONUT_ENABLE_DOCUMENTATION=ON
-          cmake --build . --target donut-generate-documentation
-      
+        run: cmake --build build/emscripten-release --target GREM-generate-documentation
+
+      - name: Copy Examples
+        run: cp -r build/emscripten-release/install/bin build/emscripten-release/docs/html
+
       - name: Create .nojekyll file
-        run: touch build/docs/html/.nojekyll
+        run: touch build/emscripten-release/docs/html/.nojekyll
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
-          path: build/docs/html
+          path: build/emscripten-release/docs/html
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

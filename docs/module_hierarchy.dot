@@ -1,0 +1,47 @@
+digraph module_hierarchy {
+	rankdir=BT
+	newrank=true
+	bgcolor=transparent
+
+	graph [splines=true]
+	node [style=filled,fillcolor=white,shape=box,height=0.2,width=0.4,fontname=monospace,fontsize=10]
+	edge [color=lightskyblue,labelfontname=monospace,labelfontsize=10]
+
+	{
+		rank=same
+
+		application
+		audio
+		events
+		graphics
+		networking
+		physics
+	}
+
+	application -> core
+	audio -> core
+	events -> core
+	execution -> core
+	graphics -> core
+	graphics_2d -> core
+	graphics_3d -> core
+	imgui -> core
+	networking -> core
+	physics -> core
+	resource -> core
+
+	imgui -> events
+
+	physics -> execution
+
+	graphics_2d -> graphics
+	graphics_3d -> graphics
+	imgui -> graphics
+
+	graphics_3d -> graphics_2d
+	imgui -> graphics_2d
+
+	graphics -> resource
+	graphics_2d -> resource
+	graphics_3d -> resource
+}

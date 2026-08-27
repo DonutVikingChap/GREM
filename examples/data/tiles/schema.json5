@@ -1,0 +1,503 @@
+{
+    maps: ["maps/space.json5", "maps/grassland.json5", "maps/sea.json5"],
+    tileCategories: {
+        AIR: {
+            friction: 0.25,
+        },
+        GROUND: {
+            collisionType: "SOLID",
+        },
+        WALL: {
+            collisionType: "SOLID",
+        },
+        LIQUID: {
+            collisionType: "LIQUID",
+            friction: 0.5,
+        },
+    },
+    tilesets: {
+        OVERWORLD: {
+            imageFilepath: "tilesets/Overworld.png",
+            tileSize: 16,
+            tileGap: 0,
+            useMipmap: true,
+        },
+        CHARACTER: {
+            imageFilepath: "tilesets/character.png",
+            tileSize: 16,
+            tileGap: 0,
+            useMipmap: true,
+        },
+    },
+    tiles: {
+        AIR: {
+            category: "AIR",
+            tileset: "OVERWORLD",
+            tilesetPosition: [2, 0],
+        },
+        GRASS: {
+            category: "GROUND",
+            tileset: "OVERWORLD",
+            tilesetPosition: [0, 35],
+        },
+        DIRT: {
+            category: "GROUND",
+            tileset: "OVERWORLD",
+            tilesetPosition: [2, 3],
+        },
+        TILLED_DIRT: {
+            category: "GROUND",
+            tileset: "OVERWORLD",
+            tilesetPosition: [1, 0],
+        },
+        TILLED_DIRT_WITH_UNGROWN_FRUIT: {
+            category: "GROUND",
+            tileset: "OVERWORLD",
+            tilesetPosition: [0, 1],
+        },
+        TILLED_DIRT_WITH_RED_FRUIT: {
+            category: "GROUND",
+            tileset: "OVERWORLD",
+            tilesetPosition: [0, 0],
+        },
+        TILLED_DIRT_WITH_YELLOW_FRUIT: {
+            category: "GROUND",
+            tileset: "OVERWORLD",
+            tilesetPosition: [1, 1],
+        },
+        ICE: {
+            category: {
+                collisionType: "SOLID",
+                friction: 0.1,
+            },
+            tileset: "OVERWORLD",
+            tilesetPosition: [19, 28],
+        },
+        WATER: {
+            category: "LIQUID",
+            tileset: "OVERWORLD",
+            tilesetPosition: [0, 34],
+            animationFrameCount: [4, 2],
+            animationFrameRate: 15,
+        },
+    },
+    brushes: {
+        PLAYER_IDLE_DOWN: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 14],
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 15],
+                    },
+                },
+            ],
+        },
+        PLAYER_WALK_DOWN: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 14],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 15],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+            ],
+        },
+        PLAYER_RUN_DOWN: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 14],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 15],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+            ],
+        },
+        PLAYER_IDLE_RIGHT: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 12],
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 13],
+                    },
+                },
+            ],
+        },
+        PLAYER_WALK_RIGHT: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 12],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 13],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+            ],
+        },
+        PLAYER_RUN_RIGHT: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 12],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 13],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+            ],
+        },
+        PLAYER_IDLE_UP: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 10],
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 11],
+                    },
+                },
+            ],
+        },
+        PLAYER_WALK_UP: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 10],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 11],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+            ],
+        },
+        PLAYER_RUN_UP: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 10],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 11],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+            ],
+        },
+        PLAYER_IDLE_LEFT: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 8],
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 9],
+                    },
+                },
+            ],
+        },
+        PLAYER_WALK_LEFT: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 8],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 9],
+                        animationFrameCount: 4,
+                        animationFrameRate: 3,
+                    },
+                },
+            ],
+        },
+        PLAYER_RUN_LEFT: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 8],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        tileset: "CHARACTER",
+                        tilesetPosition: [0, 9],
+                        animationFrameCount: 4,
+                        animationFrameRate: 12,
+                    },
+                },
+            ],
+        },
+        FLAG: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [0, 0, 0],
+                    tile: { tileset: "OVERWORLD", tilesetPosition: [3, 3] },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: { tileset: "OVERWORLD", tilesetPosition: [3, 4] },
+                },
+                {
+                    offset: [0, 2, 0],
+                    tile: {
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [3, 5],
+                        animationFrameStep: 2,
+                        animationFrameCount: 5,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [1, 2, 0],
+                    tile: {
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [4, 5],
+                        animationFrameStep: 2,
+                        animationFrameCount: 5,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [0, 3, 0],
+                    tile: {
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [3, 6],
+                        animationFrameStep: 2,
+                        animationFrameCount: 5,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [1, 3, 0],
+                    tile: {
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [4, 6],
+                        animationFrameStep: 2,
+                        animationFrameCount: 5,
+                        animationFrameRate: 9,
+                    },
+                },
+            ],
+        },
+        FOUNTAIN: {
+            origin: [0.5, 0.5],
+            tilePlacements: [
+                {
+                    offset: [-1, -1, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [22, 24],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [0, -1, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [23, 24],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [1, -1, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [24, 24],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [-1, 0, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [22, 25],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [0, 0, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [23, 25],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [1, 0, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [24, 25],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [-1, 1, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [22, 26],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [0, 1, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [23, 26],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+                {
+                    offset: [1, 1, 0],
+                    tile: {
+                        category: "WALL",
+                        tileset: "OVERWORLD",
+                        tilesetPosition: [24, 26],
+                        animationFrameStep: 3,
+                        animationFrameCount: 3,
+                        animationFrameRate: 9,
+                    },
+                },
+            ],
+        },
+    },
+}

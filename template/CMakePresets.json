@@ -1,0 +1,1574 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 23,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "hidden": true,
+            "name": "base",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/build/${presetName}/install",
+            "cacheVariables": {
+                "BUILD_SHARED_LIBS": "OFF",
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_STANDARD": "11",
+                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_C_FLAGS": "$env{GREM_C_STANDARD_FLAG} $env{GREM_COMPILER_FLAGS} $env{GREM_C_COMPILER_FLAGS}",
+                "CMAKE_C_FLAGS_DEBUG": "$env{GREM_COMPILER_FLAGS_DEBUG}",
+                "CMAKE_C_FLAGS_RELEASE": "$env{GREM_COMPILER_FLAGS_RELEASE}",
+                "CMAKE_C_FLAGS_MINSIZEREL": "$env{GREM_COMPILER_FLAGS_MINSIZEREL}",
+                "CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{GREM_COMPILER_FLAGS_RELWITHDEBINFO}",
+                "CMAKE_CXX_FLAGS": "$env{GREM_CXX_STANDARD_FLAG} $env{GREM_COMPILER_FLAGS} $env{GREM_CXX_COMPILER_FLAGS}",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{GREM_COMPILER_FLAGS_DEBUG}",
+                "CMAKE_CXX_FLAGS_RELEASE": "$env{GREM_COMPILER_FLAGS_RELEASE}",
+                "CMAKE_CXX_FLAGS_MINSIZEREL": "$env{GREM_COMPILER_FLAGS_MINSIZEREL}",
+                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{GREM_COMPILER_FLAGS_RELWITHDEBINFO}",
+                "CMAKE_SHARED_LINKER_FLAGS": "$env{GREM_LINKER_FLAGS} $env{GREM_SHARED_LINKER_FLAGS}",
+                "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "$env{GREM_LINKER_FLAGS_DEBUG}",
+                "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "$env{GREM_LINKER_FLAGS_RELEASE}",
+                "CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL": "$env{GREM_LINKER_FLAGS_MINSIZEREL}",
+                "CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO": "$env{GREM_LINKER_FLAGS_RELWITHDEBINFO}",
+                "CMAKE_EXE_LINKER_FLAGS": "$env{GREM_LINKER_FLAGS} $env{GREM_EXE_LINKER_FLAGS}",
+                "CMAKE_EXE_LINKER_FLAGS_DEBUG": "$env{GREM_LINKER_FLAGS_DEBUG}",
+                "CMAKE_EXE_LINKER_FLAGS_RELEASE": "$env{GREM_LINKER_FLAGS_RELEASE}",
+                "CMAKE_EXE_LINKER_FLAGS_MINSIZEREL": "$env{GREM_LINKER_FLAGS_MINSIZEREL}",
+                "CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO": "$env{GREM_LINKER_FLAGS_RELWITHDEBINFO}"
+            },
+            "environment": {
+                "CMAKE_BUILD_PARALLEL_LEVEL": "16"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "gcc-base",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON"
+            },
+            "environment": {
+                "GREM_C_STANDARD_FLAG": "-std=c11",
+                "GREM_CXX_STANDARD_FLAG": "-std=c++20",
+                "GREM_CXX_COMPILER_FLAGS": "-ftemplate-backtrace-limit=0",
+                "GREM_COMPILER_FLAGS_DEBUG": "-O0 -g",
+                "GREM_COMPILER_FLAGS_RELEASE": "-O3 -s -DNDEBUG",
+                "GREM_COMPILER_FLAGS_MINSIZEREL": "-Os -s -DNDEBUG",
+                "GREM_COMPILER_FLAGS_RELWITHDEBINFO": "-O3 -g -DNDEBUG"
+            }
+        },
+        {
+            "name": "gcc-debug",
+            "displayName": "GCC (Debug)",
+            "inherits": "gcc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "gcc-release",
+            "displayName": "GCC (Release)",
+            "inherits": "gcc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "gcc-minsizerel",
+            "displayName": "GCC (MinSizeRel)",
+            "inherits": "gcc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "gcc-relwithdebinfo",
+            "displayName": "GCC (RelWithDebInfo)",
+            "inherits": "gcc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "gcc-ninja-base",
+            "inherits": "gcc-base",
+            "generator": "Ninja"
+        },
+        {
+            "name": "gcc-ninja-debug",
+            "displayName": "GCC + Ninja (Debug)",
+            "inherits": "gcc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "gcc-ninja-release",
+            "displayName": "GCC + Ninja (Release)",
+            "inherits": "gcc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "gcc-ninja-minsizerel",
+            "displayName": "GCC + Ninja (MinSizeRel)",
+            "inherits": "gcc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "gcc-ninja-relwithdebinfo",
+            "displayName": "GCC + Ninja (RelWithDebInfo)",
+            "inherits": "gcc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "clang-base",
+            "inherits": "gcc-base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
+            },
+            "environment": {
+                "GREM_CXX_COMPILER_FLAGS": "",
+                "GREM_COMPILER_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                "GREM_COMPILER_FLAGS_MINSIZEREL": "-Os -DNDEBUG"
+            }
+        },
+        {
+            "name": "clang-debug",
+            "displayName": "Clang (Debug)",
+            "inherits": "clang-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "clang-release",
+            "displayName": "Clang (Release)",
+            "inherits": "clang-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "clang-minsizerel",
+            "displayName": "Clang (MinSizeRel)",
+            "inherits": "clang-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "clang-relwithdebinfo",
+            "displayName": "Clang (RelWithDebInfo)",
+            "inherits": "clang-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "clang-ninja-base",
+            "inherits": "clang-base",
+            "generator": "Ninja"
+        },
+        {
+            "name": "clang-ninja-debug",
+            "displayName": "Clang + Ninja (Debug)",
+            "inherits": "clang-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "clang-ninja-release",
+            "displayName": "Clang + Ninja (Release)",
+            "inherits": "clang-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "clang-ninja-minsizerel",
+            "displayName": "Clang + Ninja (MinSizeRel)",
+            "inherits": "clang-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "clang-ninja-relwithdebinfo",
+            "displayName": "Clang + Ninja (RelWithDebInfo)",
+            "inherits": "clang-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "clang-sanitized-base",
+            "inherits": "clang-base",
+            "environment": {
+                "GREM_CXX_COMPILER_FLAGS": "-stdlib=libc++",
+                "GREM_COMPILER_FLAGS": "-fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common -fsanitize=address,undefined,local-bounds,vptr,nullability,leak -fsanitize-address-use-after-scope -shared-libasan",
+                "GREM_LINKER_FLAGS": "-fsanitize=address,undefined,local-bounds,vptr,nullability,leak -shared-libasan"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "clang-sanitized-ninja-base",
+            "inherits": "clang-sanitized-base",
+            "generator": "Ninja"
+        },
+        {
+            "name": "clang-sanitized-debug",
+            "displayName": "Clang with sanitizers (Debug)",
+            "inherits": "clang-sanitized-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "clang-sanitized-release",
+            "displayName": "Clang with sanitizers (Release)",
+            "inherits": "clang-sanitized-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "clang-sanitized-minsizerel",
+            "displayName": "Clang with sanitizers (MinSizeRel)",
+            "inherits": "clang-sanitized-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "clang-sanitized-relwithdebinfo",
+            "displayName": "Clang with sanitizers (RelWithDebInfo)",
+            "inherits": "clang-sanitized-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "clang-sanitized-ninja-debug",
+            "displayName": "Clang with sanitizers + Ninja (Debug)",
+            "inherits": "clang-sanitized-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "clang-sanitized-ninja-release",
+            "displayName": "Clang with sanitizers + Ninja (Release)",
+            "inherits": "clang-sanitized-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "clang-sanitized-ninja-minsizerel",
+            "displayName": "Clang with sanitizers + Ninja (MinSizeRel)",
+            "inherits": "clang-sanitized-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "clang-sanitized-ninja-relwithdebinfo",
+            "displayName": "Clang with sanitizers + Ninja (RelWithDebInfo)",
+            "inherits": "clang-sanitized-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "mingw-w64-base",
+            "inherits": "base",
+            "cacheVariables": {
+                "BUILD_SHARED_LIBS": "OFF",
+                "CMAKE_C_COMPILER": "x86_64-w64-mingw32-gcc",
+                "CMAKE_CXX_COMPILER": "x86_64-w64-mingw32-g++",
+                "CMAKE_RC_COMPILER": "x86_64-w64-mingw32-windres",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON"
+            },
+            "environment": {
+                "GREM_C_STANDARD_FLAG": "-std=c11",
+                "GREM_CXX_STANDARD_FLAG": "-std=c++20",
+                "GREM_C_COMPILER_FLAGS": "-fno-set-stack-executable -static -static-libgcc -mthreads",
+                "GREM_CXX_COMPILER_FLAGS": "-ftemplate-backtrace-limit=0 -fno-set-stack-executable -static -static-libgcc -static-libstdc++ -mthreads",
+                "GREM_COMPILER_FLAGS_DEBUG": "-O0 -g -Wa,-mbig-obj",
+                "GREM_COMPILER_FLAGS_RELEASE": "-O3 -s -DNDEBUG",
+                "GREM_COMPILER_FLAGS_MINSIZEREL": "-Os -s -DNDEBUG",
+                "GREM_COMPILER_FLAGS_RELWITHDEBINFO": "-O3 -g -Wa,-mbig-obj -DNDEBUG",
+                "GREM_SHARED_LINKER_FLAGS": "-fno-set-stack-executable -static -static-libgcc -static-libstdc++ -mthreads",
+                "GREM_EXE_LINKER_FLAGS": "-fno-set-stack-executable -static -static-pie -static-libgcc -static-libstdc++ -mthreads -mconsole"
+            }
+        },
+        {
+            "name": "mingw-w64-debug",
+            "displayName": "MinGW-w64 (Debug)",
+            "inherits": "mingw-w64-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "mingw-w64-release",
+            "displayName": "MinGW-w64 (Release)",
+            "inherits": "mingw-w64-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "mingw-w64-minsizerel",
+            "displayName": "MinGW-w64 (MinSizeRel)",
+            "inherits": "mingw-w64-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "mingw-w64-relwithdebinfo",
+            "displayName": "MinGW-w64 (RelWithDebInfo)",
+            "inherits": "mingw-w64-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "mingw-w64-ninja-base",
+            "inherits": "mingw-w64-base",
+            "generator": "Ninja"
+        },
+        {
+            "name": "mingw-w64-ninja-debug",
+            "displayName": "MinGW-w64 + Ninja (Debug)",
+            "inherits": "mingw-w64-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "mingw-w64-ninja-release",
+            "displayName": "MinGW-w64 + Ninja (Release)",
+            "inherits": "mingw-w64-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "mingw-w64-ninja-minsizerel",
+            "displayName": "MinGW-w64 + Ninja (MinSizeRel)",
+            "inherits": "mingw-w64-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "mingw-w64-ninja-relwithdebinfo",
+            "displayName": "MinGW-w64 + Ninja (RelWithDebInfo)",
+            "inherits": "mingw-w64-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "mingw-w64-cross-base",
+            "inherits": "mingw-w64-base",
+            "toolchainFile": "${sourceDir}/scripts/cmake/MinGW-w64CrossCompileToolchain.cmake",
+            "condition": {
+                "type": "notEquals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "vendor": {
+                "microsoft.com/VisualStudioSettings/CMake/1.0": {
+                    "hostOS": ["Linux", "macOS"]
+                }
+            }
+        },
+        {
+            "name": "mingw-w64-cross-debug",
+            "displayName": "MinGW-w64 Cross-Compile (Debug)",
+            "inherits": "mingw-w64-cross-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "mingw-w64-cross-release",
+            "displayName": "MinGW-w64 Cross-Compile (Release)",
+            "inherits": "mingw-w64-cross-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "mingw-w64-cross-minsizerel",
+            "displayName": "MinGW-w64 Cross-Compile (MinSizeRel)",
+            "inherits": "mingw-w64-cross-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "mingw-w64-cross-relwithdebinfo",
+            "displayName": "MinGW-w64 Cross-Compile (RelWithDebInfo)",
+            "inherits": "mingw-w64-cross-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "msvc-base",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            },
+            "environment": {
+                "GREM_C_STANDARD_FLAG": "/std:c11",
+                "GREM_CXX_STANDARD_FLAG": "/std:c++20",
+                "GREM_COMPILER_FLAGS": "/utf-8 /EHs /MP",
+                "GREM_COMPILER_FLAGS_DEBUG": "/Od /Ob1 /bigobj /D_DEBUG /Zi",
+                "GREM_COMPILER_FLAGS_RELEASE": "/O2 /Ot /DNDEBUG",
+                "GREM_COMPILER_FLAGS_MINSIZEREL": "/O1 /Os /DNDEBUG",
+                "GREM_COMPILER_FLAGS_RELWITHDEBINFO": "/Ox /bigobj /DNDEBUG /Zi /Zo",
+                "GREM_LINKER_FLAGS_DEBUG": "/DEBUG",
+                "GREM_LINKER_FLAGS_RELWITHDEBINFO": "/DEBUG"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "vendor": {
+                "microsoft.com/VisualStudioSettings/CMake/1.0": {
+                    "hostOS": ["Windows"]
+                }
+            }
+        },
+        {
+            "name": "msvc-debug",
+            "displayName": "MSVC (Debug)",
+            "inherits": "msvc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "msvc-release",
+            "displayName": "MSVC (Release)",
+            "inherits": "msvc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "msvc-minsizerel",
+            "displayName": "MSVC (MinSizeRel)",
+            "inherits": "msvc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "msvc-relwithdebinfo",
+            "displayName": "MSVC (RelWithDebInfo)",
+            "inherits": "msvc-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "msvc-ninja-base",
+            "inherits": "msvc-base",
+            "generator": "Ninja",
+            "toolset": {
+                "value": "v143,host=x64",
+                "strategy": "external"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "msvc-ninja-debug",
+            "displayName": "MSVC + Ninja (Debug)",
+            "inherits": "msvc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "msvc-ninja-release",
+            "displayName": "MSVC + Ninja (Release)",
+            "inherits": "msvc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "msvc-ninja-minsizerel",
+            "displayName": "MSVC + Ninja (MinSizeRel)",
+            "inherits": "msvc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "msvc-ninja-relwithdebinfo",
+            "displayName": "MSVC + Ninja (RelWithDebInfo)",
+            "inherits": "msvc-ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "emscripten-base",
+            "inherits": "base",
+            "generator": "Ninja",
+            "toolchainFile": "${sourceDir}/scripts/cmake/EmscriptenToolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "GREM_USE_MULTITHREADING": "OFF",
+                "GREM_GRAPHICS_BACKEND": "OpenGL",
+                "GREM_GRAPHICS_OPENGL_USE_ES_PROFILE": "ON",
+                "GREM_NETWORKING_SOCKETS_BACKEND": "Emulated"
+            },
+            "environment": {
+                "GREM_C_STANDARD_FLAG": "-std=c11",
+                "GREM_CXX_STANDARD_FLAG": "-std=c++20",
+                "GREM_COMPILER_FLAGS": "-fexceptions -frtti -sDISABLE_EXCEPTION_CATCHING=0 -sNO_DISABLE_EXCEPTION_CATCHING",
+                "GREM_COMPILER_FLAGS_DEBUG": "-O0 -g",
+                "GREM_COMPILER_FLAGS_RELEASE": "-O3 -g0 -DNDEBUG",
+                "GREM_COMPILER_FLAGS_MINSIZEREL": "-Os -g0 -DNDEBUG",
+                "GREM_COMPILER_FLAGS_RELWITHDEBINFO": "-O3 -g -DNDEBUG",
+                "GREM_LINKER_FLAGS": "-fexceptions -frtti -lidbfs.js -sDISABLE_EXCEPTION_CATCHING=0 -sNO_DISABLE_EXCEPTION_CATCHING -sNODEJS_CATCH_EXIT=0 -sNODEJS_CATCH_REJECTION=0 -sFULL_ES3 -sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=4194304 -sEXPORTED_RUNTIME_METHODS=requestFullscreen",
+                "GREM_LINKER_FLAGS_DEBUG": "--sASSERTIONS=1 -sGL_ASSERTIONS=1 -sGL_DEBUG=1",
+                "GREM_LINKER_FLAGS_RELEASE": "-sSINGLE_FILE -sSINGLE_FILE_BINARY_ENCODE=0",
+                "GREM_LINKER_FLAGS_MINSIZEREL": "-sSINGLE_FILE -sSINGLE_FILE_BINARY_ENCODE=0",
+                "GREM_LINKER_FLAGS_RELWITHDEBINFO": ""
+            }
+        },
+        {
+            "name": "emscripten-debug",
+            "displayName": "Emscripten (Debug)",
+            "inherits": "emscripten-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "emscripten-release",
+            "displayName": "Emscripten (Release)",
+            "inherits": "emscripten-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "emscripten-minsizerel",
+            "displayName": "Emscripten (MinSizeRel)",
+            "inherits": "emscripten-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "emscripten-relwithdebinfo",
+            "displayName": "Emscripten (RelWithDebInfo)",
+            "inherits": "emscripten-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "gcc-debug",
+            "displayName": "GCC (Debug)",
+            "configurePreset": "gcc-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "gcc-release",
+            "displayName": "GCC (Release)",
+            "configurePreset": "gcc-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "gcc-minsizerel",
+            "displayName": "GCC (MinSizeRel)",
+            "configurePreset": "gcc-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "gcc-relwithdebinfo",
+            "displayName": "GCC (RelWithDebInfo)",
+            "configurePreset": "gcc-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "gcc-ninja-debug",
+            "displayName": "GCC + Ninja (Debug)",
+            "configurePreset": "gcc-ninja-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "gcc-ninja-release",
+            "displayName": "GCC + Ninja (Release)",
+            "configurePreset": "gcc-ninja-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "gcc-ninja-minsizerel",
+            "displayName": "GCC + Ninja (MinSizeRel)",
+            "configurePreset": "gcc-ninja-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "gcc-ninja-relwithdebinfo",
+            "displayName": "GCC + Ninja (RelWithDebInfo)",
+            "configurePreset": "gcc-ninja-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-debug",
+            "displayName": "Clang (Debug)",
+            "configurePreset": "clang-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-release",
+            "displayName": "Clang (Release)",
+            "configurePreset": "clang-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-minsizerel",
+            "displayName": "Clang (MinSizeRel)",
+            "configurePreset": "clang-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "clang-relwithdebinfo",
+            "displayName": "Clang (RelWithDebInfo)",
+            "configurePreset": "clang-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-ninja-debug",
+            "displayName": "Clang + Ninja (Debug)",
+            "configurePreset": "clang-ninja-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-ninja-release",
+            "displayName": "Clang + Ninja (Release)",
+            "configurePreset": "clang-ninja-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-ninja-minsizerel",
+            "displayName": "Clang + Ninja (MinSizeRel)",
+            "configurePreset": "clang-ninja-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "clang-ninja-relwithdebinfo",
+            "displayName": "Clang + Ninja (RelWithDebInfo)",
+            "configurePreset": "clang-ninja-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-sanitized-debug",
+            "displayName": "Clang with sanitizers (Debug)",
+            "configurePreset": "clang-sanitized-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-sanitized-release",
+            "displayName": "Clang with sanitizers (Release)",
+            "configurePreset": "clang-sanitized-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-sanitized-minsizerel",
+            "displayName": "Clang with sanitizers (MinSizeRel)",
+            "configurePreset": "clang-sanitized-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "clang-sanitized-relwithdebinfo",
+            "displayName": "Clang with sanitizers (RelWithDebInfo)",
+            "configurePreset": "clang-sanitized-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "clang-sanitized-ninja-debug",
+            "displayName": "Clang with sanitizers + Ninja (Debug)",
+            "configurePreset": "clang-sanitized-ninja-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-sanitized-ninja-release",
+            "displayName": "Clang with sanitizers + Ninja (Release)",
+            "configurePreset": "clang-sanitized-ninja-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-sanitized-ninja-minsizerel",
+            "displayName": "Clang with sanitizers + Ninja (MinSizeRel)",
+            "configurePreset": "clang-sanitized-ninja-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "clang-sanitized-ninja-relwithdebinfo",
+            "displayName": "Clang with sanitizers + Ninja (RelWithDebInfo)",
+            "configurePreset": "clang-sanitized-ninja-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "mingw-w64-debug",
+            "displayName": "MinGW-w64 (Debug)",
+            "configurePreset": "mingw-w64-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "mingw-w64-release",
+            "displayName": "MinGW-w64 (Release)",
+            "configurePreset": "mingw-w64-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "mingw-w64-minsizerel",
+            "displayName": "MinGW-w64 (MinSizeRel)",
+            "configurePreset": "mingw-w64-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "mingw-w64-relwithdebinfo",
+            "displayName": "MinGW-w64 (RelWithDebInfo)",
+            "configurePreset": "mingw-w64-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "mingw-w64-ninja-debug",
+            "displayName": "MinGW-w64 + Ninja (Debug)",
+            "configurePreset": "mingw-w64-ninja-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "mingw-w64-ninja-release",
+            "displayName": "MinGW-w64 + Ninja (Release)",
+            "configurePreset": "mingw-w64-ninja-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "mingw-w64-ninja-minsizerel",
+            "displayName": "MinGW-w64 + Ninja (MinSizeRel)",
+            "configurePreset": "mingw-w64-ninja-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "mingw-w64-ninja-relwithdebinfo",
+            "displayName": "MinGW-w64 + Ninja (RelWithDebInfo)",
+            "configurePreset": "mingw-w64-ninja-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "mingw-w64-cross-debug",
+            "displayName": "MinGW-w64 Cross-Compile (Debug)",
+            "configurePreset": "mingw-w64-cross-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "mingw-w64-cross-release",
+            "displayName": "MinGW-w64 Cross-Compile (Release)",
+            "configurePreset": "mingw-w64-cross-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "mingw-w64-cross-minsizerel",
+            "displayName": "MinGW-w64 Cross-Compile (MinSizeRel)",
+            "configurePreset": "mingw-w64-cross-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "mingw-w64-cross-relwithdebinfo",
+            "displayName": "MinGW-w64 Cross-Compile (RelWithDebInfo)",
+            "configurePreset": "mingw-w64-cross-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "msvc-debug",
+            "displayName": "MSVC (Debug)",
+            "configurePreset": "msvc-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-release",
+            "displayName": "MSVC (Release)",
+            "configurePreset": "msvc-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "msvc-minsizerel",
+            "displayName": "MSVC (MinSizeRel)",
+            "configurePreset": "msvc-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "msvc-relwithdebinfo",
+            "displayName": "MSVC (RelWithDebInfo)",
+            "configurePreset": "msvc-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "msvc-ninja-debug",
+            "displayName": "MSVC + Ninja (Debug)",
+            "configurePreset": "msvc-ninja-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-ninja-release",
+            "displayName": "MSVC + Ninja (Release)",
+            "configurePreset": "msvc-ninja-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "msvc-ninja-minsizerel",
+            "displayName": "MSVC + Ninja (MinSizeRel)",
+            "configurePreset": "msvc-ninja-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "msvc-ninja-relwithdebinfo",
+            "displayName": "MSVC + Ninja (RelWithDebInfo)",
+            "configurePreset": "msvc-ninja-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "emscripten-debug",
+            "displayName": "Emscripten (Debug)",
+            "configurePreset": "emscripten-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "emscripten-release",
+            "displayName": "Emscripten (Release)",
+            "configurePreset": "emscripten-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "emscripten-minsizerel",
+            "displayName": "Emscripten (MinSizeRel)",
+            "configurePreset": "emscripten-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "emscripten-relwithdebinfo",
+            "displayName": "Emscripten (RelWithDebInfo)",
+            "configurePreset": "emscripten-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "gcc-debug",
+            "displayName": "GCC (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-debug"
+                }
+            ]
+        },
+        {
+            "name": "gcc-release",
+            "displayName": "GCC (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-release"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-release"
+                }
+            ]
+        },
+        {
+            "name": "gcc-minsizerel",
+            "displayName": "GCC (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "gcc-relwithdebinfo",
+            "displayName": "GCC (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "gcc-ninja-debug",
+            "displayName": "GCC + Ninja (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "gcc-ninja-release",
+            "displayName": "GCC + Ninja (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "gcc-ninja-minsizerel",
+            "displayName": "GCC + Ninja (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-ninja-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-ninja-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "gcc-ninja-relwithdebinfo",
+            "displayName": "GCC + Ninja (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "gcc-ninja-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "gcc-ninja-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "clang-debug",
+            "displayName": "Clang (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-debug"
+                }
+            ]
+        },
+        {
+            "name": "clang-release",
+            "displayName": "Clang (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-release"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-release"
+                }
+            ]
+        },
+        {
+            "name": "clang-minsizerel",
+            "displayName": "Clang (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "clang-relwithdebinfo",
+            "displayName": "Clang (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "clang-ninja-debug",
+            "displayName": "Clang + Ninja (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "clang-ninja-release",
+            "displayName": "Clang + Ninja (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "clang-ninja-minsizerel",
+            "displayName": "Clang + Ninja (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-ninja-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-ninja-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "clang-ninja-relwithdebinfo",
+            "displayName": "Clang + Ninja (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-ninja-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-ninja-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-debug",
+            "displayName": "Clang with sanitizers (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-debug"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-release",
+            "displayName": "Clang with sanitizers (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-release"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-release"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-minsizerel",
+            "displayName": "Clang with sanitizers (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-relwithdebinfo",
+            "displayName": "Clang with sanitizers (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-ninja-debug",
+            "displayName": "Clang with sanitizers + Ninja (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-ninja-release",
+            "displayName": "Clang with sanitizers + Ninja (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-ninja-minsizerel",
+            "displayName": "Clang with sanitizers + Ninja (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-ninja-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-ninja-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "clang-sanitized-ninja-relwithdebinfo",
+            "displayName": "Clang with sanitizers + Ninja (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang-sanitized-ninja-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "clang-sanitized-ninja-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-debug",
+            "displayName": "MinGW-w64 (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-debug"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-release",
+            "displayName": "MinGW-w64 (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-release"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-release"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-minsizerel",
+            "displayName": "MinGW-w64 (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-relwithdebinfo",
+            "displayName": "MinGW-w64 (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-ninja-debug",
+            "displayName": "MinGW-w64 + Ninja (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-ninja-release",
+            "displayName": "MinGW-w64 + Ninja (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-ninja-minsizerel",
+            "displayName": "MinGW-w64 + Ninja (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-ninja-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-ninja-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-ninja-relwithdebinfo",
+            "displayName": "MinGW-w64 + Ninja (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-ninja-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-ninja-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-cross-debug",
+            "displayName": "MinGW-w64 Cross-Compile (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-cross-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-cross-debug"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-cross-release",
+            "displayName": "MinGW-w64 Cross-Compile (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-cross-release"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-cross-release"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-cross-minsizerel",
+            "displayName": "MinGW-w64 Cross-Compile (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-cross-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-cross-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "mingw-w64-cross-relwithdebinfo",
+            "displayName": "MinGW-w64 Cross-Compile (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "mingw-w64-cross-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "mingw-w64-cross-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "msvc-debug",
+            "displayName": "MSVC (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-debug"
+                }
+            ]
+        },
+        {
+            "name": "msvc-release",
+            "displayName": "MSVC (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-release"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-release"
+                }
+            ]
+        },
+        {
+            "name": "msvc-minsizerel",
+            "displayName": "MSVC (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "msvc-relwithdebinfo",
+            "displayName": "MSVC (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "msvc-ninja-debug",
+            "displayName": "MSVC + Ninja (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "msvc-ninja-release",
+            "displayName": "MSVC + Ninja (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "msvc-ninja-minsizerel",
+            "displayName": "MSVC + Ninja (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-ninja-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-ninja-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "msvc-ninja-relwithdebinfo",
+            "displayName": "MSVC + Ninja (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "msvc-ninja-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "msvc-ninja-relwithdebinfo"
+                }
+            ]
+        },
+        {
+            "name": "emscripten-debug",
+            "displayName": "Emscripten (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "emscripten-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "emscripten-debug"
+                }
+            ]
+        },
+        {
+            "name": "emscripten-release",
+            "displayName": "Emscripten (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "emscripten-release"
+                },
+                {
+                    "type": "build",
+                    "name": "emscripten-release"
+                }
+            ]
+        },
+        {
+            "name": "emscripten-minsizerel",
+            "displayName": "Emscripten (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "emscripten-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "emscripten-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "emscripten-relwithdebinfo",
+            "displayName": "Emscripten (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "emscripten-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "emscripten-relwithdebinfo"
+                }
+            ]
+        }
+    ]
+}

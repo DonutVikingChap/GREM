@@ -1,34 +1,38 @@
-#include <donut/audio/Error.hpp>
+// SPDX-FileCopyrightText: 2026 Ivar Härnqvist
+// SPDX-License-Identifier: MIT
 
-#include <fmt/format.h> // fmt::format
-#include <soloud.h>     // SoLoud::...
-#include <stdexcept>    // std::runtime_error
-#include <string_view>  // std::string_view
-#include <type_traits>  // std::is_same_v
+#include <GREM/build_config.hpp>
 
-namespace donut::audio {
+#include <GREM/audio/Error.hpp>
+#include <GREM/core/concepts.hpp>
+#include <GREM/core/data/CStringView.hpp>
+#include <GREM/core/data/String.hpp>
+#include <GREM/core/data/StringView.hpp>
+
+#include <soloud.h> // SoLoud::...
+
+namespace grem::audio {
 
 namespace {
 
-constexpr std::string_view getErrorCodeMessage(unsigned errorCode) noexcept {
-	static_assert(std::is_same_v<unsigned, SoLoud::result>);
-	const char* message = "Unknown error.";
+constexpr CStringView getErrorCodeMessage(unsigned errorCode) noexcept {
+	static_assert(same_as<unsigned, SoLoud::result>);
 	switch (errorCode) {
-		case SoLoud::SO_NO_ERROR: message = "No error."; break;
-		case SoLoud::INVALID_PARAMETER: message = "Some parameter is invalid."; break;
-		case SoLoud::FILE_NOT_FOUND: message = "File not found."; break;
-		case SoLoud::FILE_LOAD_FAILED: message = "File found, but could not be loaded."; break;
-		case SoLoud::DLL_NOT_FOUND: message = "DLL not found, or wrong DLL."; break;
-		case SoLoud::OUT_OF_MEMORY: message = "Out of memory."; break;
-		case SoLoud::NOT_IMPLEMENTED: message = "Feature not implemented."; break;
+		case SoLoud::SO_NO_ERROR: return "No error.";
+		case SoLoud::INVALID_PARAMETER: return "Some parameter is invalid.";
+		case SoLoud::FILE_NOT_FOUND: return "File not found.";
+		case SoLoud::FILE_LOAD_FAILED: return "File found, but could not be loaded.";
+		case SoLoud::DLL_NOT_FOUND: return "DLL not found, or wrong DLL.";
+		case SoLoud::OUT_OF_MEMORY: return "Out of memory.";
+		case SoLoud::NOT_IMPLEMENTED: return "Feature not implemented.";
 		default: break;
 	}
-	return message;
+	return "Unknown SoLoud error.";
 }
 
 } // namespace
 
-Error::Error(std::string_view message, unsigned errorCode)
-	: std::runtime_error(fmt::format("{}: {}", message, getErrorCodeMessage(errorCode))) {}
+Error::Error(StringView message, unsigned errorCode)
+	: Error(String{message} + ": " + getErrorCodeMessage(errorCode).c_str()) {}
 
-} // namespace donut::audio
+} // namespace grem::audio

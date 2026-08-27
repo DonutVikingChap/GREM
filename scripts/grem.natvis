@@ -1,0 +1,801 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Ivar Härnqvist
+SPDX-License-Identifier: MIT
+-->
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="grem::Allocation&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{elements[0]}, {elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{elements[0]}, {elements[1]}, {elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">elementCount</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Array&lt;*,*&gt;">
+    <DisplayString Optional="true" Condition="$T2 == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="$T2 == 1">[{_private_elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T2 == 2">[{_private_elements[0]}, {_private_elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T2 == 3">[{_private_elements[0]}, {_private_elements[1]}, {_private_elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T2 &gt;= 4">[... ({$T2} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">$T2</Item>
+      <ArrayItems>
+        <Size>$T2</Size>
+        <ValuePointer>_private_elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::ArrayList&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{elements[0]}, {elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{elements[0]}, {elements[1]}, {elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">(size_t)elementCapacity</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::BitArray&lt;*&gt;">
+    <Intrinsic Name="get" Expression="((bits[i / INTEGER_BITS] &gt;&gt; (i % INTEGER_BITS)) &amp; 1) != 0">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="$T1 == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 1">[{get(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 2">[{get(0)}, {get(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 3">[{get(0)}, {get(1)}, {get(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 &gt;= 4">[... ({$T1} items)]</DisplayString>
+    <Expand>
+      <IndexListItems>
+        <Size>$T1</Size>
+        <ValueNode>get($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::BitBufferBase&lt;*&gt;">
+    <Intrinsic Name="get" Expression="((bits[i / INTEGER_BITS] &gt;&gt; (i % INTEGER_BITS)) &amp; 1) != 0">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="bitCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="bitCount == 1">[{get(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="bitCount == 2">[{get(0)}, {get(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="bitCount == 3">[{get(0)}, {get(1)}, {get(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="bitCount &gt;= 4">[... ({bitCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">bitCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">bitCapacity</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <IndexListItems>
+        <Size>bitCount</Size>
+        <ValueNode>get($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Buffer&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{elements[0]}, {elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{elements[0]}, {elements[1]}, {elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">elementCapacity</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::ConstantString&lt;*&gt;">
+    <DisplayString>{characters,na}</DisplayString>
+    <StringView>characters,na</StringView>
+  </Type>
+
+  <Type Name="grem::CRC32">
+    <DisplayString>{value,X}</DisplayString>
+    <Expand>
+      <Item Name="uint32_t()">value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::CStringViewBase&lt;*&gt;">
+    <DisplayString>{string,na}</DisplayString>
+    <StringView>string,na</StringView>
+  </Type>
+
+  <Type Name="grem::DoubleEndedQueue&lt;*&gt;">
+    <Intrinsic Name="size" Expression="(size_t)(endIndex - beginIndex)" />
+    <Intrinsic Name="capacity" Expression="(mask == 0) ? (size_t)0 : (size_t)(mask + 1)" />
+    <Intrinsic Name="at" Expression="&amp;ringBuffer[(beginIndex + i) &amp; mask]">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="size() == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 1">[{*at(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 2">[{*at(0)}, {*at(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 3">[{*at(0)}, {*at(1)}, {*at(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() &gt;= 4">[... ({size()} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">size()</Item>
+      <Item Name="capacity()" ExcludeView="simple">capacity()</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <IndexListItems>
+        <Size>size()</Size>
+        <ValueNode>*at($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::HashMap&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">{{}}</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">{{... (1 item)}}</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 2">{{... ({elementCount} items)}}</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">elementCapacity</Item>
+      <Item Name="hash_function()" ExcludeView="simple">hash</Item>
+      <Item Name="key_eq()" ExcludeView="simple">equal</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Size>elementCapacity</Size>
+        <Loop>
+          <Item Name="[{keys[i]}]" Condition="(activeBits[i / 64] &amp; (1 &lt;&lt; (i % 64))) != 0">values[i]</Item>
+          <Exec>++i</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::HashSet&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">{{}}</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">{{... (1 item)}}</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount != 0">{{... ({elementCount} items)}}</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">elementCapacity</Item>
+      <Item Name="hash_function()" ExcludeView="simple">hash</Item>
+      <Item Name="key_eq()" ExcludeView="simple">equal</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Size>elementCapacity</Size>
+        <Loop>
+          <Item>keys[i]</Item>
+          <Exec>++i</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::InplaceArrayList&lt;*,*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{(($T1*)buffer)[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{(($T1*)buffer)[0]}, {(($T1*)buffer)[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{(($T1*)buffer)[0]}, {(($T1*)buffer)[1]}, {(($T1*)buffer)[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">$T2</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>($T1*)buffer</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::InplaceBuffer&lt;*,*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{(($T1*)buffer)[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{(($T1*)buffer)[0]}, {(($T1*)buffer)[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{(($T1*)buffer)[0]}, {(($T1*)buffer)[1]}, {(($T1*)buffer)[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">$T2</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>($T1*)buffer</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::InplaceDoubleEndedQueue&lt;*,*&gt;">
+    <Intrinsic Name="size" Expression="(size_t)(endIndex - beginIndex)" />
+    <Intrinsic Name="at" Expression="&amp;ringBuffer[(beginIndex + i) &amp; ($T2 - 1)]">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="size() == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 1">[{*at(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 2">[{*at(0)}, {*at(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 3">[{*at(0)}, {*at(1)}, {*at(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() &gt;= 4">[... ({size()} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">size()</Item>
+      <Item Name="capacity()" ExcludeView="simple">$T2</Item>
+      <IndexListItems>
+        <Size>size()</Size>
+        <ValueNode>*at($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::InplaceRingBuffer&lt;*,*&gt;">
+    <Intrinsic Name="size" Expression="(size_t)(endIndex - beginIndex)" />
+    <Intrinsic Name="at" Expression="&amp;ringBuffer[(beginIndex + i) &amp; ($T2 - 1)]">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="size() == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 1">[{*at(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 2">[{*at(0)}, {*at(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 3">[{*at(0)}, {*at(1)}, {*at(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() &gt;= 4">[... ({size()} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">size()</Item>
+      <Item Name="capacity()" ExcludeView="simple">$T2</Item>
+      <IndexListItems>
+        <Size>size()</Size>
+        <ValueNode>*at($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::vec&lt;*,*&gt;">
+    <DisplayString Optional="true" Condition="$T1 == 1">({x})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 2">({x}, {y})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 3">({x}, {y}, {z})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 4">({x}, {y}, {z}, {w})</DisplayString>
+    <Expand>
+      <Item Name="x" Optional="true" Condition="$T1 &gt;= 1">x</Item>
+      <Item Name="y" Optional="true" Condition="$T1 &gt;= 2">y</Item>
+      <Item Name="z" Optional="true" Condition="$T1 &gt;= 3">z</Item>
+      <Item Name="w" Optional="true" Condition="$T1 &gt;= 4">w</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::mat&lt;*,*,*&gt;">
+    <DisplayString Optional="true" Condition="$T1 == 1">[{_private_value[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 2">[{_private_value[0]}, {_private_value[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 3">[{_private_value[0]}, {_private_value[1]}, {_private_value[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 4">[{_private_value[0]}, {_private_value[1]}, {_private_value[2]}, {_private_value[3]}]</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>$T1</Size>
+        <ValuePointer>_private_value</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::qua&lt;*&gt;">
+    <DisplayString>{x}i + {y}j + {z}k + {w}</DisplayString>
+    <Expand>
+      <Item Name="x">x</Item>
+      <Item Name="y">y</Item>
+      <Item Name="z">z</Item>
+      <Item Name="w">w</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Optional&lt;*&gt;">
+    <DisplayString Condition="variant.activeTypeIndex == 0">nullopt</DisplayString>
+    <DisplayString Condition="variant.activeTypeIndex == 1">{variant.storage.tail.head}</DisplayString>
+    <Expand>
+      <Item Name="has_value()">variant.activeTypeIndex == 1</Item>
+      <Item Condition="variant.activeTypeIndex == 1" Name="value()">variant.storage.tail.head</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::OrderedMap&lt;*&gt;">
+    <AlternativeType Name="grem::OrderedMultimap&lt;*&gt;" />
+    <DisplayString Optional="true" Condition="elementCount == 0">{{}}</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">{{... (1 item)}}</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 2">{{... ({elementCount} items)}}</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">elementCount</Item>
+      <Item Name="key_comp()" ExcludeView="simple">compare.comp</Item>
+      <Item Name="value_comp()" ExcludeView="simple">compare</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Size>elementCount</Size>
+        <Loop>
+          <Item Name="[{elements[i].first}]">elements[i].second</Item>
+          <Exec>++i</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Pair&lt;*&gt;">
+    <DisplayString>({first}, {second})</DisplayString>
+    <Expand>
+      <Item Name="first">first</Item>
+      <Item Name="second">second</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::RegistryElementIDBase&lt;*&gt;">
+    <DisplayString Condition="value == 0xFFFFFFFF">INVALID</DisplayString>
+    <DisplayString Condition="value != 0xFFFFFFFF">{{index = {value &amp; 0xFFFF}, generation = {(value &gt;&gt; 16) &amp; 0x3FFF}, flags = {(value &gt;&gt; 30) &amp; 0x3,b}}}</DisplayString>
+    <Expand>
+      <Item Name="index">(unsigned short)(value &amp; 0xFFFF)</Item>
+      <Item Name="generation">(unsigned short)((value &gt;&gt; 16) &amp; 0x3FFF)</Item>
+      <Item Name="flags">(unsigned char)((value &gt;&gt; 30) &amp; 0x3),b</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::RingBuffer&lt;*&gt;">
+    <Intrinsic Name="size" Expression="(endIndex - beginIndex)" />
+    <Intrinsic Name="capacity" Expression="(mask == 0) ? (size_t)0 : mask + 1" />
+    <Intrinsic Name="at" Expression="&amp;ringBuffer[(beginIndex + i) &amp; mask]">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="size() == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 1">[{*at(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 2">[{*at(0)}, {*at(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 3">[{*at(0)}, {*at(1)}, {*at(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() &gt;= 4">[... ({size()} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">size()</Item>
+      <Item Name="capacity()" ExcludeView="simple">capacity()</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <IndexListItems>
+        <Size>size()</Size>
+        <ValueNode>*at($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::SharedPointer&lt;void&gt;">
+    <Intrinsic Name="use_count" Expression="controlBlock-&gt;strongReferenceCount" />
+    <SmartPointer Usage="Minimal">object</SmartPointer>
+    <DisplayString Condition="object == 0">nullptr</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock == 0">empty</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock != 0">void</DisplayString>
+    <Expand>
+      <Item Condition="controlBlock != 0" Name="(total reference count)">controlBlock-&gt;totalReferenceCount</Item>
+      <Item Condition="controlBlock != 0" Name="use_count()">use_count()</Item>
+      <Item Condition="controlBlock != 0" Name="get()">object</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::SharedPointer&lt;*&gt;">
+    <Intrinsic Name="use_count" Expression="controlBlock-&gt;strongReferenceCount" />
+    <SmartPointer Usage="Minimal">object</SmartPointer>
+    <DisplayString Condition="object == 0">nullptr</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock == 0">empty</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock != 0">{*object}</DisplayString>
+    <Expand>
+      <Item Condition="controlBlock != 0" Name="(total reference count)">controlBlock-&gt;totalReferenceCount</Item>
+      <Item Condition="controlBlock != 0" Name="use_count()">use_count()</Item>
+      <Item Condition="controlBlock != 0" Name="get()">object</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::WeakPointer&lt;void&gt;">
+    <Intrinsic Name="use_count" Expression="controlBlock-&gt;strongReferenceCount" />
+    <DisplayString Condition="object == 0">nullptr</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock == 0">empty</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock != 0 &amp;&amp; use_count() == 0">expired</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock != 0 &amp;&amp; use_count() != 0">void</DisplayString>
+    <Expand>
+      <Item Condition="controlBlock != 0" Name="(total reference count)">controlBlock-&gt;totalReferenceCount</Item>
+      <Item Condition="controlBlock != 0" Name="use_count()">use_count()</Item>
+      <Item Condition="controlBlock != 0 &amp;&amp; (object == 0 || use_count() != 0)" Name="get()">object</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::WeakPointer&lt;*&gt;">
+    <Intrinsic Name="use_count" Expression="controlBlock-&gt;strongReferenceCount" />
+    <DisplayString Condition="object == 0">nullptr</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock == 0">empty</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock != 0 &amp;&amp; use_count() == 0">expired</DisplayString>
+    <DisplayString Condition="object != 0 &amp;&amp; controlBlock != 0 &amp;&amp; use_count() != 0">{*object}</DisplayString>
+    <Expand>
+      <Item Condition="controlBlock != 0" Name="(total reference count)">controlBlock-&gt;totalReferenceCount</Item>
+      <Item Condition="controlBlock != 0" Name="use_count()">use_count()</Item>
+      <Item Condition="controlBlock != 0 &amp;&amp; (object == 0 || use_count() != 0)" Name="get()">object</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::SmallArrayList&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{elements[0]}, {elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{elements[0]}, {elements[1]}, {elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">elementCapacity</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::SmallBuffer&lt;*&gt;">
+    <DisplayString Optional="true" Condition="elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 1">[{elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 2">[{elements[0]}, {elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount == 3">[{elements[0]}, {elements[1]}, {elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="elementCount &gt;= 4">[... ({elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">elementCapacity</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <ArrayItems>
+        <Size>elementCount</Size>
+        <ValuePointer>elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Span&lt;*,*&gt;">
+    <Intrinsic Name="data" Expression="((Base*)this)-&gt;elements" />
+	<Intrinsic Name="size" Optional="true" Expression="(size_t)$T2" />
+    <Intrinsic Name="size" Optional="true" Expression="((Base*)this)-&gt;elementCount" />
+    <DisplayString Optional="true" Condition="size() == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 1">[{data()[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 2">[{data()[0]}, {data()[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 3">[{data()[0]}, {data()[1]}, {data()[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() &gt;= 4">[... ({size()} items)]</DisplayString>
+    <Expand>
+      <Item Name="data()" ExcludeView="simple">data()</Item>
+      <Item Name="size()" ExcludeView="simple">size()</Item>
+      <ArrayItems>
+        <Size>size()</Size>
+        <ValuePointer>data()</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::StridedSpan&lt;*,*,*&gt;">
+    <Intrinsic Name="base" Expression="((Base*)this)-&gt;elements" />
+    <Intrinsic Optional="true" Name="size" Expression="(size_t)$T2" />
+    <Intrinsic Optional="true" Name="size" Expression="elementCount" />
+    <Intrinsic Optional="true" Name="stride" Expression="(size_t)$T3" />
+    <Intrinsic Optional="true" Name="stride" Expression="elementStride" />
+    <Intrinsic Name="at" Expression="($T1*)((char*)base() + i * stride())">
+      <Parameter Name="i" Type="size_t" />
+    </Intrinsic>
+    <DisplayString Optional="true" Condition="size() == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 1">[{*at(0)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 2">[{*at(0)}, {*at(1)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() == 3">[{*at(0)}, {*at(1)}, {*at(2)}]</DisplayString>
+    <DisplayString Optional="true" Condition="size() &gt;= 4">[... ({size()} items)]</DisplayString>
+    <Expand>
+      <Item Name="base()" ExcludeView="simple">base()</Item>
+      <Item Name="size()" ExcludeView="simple">size()</Item>
+      <Item Name="stride()" ExcludeView="simple">stride()</Item>
+      <IndexListItems>
+        <Size>size()</Size>
+        <ValueNode>*at($i)</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Table&lt;*&gt;">
+    <DisplayString Optional="true" Condition="rowCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="rowCount == 1">[... (1 item)]</DisplayString>
+    <DisplayString Optional="true" Condition="rowCount &gt;= 2">[... ({rowCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">rowCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">rowCapacity</Item>
+      <Item Name="get_allocator()" ExcludeView="simple">allocator</Item>
+      <Item Name="columns">columns</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::detail::TupleStorage&lt;*&gt;">
+    <DisplayString Optional="true" Condition="(void)tail.head, true">{head}, {tail}</DisplayString>
+    <DisplayString>{head}</DisplayString>
+    <Expand>
+      <Item Name="get&lt;0&gt;()">head</Item>
+      <Item Name="get&lt;1&gt;()" Optional="true">tail.head</Item>
+      <Item Name="get&lt;2&gt;()" Optional="true">tail.tail.head</Item>
+      <Item Name="get&lt;3&gt;()" Optional="true">tail.tail.tail.head</Item>
+      <Item Name="get&lt;4&gt;()" Optional="true">tail.tail.tail.tail.head</Item>
+      <Synthetic Name="[...]" Optional="true" Condition="(void)tail.tail.tail.tail.tail.head, true">
+        <DisplayString>Next five elements:</DisplayString>
+      </Synthetic>
+      <ExpandedItem Optional="true" Condition="(void)tail.tail.tail.tail.tail.head, true">tail.tail.tail.tail.tail</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Tuple&lt;&gt;">
+    <DisplayString>()</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="grem::Tuple&lt;*&gt;">
+    <DisplayString>({storage})</DisplayString>
+    <Expand>
+      <Item Name="get&lt;0&gt;()">storage.head</Item>
+      <Item Name="get&lt;1&gt;()" Optional="true">storage.tail.head</Item>
+      <Item Name="get&lt;2&gt;()" Optional="true">storage.tail.tail.head</Item>
+      <Item Name="get&lt;3&gt;()" Optional="true">storage.tail.tail.tail.head</Item>
+      <Item Name="get&lt;4&gt;()" Optional="true">storage.tail.tail.tail.tail.head</Item>
+      <Synthetic Name="[...]" Optional="true" Condition="(void)storage.tail.tail.tail.tail.tail.head, true">
+        <DisplayString>Next five elements:</DisplayString>
+      </Synthetic>
+      <ExpandedItem Optional="true" Condition="(void)storage.tail.tail.tail.tail.tail.head, true">storage.tail.tail.tail.tail.tail</ExpandedItem>
+    </Expand>
+  </Type>
+
+   <Type Name="grem::UniqueHandle&lt;*&gt;">
+    <DisplayString>{handle}</DisplayString>
+    <Expand>
+      <Item Name="get()">handle</Item>
+      <Item Name="get_deleter()">deleter</Item>
+    </Expand>
+  </Type>
+
+   <Type Name="grem::UniquePointer&lt;void,*&gt;">
+    <SmartPointer Usage="Minimal">handle.handle</SmartPointer>
+    <DisplayString Condition="handle == 0">nullptr</DisplayString>
+    <DisplayString Condition="handle != 0">void</DisplayString>
+    <Expand>
+      <Item Name="get()">handle.handle</Item>
+      <Item Name="get_deleter()">handle.deleter</Item>
+    </Expand>
+  </Type>
+
+   <Type Name="grem::UniquePointer&lt;*&gt;">
+    <SmartPointer Usage="Minimal">handle.handle</SmartPointer>
+    <DisplayString Condition="handle == 0">nullptr</DisplayString>
+    <DisplayString Condition="handle != 0">{*handle.handle}</DisplayString>
+    <Expand>
+      <Item Name="get()">handle.handle</Item>
+      <Item Name="get_deleter()">handle.deleter</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::Variant&lt;*&gt;">
+    <DisplayString Condition="activeTypeIndex == npos">valueless_by_exception</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 0">{storage.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 1">{storage.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 2">{storage.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 3">{storage.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 4">{storage.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 5">{storage.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 6">{storage.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 7">{storage.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 8">{storage.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 9">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 10">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 11">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 12">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 13">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 14">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 15">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 16">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 17">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 18">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 19">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 20">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 21">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 22">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 23">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 24">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 25">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 26">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 27">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 28">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 29">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 30">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 31">{storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head}</DisplayString>
+    <Expand>
+      <Item Name="index()">activeTypeIndex</Item>
+      <Item Name="get&lt;0&gt;()" Optional="true" Condition="activeTypeIndex == 0">storage.head</Item>
+      <Item Name="get&lt;1&gt;()" Optional="true" Condition="activeTypeIndex == 1">storage.tail.head</Item>
+      <Item Name="get&lt;2&gt;()" Optional="true" Condition="activeTypeIndex == 2">storage.tail.tail.head</Item>
+      <Item Name="get&lt;3&gt;()" Optional="true" Condition="activeTypeIndex == 3">storage.tail.tail.tail.head</Item>
+      <Item Name="get&lt;4&gt;()" Optional="true" Condition="activeTypeIndex == 4">storage.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;5&gt;()" Optional="true" Condition="activeTypeIndex == 5">storage.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;6&gt;()" Optional="true" Condition="activeTypeIndex == 6">storage.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;7&gt;()" Optional="true" Condition="activeTypeIndex == 7">storage.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;8&gt;()" Optional="true" Condition="activeTypeIndex == 8">storage.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;9&gt;()" Optional="true" Condition="activeTypeIndex == 9">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;10&gt;()" Optional="true" Condition="activeTypeIndex == 10">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;11&gt;()" Optional="true" Condition="activeTypeIndex == 11">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;12&gt;()" Optional="true" Condition="activeTypeIndex == 12">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;13&gt;()" Optional="true" Condition="activeTypeIndex == 13">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;14&gt;()" Optional="true" Condition="activeTypeIndex == 14">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;15&gt;()" Optional="true" Condition="activeTypeIndex == 15">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;16&gt;()" Optional="true" Condition="activeTypeIndex == 16">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;17&gt;()" Optional="true" Condition="activeTypeIndex == 17">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;18&gt;()" Optional="true" Condition="activeTypeIndex == 18">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;19&gt;()" Optional="true" Condition="activeTypeIndex == 19">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;20&gt;()" Optional="true" Condition="activeTypeIndex == 20">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;21&gt;()" Optional="true" Condition="activeTypeIndex == 21">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;22&gt;()" Optional="true" Condition="activeTypeIndex == 22">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;23&gt;()" Optional="true" Condition="activeTypeIndex == 23">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;24&gt;()" Optional="true" Condition="activeTypeIndex == 24">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;25&gt;()" Optional="true" Condition="activeTypeIndex == 25">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;26&gt;()" Optional="true" Condition="activeTypeIndex == 26">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;27&gt;()" Optional="true" Condition="activeTypeIndex == 27">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;28&gt;()" Optional="true" Condition="activeTypeIndex == 28">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;29&gt;()" Optional="true" Condition="activeTypeIndex == 29">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;30&gt;()" Optional="true" Condition="activeTypeIndex == 30">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;31&gt;()" Optional="true" Condition="activeTypeIndex == 31">storage.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.head</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::ObjectBase&lt;*&gt;">
+    <DisplayString Optional="true" Condition="membersSortedByName.elementCount == 0">{{}}</DisplayString>
+    <DisplayString Optional="true" Condition="membersSortedByName.elementCount == 1">{{... (1 item)}}</DisplayString>
+    <DisplayString Optional="true" Condition="membersSortedByName.elementCount &gt;= 2">{{... ({membersSortedByName.elementCount} items)}}</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)membersSortedByName.elementCount</Item>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Size>membersSortedByName.elementCount</Size>
+        <Loop>
+          <Item Name="[{membersSortedByName.elements[i].first}]">membersSortedByName.elements[i].second</Item>
+          <Exec>++i</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::ArrayBase&lt;*&gt;">
+    <DisplayString Optional="true" Condition="values.elementCount == 0">[]</DisplayString>
+    <DisplayString Optional="true" Condition="values.elementCount == 1">[{values.elements[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="values.elementCount == 2">[{values.elements[0]}, {values.elements[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="values.elementCount == 3">[{values.elements[0]}, {values.elements[1]}, {values.elements[2]}]</DisplayString>
+    <DisplayString Optional="true" Condition="values.elementCount &gt;= 4">[... ({values.elementCount} items)]</DisplayString>
+    <Expand>
+      <Item Name="size()" ExcludeView="simple">(size_t)values.elementCount</Item>
+      <Item Name="capacity()" ExcludeView="simple">(size_t)values.elementCapacity</Item>
+      <ArrayItems>
+        <Size>values.elementCount</Size>
+        <ValuePointer>values.elements</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::json::VariantBase&lt;*&gt;">
+    <DisplayString Condition="activeTypeIndex == npos">valueless_by_exception</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 0">{storage.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 1">{storage.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 2">{storage.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 3">{storage.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 4">{storage.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 5">{storage.tail.tail.tail.tail.tail.head}</DisplayString>
+    <Expand>
+      <Item Name="index()">activeTypeIndex</Item>
+      <Item Name="get&lt;0&gt;()" Optional="true" Condition="activeTypeIndex == 0">storage.head</Item>
+      <Item Name="get&lt;1&gt;()" Optional="true" Condition="activeTypeIndex == 1">storage.tail.head</Item>
+      <Item Name="get&lt;2&gt;()" Optional="true" Condition="activeTypeIndex == 2">storage.tail.tail.head</Item>
+      <Item Name="get&lt;3&gt;()" Optional="true" Condition="activeTypeIndex == 3">storage.tail.tail.tail.head</Item>
+      <Item Name="get&lt;4&gt;()" Optional="true" Condition="activeTypeIndex == 4">storage.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;5&gt;()" Optional="true" Condition="activeTypeIndex == 5">storage.tail.tail.tail.tail.tail.head</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::json::ValueBase&lt;*&gt;">
+    <DisplayString Condition="activeTypeIndex == npos">valueless_by_exception</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 0">{storage.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 1">{storage.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 2">{storage.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 3">{storage.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 4">{storage.tail.tail.tail.tail.head}</DisplayString>
+    <DisplayString Optional="true" Condition="activeTypeIndex == 5">{storage.tail.tail.tail.tail.tail.head}</DisplayString>
+    <Expand>
+      <Item Name="index()">activeTypeIndex</Item>
+      <Item Name="get&lt;0&gt;()" Optional="true" Condition="activeTypeIndex == 0">storage.head</Item>
+      <Item Name="get&lt;1&gt;()" Optional="true" Condition="activeTypeIndex == 1">storage.tail.head</Item>
+      <Item Name="get&lt;2&gt;()" Optional="true" Condition="activeTypeIndex == 2">storage.tail.tail.head</Item>
+      <Item Name="get&lt;3&gt;()" Optional="true" Condition="activeTypeIndex == 3">storage.tail.tail.tail.head</Item>
+      <Item Name="get&lt;4&gt;()" Optional="true" Condition="activeTypeIndex == 4">storage.tail.tail.tail.tail.head</Item>
+      <Item Name="get&lt;5&gt;()" Optional="true" Condition="activeTypeIndex == 5">storage.tail.tail.tail.tail.tail.head</Item>
+      <Item Name="getSource()">source</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::execution::EntityID">
+    <DisplayString Condition="value == 0xFFFFFFFFFFFFFFFFull">INVALID</DisplayString>
+    <DisplayString Condition="value != 0xFFFFFFFFFFFFFFFFull">{{index = {value &amp; 0xFFFFFFFFull}, generation = {(value &gt;&gt; 32) &amp; 0xFFFFull}, flags = {(value &gt;&gt; 48) &amp; 0xFFFFull,b}}}</DisplayString>
+    <Expand>
+      <Item Name="index">(unsigned int)(value &amp; 0xFFFFFFFFull)</Item>
+      <Item Name="generation">(unsigned short)((value &gt;&gt; 32) &amp; 0xFFFFull)</Item>
+      <Item Name="flags">(unsigned short)((value &gt;&gt; 48) &amp; 0xFFFFull),b</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::networking::IPv4Address">
+    <Intrinsic Name="addr4" Expression="sin_addr.S_un.S_addr" />
+    <DisplayString>{(addr4() &gt;&gt; 0) &amp; 0xFF,d}.{(addr4() &gt;&gt; 8) &amp; 0xFF,d}.{(addr4() &gt;&gt; 16) &amp; 0xFF,d}.{(addr4() &gt;&gt; 24) &amp; 0xFF,d}</DisplayString>
+  </Type>
+
+  <Type Name="grem::networking::IPv6Address">
+    <Intrinsic Name="addr6" Expression="((unsigned short*)&amp;sin6_addr)" />
+    <DisplayString>{addr6()[0],xb}:{addr6()[1],xb}:{addr6()[2],xb}:{addr6()[3],xb}:{addr6()[4],xb}:{addr6()[5],xb}:{addr6()[6],xb}:{addr6()[7],xb}</DisplayString>
+  </Type>
+
+  <Type Name="grem::networking::IPv4Endpoint">
+    <Intrinsic Name="addr4" Expression="addr.sin_addr.S_un.S_addr" />
+    <Intrinsic Name="port4" Expression="addr.sin_port" />
+    <DisplayString Condition="port4() == 0">{(addr4() &gt;&gt; 0) &amp; 0xFF,d}.{(addr4() &gt;&gt; 8) &amp; 0xFF,d}.{(addr4() &gt;&gt; 16) &amp; 0xFF,d}.{(addr4() &gt;&gt; 24) &amp; 0xFF,d}</DisplayString>
+    <DisplayString Condition="port4() != 0">{(addr4() &gt;&gt; 0) &amp; 0xFF,d}.{(addr4() &gt;&gt; 8) &amp; 0xFF,d}.{(addr4() &gt;&gt; 16) &amp; 0xFF,d}.{(addr4() &gt;&gt; 24) &amp; 0xFF,d}:{((port4() &amp; 0x00FF) &lt;&lt; 8) | ((port4() &amp; 0xFF00) &gt;&gt; 8),d}</DisplayString>
+  </Type>
+
+  <Type Name="grem::networking::IPv6Endpoint">
+    <Intrinsic Name="addr6" Expression="((unsigned short*)&amp;addr.sin6_addr)" />
+    <Intrinsic Name="port6" Expression="addr.sin6_port" />
+    <DisplayString Condition="port6() == 0">{addr6()[0],xb}:{addr6()[1],xb}:{addr6()[2],xb}:{addr6()[3],xb}:{addr6()[4],xb}:{addr6()[5],xb}:{addr6()[6],xb}:{addr6()[7],xb}</DisplayString>
+    <DisplayString Condition="port6() != 0">[{addr6()[0],xb}:{addr6()[1],xb}:{addr6()[2],xb}:{addr6()[3],xb}:{addr6()[4],xb}:{addr6()[5],xb}:{addr6()[6],xb}:{addr6()[7],xb}]:{((port6() &amp; 0x00FF) &lt;&lt; 8) | ((port6() &amp; 0xFF00) &gt;&gt; 8),d}</DisplayString>
+  </Type>
+
+  <Type Name="grem::networking::Endpoint">
+    <Intrinsic Name="family" Expression="*(short*)&amp;storage" />
+    <Intrinsic Name="addr4" Expression="(((sockaddr_in*)&amp;storage)-&gt;sin_addr.S_un.S_addr)" />
+    <Intrinsic Name="port4" Expression="(((sockaddr_in*)&amp;storage)-&gt;sin_port)" />
+    <Intrinsic Name="addr6" Expression="(unsigned short*)(((sockaddr_in*)&amp;storage)-&gt;sin6_addr)" />
+    <Intrinsic Name="port6" Expression="(((sockaddr_in*)&amp;storage)-&gt;sin6_port)" />
+    <DisplayString Condition="family() == 2 &amp;&amp; port4() == 0">{(addr4() &gt;&gt; 0) &amp; 0xFF,d}.{(addr4() &gt;&gt; 8) &amp; 0xFF,d}.{(addr4() &gt;&gt; 16) &amp; 0xFF,d}.{(addr4() &gt;&gt; 24) &amp; 0xFF,d}</DisplayString>
+    <DisplayString Condition="family() == 2 &amp;&amp; port4() != 0">{(addr4() &gt;&gt; 0) &amp; 0xFF,d}.{(addr4() &gt;&gt; 8) &amp; 0xFF,d}.{(addr4() &gt;&gt; 16) &amp; 0xFF,d}.{(addr4() &gt;&gt; 24) &amp; 0xFF,d}:{((port4() &amp; 0x00FF) &lt;&lt; 8) | ((port4() &amp; 0xFF00) &gt;&gt; 8),d}</DisplayString>
+    <DisplayString Condition="family() == 23 &amp;&amp; port6() == 0">{addr6()[0],xb}:{addr6()[1],xb}:{addr6()[2],xb}:{addr6()[3],xb}:{addr6()[4],xb}:{addr6()[5],xb}:{addr6()[6],xb}:{addr6()[7],xb}</DisplayString>
+    <DisplayString Condition="family() == 23 &amp;&amp; port6() != 0">[{addr6()[0],xb}:{addr6()[1],xb}:{addr6()[2],xb}:{addr6()[3],xb}:{addr6()[4],xb}:{addr6()[5],xb}:{addr6()[6],xb}:{addr6()[7],xb}]:{((port6() &amp; 0x00FF) &lt;&lt; 8) | ((port6() &amp; 0xFF00) &gt;&gt; 8),d}</DisplayString>
+  </Type>
+
+  <Type Name="grem::physics::Zero">
+    <DisplayString>0</DisplayString>
+  </Type>
+
+  <Type Name="grem::physics::Quantity&lt;*,*&gt;">
+    <AlternativeType Name="grem::physics::Direction&lt;*&gt;" />
+    <DisplayString Optional="true" Condition="$T1 == 1">({((float*)_private_value)[0]})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 2">({((float*)_private_value)[0]}, {((float*)_private_value)[1]})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 3">({((float*)_private_value)[0]}, {((float*)_private_value)[1]}, {((float*)_private_value)[2]})</DisplayString>
+    <Expand>
+      <Item Name="x" Optional="true" Condition="$T1 &gt;= 1">((float*)_private_value)[0]</Item>
+      <Item Name="y" Optional="true" Condition="$T1 &gt;= 2">((float*)_private_value)[1]</Item>
+      <Item Name="z" Optional="true" Condition="$T1 &gt;= 3">((float*)_private_value)[2]</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::physics::TensorQuantity&lt;*,*&gt;">
+    <AlternativeType Name="grem::physics::OrthonormalBasis&lt;*&gt;" />
+    <DisplayString Optional="true" Condition="$T1 == 1">[{_private_value[0]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 2">[{_private_value[0]}, {_private_value[1]}]</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 3">[{_private_value[0]}, {_private_value[1]}, {_private_value[2]}]</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>$T1</Size>
+        <ValuePointer>_private_value</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="grem::physics::Orientation&lt;*&gt;">
+    <DisplayString>{_private_value}</DisplayString>
+    <Expand>
+      <Item Name="x" Optional="true" Condition="$T1 == 3">_private_value.x</Item>
+      <Item Name="y" Optional="true" Condition="$T1 == 3">_private_value.y</Item>
+      <Item Name="z" Optional="true" Condition="$T1 == 3">_private_value.z</Item>
+      <Item Name="w" Optional="true" Condition="$T1 == 3">_private_value.w</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>

@@ -1,0 +1,27 @@
+{
+    "cmake.configureArgs": ["-DFETCHCONTENT_UPDATES_DISCONNECTED=ON"],
+    "cmake.mergedCompileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "cmake.debugConfig": {
+        "cwd": "${workspaceFolder}"
+    },
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/build",
+        "--header-insertion=never"
+    ],
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/spirv-tools-src/utils/vscode/package.json": true
+    },
+    "files.associations": {
+        "*.json5": "coffeescript"
+    },
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": false,
+    "editor.inlayHints.enabled": "off"
+}

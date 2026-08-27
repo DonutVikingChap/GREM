@@ -1,196 +1,398 @@
-#include <donut/events/Error.hpp>
-#include <donut/events/Input.hpp>
-#include <donut/events/InputManager.hpp>
-#include <donut/math.hpp>
+// SPDX-FileCopyrightText: 2026 Ivar Härnqvist
+// SPDX-License-Identifier: MIT
 
-#include <SDL.h>        // SDL...
-#include <cstddef>      // std::size_t
-#include <fmt/format.h> // fmt::format
-#include <optional>     // std::optional
-#include <vector>       // std::vector
+#include <GREM/build_config.hpp>
 
-namespace donut::events {
+#include <GREM/core/algorithms.hpp>
+#include <GREM/core/concepts.hpp>
+#include <GREM/core/data/Allocation.hpp>
+#include <GREM/core/data/ArrayList.hpp>
+#include <GREM/core/data/CStringView.hpp>
+#include <GREM/core/data/HashMap.hpp>
+#include <GREM/core/data/Optional.hpp>
+#include <GREM/core/data/Span.hpp>
+#include <GREM/core/data/String.hpp>
+#include <GREM/core/data/StringView.hpp>
+#include <GREM/core/formats/json.hpp>
+#include <GREM/core/fundamentals.hpp>
+#include <GREM/core/math.hpp>
+#include <GREM/core/metaprogramming.hpp>
+#include <GREM/events/Error.hpp>
+#include <GREM/events/Input.hpp>
+#include <GREM/events/InputManager.hpp>
+
+#include <sstream>     // std::istringstream, std::ostringstream
+#include <type_traits> // std::remove_cvref_t
+#include <utility>     // std::move
+
+namespace grem::events {
 
 namespace {
 
-constexpr float DIAGONAL_RATIO = 0.41421356237f; // sqrt(2) - 1 or tan(pi / 8)
-
-[[nodiscard]] i32 getIntegerValue(float value) noexcept {
-	return static_cast<i32>(floor(value * 32767.5f));
-}
-
-[[nodiscard]] float getFloatValue(i32 value) noexcept {
-	return (static_cast<float>(value) + 0.5f) / 32767.5f;
-}
+// Equal to tan(pi / 8) or tan(22.5 degrees), i.e. sin(22.5 degrees) / cos(22.5 degrees) or y / x at 22.5 degrees on unit circle.
+constexpr float DIAGONAL_RATIO_THRESHOLD = numbers::SQRT2 - 1.0f;
 
 } // namespace
 
 InputManager::InputManager(const InputManagerOptions& options)
-	: options(options) {
-	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
-		throw Error{fmt::format("Failed to initialize SDL gamecontroller subsystem:\n{}", SDL_GetError())};
+	: initialPreferences(options.preferences)
+	, options(options) {}
+
+void InputManager::loadConfiguration(String fileContents, CStringView filepath, FunctionView<Optional<OutputIndex>(StringView actionName)> getOutputIndex,
+	FunctionView<void(StringView key, json::Reader& reader)> readExtraProperty) {
+	try {
+		std::istringstream stream{std::move(fileContents)};
+		json::Reader reader{stream};
+		InputManagerPreferences preferences = getInitialPreferences();
+		reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void {
+			if (key == "bindings") {
+				reader.readCustomObject([&](const json::SourceLocation& source, const json::String& key) -> void {
+					if (const Input input = findInputByIdentifier(key); input != Input::UNKNOWN) {
+						const auto bindAction = [&](const json::SourceLocation& source, const json::String& value) -> void {
+							if (const Optional<OutputIndex> outputIndex = getOutputIndex(value)) {
+								addBinding(input, *outputIndex);
+							} else {
+								throw json::Error{formatString("Invalid action name \"{}\".", value), source};
+							}
+						};
+						if (reader.nextIsString()) {
+							bindAction(source, reader.readString());
+						} else {
+							reader.readCustomArray([&](const json::SourceLocation& source) -> void { bindAction(source, reader.readString()); });
+						}
+					} else {
+						throw json::Error{formatString("Invalid input identifier \"{}\".", key), source};
+					}
+				});
+			} else {
+				bool found = false;
+				meta::forEachNamedField(preferences, [&](StringView name, auto& field) -> void {
+					if (!found && key == name) {
+						found = true;
+						if constexpr (same_as<std::remove_cvref_t<decltype(field)>, vec2>) {
+							field *= reader.deserialize<vec2>();
+						} else {
+							reader.deserialize(field);
+						}
+					}
+				});
+				if (!found) {
+					readExtraProperty(key, reader);
+				}
+			}
+		});
+		setPreferences(preferences);
+	} catch (const json::Error& e) {
+		if (!filepath.empty()) {
+			if (e.messageAttachesToPrecedingFilepath()) {
+				String message = formatString("Failed to load configuration.\n{}:", filepath);
+				e.writeMessage(message);
+				throw json::Error{message, json::SourceLocation{.lineNumber = 0, .columnNumber = 0}};
+			}
+			throw json::Error{formatString("Failed to load configuration \"{}\":\n{}", filepath, e.what()), e.getSource()};
+		}
+		throw json::Error{formatString("Failed to load configuration:\n{}", e.what()), e.getSource()};
 	}
 }
 
-InputManager::~InputManager() {
-	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
-}
+String InputManager::saveConfiguration(FunctionView<Optional<String>(OutputIndex outputIndex)> getActionName, Span<const Pair<StringView, json::Variant>> extraProperties) const {
+	try {
+		std::ostringstream stream{};
+		json::Writer writer{stream};
+		writer.writeCustomObject([&](auto writeProperty) -> void {
+			const InputManagerPreferences preferences = getPreferences();
+			const InputManagerPreferences initialPreferences = getInitialPreferences();
+			const auto& preferencesFields = meta::getFields(preferences);
+			const auto& initialPreferencesFields = meta::getFields(initialPreferences);
+			meta::forEachNamedFieldIndex<InputManagerPreferences>([&](StringView name, auto index) -> void {
+				const auto& field = get<index>(preferencesFields);
+				const auto& initialField = get<index>(initialPreferencesFields);
+				if (field != initialField) {
+					if constexpr (same_as<std::remove_cvref_t<decltype(field)>, vec2>) {
+						writeProperty(name, field / initialField);
+					} else {
+						writeProperty(name, field);
+					}
+				}
+			});
 
-void InputManager::prepareForEvents() {
-	previousPersistentOutputs = currentPersistentOutputs;
-	transientOutputPresses = {};
-	transientOutputReleases = {};
-	outputRelativeStates.fill(0);
-	previousPersistentInputs = currentPersistentInputs;
-	transientInputPresses = {};
-	transientInputReleases = {};
-	mouseTransientMotion = false;
-	mouseWheelHorizontalTransientMotion = false;
-	mouseWheelVerticalTransientMotion = false;
-	controllerLeftStickTransientMotion = false;
-	controllerRightStickTransientMotion = false;
-	controllerLeftTriggerTransientMotion = false;
-	controllerRightTriggerTransientMotion = false;
-	touchTransientMotion = false;
-	touchTransientPressure = false;
+			for (const auto& [key, value] : extraProperties) {
+				writeProperty(key, value);
+			}
+
+			writeProperty("bindings", getBindings(), [&](Span<const Binding> bindings) -> void {
+				writer.writeCustomObject([&](auto writeProperty) -> void {
+					for (const Binding& binding : bindings) {
+						const StringView inputIdentifier = getInputIdentifier(binding.input);
+
+						json::Array array{};
+						for (const OutputIndex outputIndex : binding.outputIndices) {
+							if (const Optional<String> actionName = getActionName(outputIndex)) {
+								array.emplace_back(*actionName);
+							} else {
+								throw events::Error{
+									formatString("Failed to save configuration:\n"
+												 "Invalid output number {} in binding for input \"{}\".",
+										outputIndex, inputIdentifier)};
+							}
+						}
+
+						if (array.size() == 1) {
+							writeProperty(inputIdentifier, std::move(array.front()));
+						} else {
+							writeProperty(inputIdentifier, std::move(array));
+						}
+					}
+				});
+			});
+		});
+		return std::move(stream).str();
+	} catch (const json::Error&) {
+		Error::throwWithNested(Error{"Failed to save configuration."});
+	}
 }
 
 void InputManager::handleEvent(const Event& event) {
-	match(event)(                                                               //
-		[&](const WindowKeyboardFocusLostEvent&) -> void { resetAllInputs(); }, //
-		[&](const WindowMouseFocusLostEvent&) -> void {
-			mousePosition.reset();
-			touchPosition.reset();
-			touchPressure.reset();
-		},                                                                                     //
-		[&](const KeyPressedEvent& pressed) -> void { press(pressed.physicalKeyInput); },      //
-		[&](const KeyReleasedEvent& released) -> void { release(released.physicalKeyInput); }, //
-		[&](const MouseMovedEvent& moved) -> void {
-			setMousePosition({static_cast<float>(moved.mousePosition.x), static_cast<float>(moved.mousePosition.y)},
-				{static_cast<float>(moved.relativeMouseMotion.x), static_cast<float>(moved.relativeMouseMotion.y)});
-		},                                                                                                     //
-		[&](const MouseButtonPressedEvent& pressed) -> void { press(pressed.physicalMouseButtonInput); },      //
-		[&](const MouseButtonReleasedEvent& released) -> void { release(released.physicalMouseButtonInput); }, //
-		[&](const MouseWheelScrolledEvent& scrolled) -> void {
-			scrollMouseWheelHorizontally(scrolled.scrollAmount.x);
-			scrollMouseWheelVertically(scrolled.scrollAmount.y);
-		}, //
-		[&](const ControllerAddedEvent& added) -> void {
-			if (controller) {
-				controller.reset(SDL_GameControllerOpen(added.controllerId));
-				resetAllInputs();
-			} else {
-				controller.reset(SDL_GameControllerOpen(added.controllerId));
+	GREM_MATCH(event) {
+		GREM_CASE(const WindowKeyboardFocusLostEvent& focusLost) {
+			releaseAll(focusLost.timestamp);
+			break;
+		}
+		GREM_CASE(const WindowMouseFocusLostEvent& mouseFocusLost) {
+			currentState.mousePosition.reset();
+			currentState.touchPosition.reset();
+			currentState.touchPressure.reset();
+			previousState.mousePosition.reset();
+			previousState.touchPosition.reset();
+			previousState.touchPressure.reset();
+			break;
+		}
+		GREM_CASE(const KeyPressedEvent& pressed) {
+			setCurrentState(pressed.timestamp, pressed.getInput(), ControlState{.activePresses = 1, .value = 1.0f});
+			break;
+		}
+		GREM_CASE(const KeyReleasedEvent& released) {
+			setCurrentState(released.timestamp, released.getInput(), ControlState{.activePresses = 0, .value = 0.0f});
+			break;
+		}
+		GREM_CASE(const MouseMovedEvent& moved) {
+			setMousePosition(moved.timestamp, moved.mousePosition, moved.relativeMouseMotion);
+			break;
+		}
+		GREM_CASE(const MouseButtonPressedEvent& pressed) {
+			setCurrentState(pressed.timestamp, pressed.getInput(), ControlState{.activePresses = 1, .value = 1.0f});
+			break;
+		}
+		GREM_CASE(const MouseButtonReleasedEvent& released) {
+			setCurrentState(released.timestamp, released.getInput(), ControlState{.activePresses = 0, .value = 0.0f});
+			break;
+		}
+		GREM_CASE(const MouseWheelScrolledEvent& scrolled) {
+			scrollMouseWheel(scrolled.timestamp, scrolled.scrollAmount);
+			break;
+		}
+		GREM_CASE(const ControllerAddedEvent& added) {
+			releaseAll(added.timestamp);
+			break;
+		}
+		GREM_CASE(const ControllerRemovedEvent& removed) {
+			releaseAll(removed.timestamp);
+			break;
+		}
+		GREM_CASE(const ControllerAxisMovedEvent& moved) {
+			switch (moved.axis) {
+				case ControllerAxis::LEFT_STICK_X:
+					setControllerLeftStickPosition(moved.timestamp,
+						{moved.axisValue, (currentState.controllerLeftStickPosition) ? currentState.controllerLeftStickPosition->y : int16_t{0}});
+					break;
+				case ControllerAxis::LEFT_STICK_Y:
+					setControllerLeftStickPosition(moved.timestamp,
+						{(currentState.controllerLeftStickPosition) ? currentState.controllerLeftStickPosition->x : int16_t{0}, moved.axisValue});
+					break;
+				case ControllerAxis::RIGHT_STICK_X:
+					setControllerRightStickPosition(moved.timestamp,
+						{moved.axisValue, (currentState.controllerRightStickPosition) ? currentState.controllerRightStickPosition->y : int16_t{0}});
+					break;
+				case ControllerAxis::RIGHT_STICK_Y:
+					setControllerRightStickPosition(moved.timestamp,
+						{(currentState.controllerRightStickPosition) ? currentState.controllerRightStickPosition->x : int16_t{0}, moved.axisValue});
+					break;
+				case ControllerAxis::LEFT_TRIGGER: setControllerLeftTriggerPosition(moved.timestamp, moved.axisValue); break;
+				case ControllerAxis::RIGHT_TRIGGER: setControllerRightTriggerPosition(moved.timestamp, moved.axisValue); break;
+				default: break;
 			}
-		}, //
-		[&](const ControllerRemovedEvent& removed) -> void {
-			if (controller && removed.controllerId == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(static_cast<SDL_GameController*>(controller.get())))) {
-				controller.reset();
-				resetAllInputs();
-			}
-		}, //
-		[&](const ControllerAxisMovedEvent& moved) -> void {
-			if (controller && moved.controllerId == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(static_cast<SDL_GameController*>(controller.get())))) {
-				const float value = getFloatValue(static_cast<i32>(moved.axisValue));
-				switch (moved.axis) {
-					case ControllerAxisMovedEvent::ControllerAxis::LEFT_STICK_X:
-						setControllerLeftStickPosition({value, (controllerLeftStickPosition) ? controllerLeftStickPosition->y : 0});
-						break;
-					case ControllerAxisMovedEvent::ControllerAxis::LEFT_STICK_Y:
-						setControllerLeftStickPosition({(controllerLeftStickPosition) ? controllerLeftStickPosition->x : 0, value});
-						break;
-					case ControllerAxisMovedEvent::ControllerAxis::RIGHT_STICK_X:
-						setControllerRightStickPosition({value, (controllerRightStickPosition) ? controllerRightStickPosition->y : 0});
-						break;
-					case ControllerAxisMovedEvent::ControllerAxis::RIGHT_STICK_Y:
-						setControllerRightStickPosition({(controllerRightStickPosition) ? controllerRightStickPosition->x : 0, value});
-						break;
-					case ControllerAxisMovedEvent::ControllerAxis::LEFT_TRIGGER: setControllerLeftTriggerPosition(value); break;
-					case ControllerAxisMovedEvent::ControllerAxis::RIGHT_TRIGGER: setControllerRightTriggerPosition(value); break;
-					default: break;
+			break;
+		}
+		GREM_CASE(const ControllerButtonPressedEvent& pressed) {
+			setCurrentState(pressed.timestamp, pressed.getInput(), ControlState{.activePresses = 1, .value = 1.0f});
+			break;
+		}
+		GREM_CASE(const ControllerButtonReleasedEvent& released) {
+			setCurrentState(released.timestamp, released.getInput(), ControlState{.activePresses = 0, .value = 0.0f});
+			break;
+		}
+		GREM_CASE(const TouchMovedEvent& moved) {
+			setTouchPosition(moved.timestamp, moved.normalizedFingerPosition, moved.relativeNormalizedFingerMotion);
+			setTouchPressure(moved.timestamp, moved.normalizedFingerPressure);
+			break;
+		}
+		GREM_CASE(const TouchPressedEvent& pressed) {
+			setTouchPressure(pressed.timestamp, pressed.normalizedFingerPressure);
+			setCurrentState(pressed.timestamp, Input::TOUCH_FINGER_TAP, ControlState{.activePresses = 1, .value = 1.0f});
+			break;
+		}
+		GREM_CASE(const TouchReleasedEvent& released) {
+			setTouchPressure(released.timestamp, released.normalizedFingerPressure);
+			setCurrentState(released.timestamp, Input::TOUCH_FINGER_TAP, ControlState{.activePresses = 0, .value = 0.0f});
+			break;
+		}
+		GREM_CASE_DEFAULT(const auto& other) break;
+	}
+}
+
+void InputManager::bind(Input input, ArrayList<OutputIndex> outputIndices) {
+	if (getInputIndex(input) >= INPUT_COUNT || input == Input::UNKNOWN) {
+		[[unlikely]];
+		return;
+	}
+
+	if (outputIndices.empty()) {
+		unbind(input);
+		return;
+	}
+
+	const auto [it, inserted] = bindings.try_emplace(input);
+	try {
+		for (size_t i = 0; i < outputIndices.size(); ++i) {
+			const OutputIndex outputIndex = outputIndices[i];
+			if (outputIndex < OUTPUT_COUNT) {
+				try {
+					ArrayList<Input>& inputs = boundInputs[outputIndex];
+					if (contains(inputs, input)) {
+						// Make sure the catch block doesn't call pop_back() for an element we never added.
+						outputIndices[i] = OUTPUT_COUNT;
+					} else {
+						inputs.push_back(input);
+					}
+				} catch (...) {
+					while (i-- > 0) {
+						const OutputIndex oldOutputIndex = outputIndices[i];
+						if (oldOutputIndex < OUTPUT_COUNT) {
+							boundInputs.at(oldOutputIndex).pop_back();
+						}
+					}
+					throw;
 				}
 			}
-		}, //
-		[&](const ControllerButtonPressedEvent& pressed) -> void {
-			if (controller && pressed.controllerId == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(static_cast<SDL_GameController*>(controller.get())))) {
-				press(pressed.physicalControllerButtonInput);
+		}
+	} catch (...) {
+		if (inserted) {
+			bindings.erase(it);
+		}
+		throw;
+	}
+
+	// Save the assignment of the new output indices until last, when we know all the bindings were successfully added.
+	static_assert(nothrow_movable<decltype(outputIndices)>);
+	it->second = std::move(outputIndices);
+}
+
+void InputManager::addBindings(Input input, Span<const OutputIndex> outputIndices) {
+	if (getInputIndex(input) >= INPUT_COUNT || input == Input::UNKNOWN) {
+		[[unlikely]];
+		return;
+	}
+
+	const auto [it, inserted] = bindings.try_emplace(input);
+	try {
+		for (const OutputIndex outputIndex : outputIndices) {
+			if (outputIndex < OUTPUT_COUNT) {
+				ArrayList<Input>& inputs = boundInputs[outputIndex];
+				if (!contains(inputs, input)) {
+					inputs.push_back(input);
+					try {
+						it->second.push_back(outputIndex);
+					} catch (...) {
+						inputs.pop_back();
+						throw;
+					}
+				}
 			}
-		}, //
-		[&](const ControllerButtonReleasedEvent& released) -> void {
-			if (controller && released.controllerId == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(static_cast<SDL_GameController*>(controller.get())))) {
-				release(released.physicalControllerButtonInput);
+		}
+	} catch (...) {
+		if (inserted) {
+			bindings.erase(it);
+		}
+		throw;
+	}
+}
+
+void InputManager::unbind(Input input) noexcept {
+	if (const auto it = bindings.find(input); it != bindings.end()) {
+		for (const OutputIndex outputIndex : it->second) {
+			if (const auto itBoundInputs = boundInputs.find(outputIndex); itBoundInputs != boundInputs.end()) {
+				erase(itBoundInputs->second, input);
+				if (itBoundInputs->second.empty()) {
+					boundInputs.erase(itBoundInputs);
+				}
 			}
-		}, //
-		[&](const TouchMovedEvent& moved) -> void {
-			setTouchPosition(moved.normalizedFingerPosition);
-			setTouchPressure(moved.normalizedFingerPressure);
-		}, //
-		[&](const TouchPressedEvent& pressed) -> void {
-			setTouchPressure(pressed.normalizedFingerPressure);
-			press(Input::TOUCH_FINGER_TAP);
-		}, //
-		[&](const TouchReleasedEvent& released) -> void {
-			setTouchPressure(released.normalizedFingerPressure);
-			release(Input::TOUCH_FINGER_TAP);
-		}, //
-		[&](const auto&) -> void {});
-}
-
-void InputManager::bind(Input input, Outputs outputs) {
-	bindings[input] = outputs;
-}
-
-void InputManager::addBinding(Input input, Outputs outputs) {
-	bindings[input] |= outputs;
-}
-
-void InputManager::unbind(Input input) {
-	bindings.erase(input);
+		}
+		bindings.erase(it);
+	}
 }
 
 void InputManager::unbindAll() noexcept {
 	bindings.clear();
+	boundInputs.clear();
 }
 
-void InputManager::press(Input input, i32 offset) noexcept {
-	const std::size_t inputIndex = getInputIndex(input);
-	const bool wasReleased = !currentPersistentInputs.test(inputIndex);
-	currentPersistentInputs.set(inputIndex);
-	transientInputPresses.set(inputIndex);
-	if (const auto it = bindings.find(input); it != bindings.end()) {
-		const Outputs outputs = it->second;
-		currentPersistentOutputs |= outputs;
-		transientOutputPresses |= outputs;
-		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
-			if (outputs.test(i)) {
-				outputRelativeStates[i] += offset;
-				if (wasReleased) {
-					outputAbsoluteStates[i] += offset;
-					++outputPersistentPresses[i];
-				}
-			}
-		}
+void InputManager::setCurrentState(TimePoint timestamp, Input input, ControlState newState) {
+	const size_t inputIndex = getInputIndex(input);
+	if (inputIndex >= INPUT_COUNT || input == Input::UNKNOWN) {
+		[[unlikely]];
+		return;
 	}
-}
 
-void InputManager::release(Input input, i32 offset) noexcept {
-	const std::size_t inputIndex = getInputIndex(input);
-	const bool wasPressed = currentPersistentInputs.test(inputIndex);
-	currentPersistentInputs.set(inputIndex, false);
-	transientInputReleases.set(inputIndex);
+	const ControlState oldState = currentState.inputStates[inputIndex];
+	const ControlDelta delta{
+		.addedPresses = newState.activePresses - oldState.activePresses,
+		.motion = newState.value - oldState.value,
+	};
+	currentState.inputStates[inputIndex] = newState;
+
+	relativeState.inputDeltas[inputIndex].addedPresses += delta.addedPresses;
+	relativeState.inputDeltas[inputIndex].motion += delta.motion;
+
+	if (delta.addedPresses > 0) {
+		relativeState.transientInputPresses[inputIndex] = true;
+	} else if (delta.addedPresses < 0) {
+		relativeState.transientInputReleases[inputIndex] = true;
+	}
+
 	if (const auto it = bindings.find(input); it != bindings.end()) {
-		const Outputs outputs = it->second;
-		transientOutputReleases |= outputs;
-		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
-			if (outputs.test(i)) {
-				outputRelativeStates[i] += offset;
-				if (wasPressed) {
-					outputAbsoluteStates[i] += offset;
-					if (outputPersistentPresses[i] > 1) {
-						--outputPersistentPresses[i];
-					} else {
-						outputPersistentPresses[i] = 0;
-						currentPersistentOutputs.set(i, false);
+		for (const OutputIndex outputIndex : it->second) {
+			if (delta.addedPresses > 0) {
+				relativeState.transientOutputPresses[outputIndex] = true;
+			} else if (delta.addedPresses < 0) {
+				relativeState.transientOutputReleases[outputIndex] = true;
+			}
+
+			const ControlState newOutputState = getCurrentState(outputIndex);
+			const ControlState oldOutputState{
+				.activePresses = newOutputState.activePresses - delta.addedPresses,
+				.value = newOutputState.value - delta.motion,
+			};
+			if (options.emitOutputEvents) {
+				if (delta.motion != 0.0f) {
+					pendingOutputEvents.emplace_back(OutputMoved{OutputEventBase{timestamp, outputIndex, newOutputState, delta}});
+				}
+				if (newOutputState.activePresses > 0) {
+					if (oldOutputState.activePresses <= 0) {
+						pendingOutputEvents.emplace_back(OutputPressed{OutputEventBase{timestamp, outputIndex, newOutputState, ControlDelta{.addedPresses = 0, .motion = 0.0f}}});
+					}
+				} else {
+					if (oldOutputState.activePresses > 0) {
+						pendingOutputEvents.emplace_back(OutputReleased{OutputEventBase{timestamp, outputIndex, newOutputState, ControlDelta{.addedPresses = 0, .motion = 0.0f}}});
 					}
 				}
 			}
@@ -198,450 +400,228 @@ void InputManager::release(Input input, i32 offset) noexcept {
 	}
 }
 
-void InputManager::move(Input input, i32 offset) noexcept {
-	if (offset > 0) {
-		const std::size_t inputIndex = getInputIndex(input);
-		transientInputPresses.set(inputIndex);
-		transientInputReleases.set(inputIndex);
-		if (const auto it = bindings.find(input); it != bindings.end()) {
-			const Outputs outputs = it->second;
-			transientOutputPresses |= outputs;
-			transientOutputReleases |= outputs;
-			for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
-				if (outputs.test(i)) {
-					outputRelativeStates[i] += offset;
+void InputManager::setCurrentState(TimePoint timestamp, OutputIndex outputIndex, ControlState newState) {
+	if (outputIndex >= OUTPUT_COUNT) {
+		[[unlikely]];
+		return;
+	}
+
+	const ControlState oldState = currentState.outputExternalStates[outputIndex];
+	const ControlDelta delta{
+		.addedPresses = newState.activePresses - oldState.activePresses,
+		.motion = newState.value - oldState.value,
+	};
+	currentState.outputExternalStates[outputIndex] = newState;
+
+	relativeState.outputExternalDeltas[outputIndex].addedPresses += delta.addedPresses;
+	relativeState.outputExternalDeltas[outputIndex].motion += delta.motion;
+
+	if (delta.addedPresses > 0) {
+		relativeState.transientOutputPresses[outputIndex] = true;
+	} else if (delta.addedPresses < 0) {
+		relativeState.transientOutputReleases[outputIndex] = true;
+	}
+
+	if (options.emitOutputEvents) {
+		if (delta.motion != 0.0f) {
+			pendingOutputEvents.emplace_back(OutputMoved{OutputEventBase{timestamp, outputIndex, newState, delta}});
+		}
+		if (newState.activePresses > 0) {
+			if (oldState.activePresses <= 0) {
+				pendingOutputEvents.emplace_back(OutputPressed{OutputEventBase{timestamp, outputIndex, newState, ControlDelta{.addedPresses = 0, .motion = 0.0f}}});
+			}
+		} else {
+			if (oldState.activePresses > 0) {
+				pendingOutputEvents.emplace_back(OutputReleased{OutputEventBase{timestamp, outputIndex, newState, ControlDelta{.addedPresses = 0, .motion = 0.0f}}});
+			}
+		}
+	}
+}
+
+void InputManager::addRelativeState(TimePoint timestamp, Input input, ControlDelta delta) {
+	const size_t inputIndex = getInputIndex(input);
+	if (inputIndex >= INPUT_COUNT || input == Input::UNKNOWN) {
+		[[unlikely]];
+		return;
+	}
+
+	relativeState.inputDeltas[inputIndex].addedPresses += delta.addedPresses;
+	relativeState.inputDeltas[inputIndex].motion += delta.motion;
+
+	if (delta.addedPresses > 0) {
+		relativeState.transientInputPresses[inputIndex] = true;
+	} else if (delta.addedPresses < 0) {
+		relativeState.transientInputReleases[inputIndex] = true;
+	}
+
+	if (const auto it = bindings.find(input); it != bindings.end()) {
+		for (const OutputIndex outputIndex : it->second) {
+			if (delta.addedPresses > 0) {
+				relativeState.transientOutputPresses[outputIndex] = true;
+			} else if (delta.addedPresses < 0) {
+				relativeState.transientOutputReleases[outputIndex] = true;
+			}
+
+			if (options.emitOutputEvents) {
+				if (delta.motion != 0.0f) {
+					const ControlState newOutputState = getCurrentState(outputIndex);
+					pendingOutputEvents.emplace_back(OutputMoved{OutputEventBase{timestamp, outputIndex, newOutputState, delta}});
 				}
 			}
 		}
 	}
 }
 
-void InputManager::set(Input input, i32 value) noexcept {
-	if (const auto it = bindings.find(input); it != bindings.end()) {
-		const Outputs outputs = it->second;
-		for (std::size_t i = 0; i < OUTPUT_COUNT; ++i) {
-			if (outputs.test(i)) {
-				outputAbsoluteStates[i] = value;
-			}
+void InputManager::addRelativeState(TimePoint timestamp, OutputIndex outputIndex, ControlDelta delta) {
+	if (outputIndex >= OUTPUT_COUNT) {
+		[[unlikely]];
+		return;
+	}
+
+	relativeState.outputExternalDeltas[outputIndex].addedPresses += delta.addedPresses;
+	relativeState.outputExternalDeltas[outputIndex].motion += delta.motion;
+
+	if (delta.addedPresses > 0) {
+		relativeState.transientOutputPresses[outputIndex] = true;
+	} else if (delta.addedPresses < 0) {
+		relativeState.transientOutputReleases[outputIndex] = true;
+	}
+
+	if (options.emitOutputEvents) {
+		if (delta.motion != 0.0f) {
+			const ControlState newState = getCurrentState(outputIndex);
+			pendingOutputEvents.emplace_back(OutputMoved{OutputEventBase{timestamp, outputIndex, newState, delta}});
 		}
 	}
 }
 
-void InputManager::resetAllInputs() noexcept {
-	mousePosition = {};
-	controllerLeftStickPosition = {};
-	controllerRightStickPosition = {};
-	controllerLeftTriggerPosition = {};
-	controllerRightTriggerPosition = {};
-	touchPosition = {};
-	touchPressure = {};
-	currentPersistentOutputs = {};
-	transientOutputReleases = {};
-	transientOutputPresses = {};
-	outputAbsoluteStates.fill(0);
-	outputRelativeStates.fill(0);
-	outputPersistentPresses.fill(0);
-	currentPersistentInputs = {};
-	transientInputReleases = {};
-	transientInputPresses = {};
-}
+void InputManager::releaseAll(TimePoint timestamp) {
+	for (OutputIndex outputIndex = 0; outputIndex < OUTPUT_COUNT; ++outputIndex) {
+		const ControlState state = getCurrentState(outputIndex);
+		if (state.activePresses != 0 || state.value != 0.0f) {
+			relativeState.transientOutputReleases[outputIndex] = true;
 
-void InputManager::setMouseSensitivity(float sensitivity) noexcept {
-	options.mouseSensitivity = sensitivity;
-}
-
-void InputManager::setControllerLeftStickSensitivity(float sensitivity) noexcept {
-	options.controllerLeftStickSensitivity = sensitivity;
-}
-
-void InputManager::setControllerRightStickSensitivity(float sensitivity) noexcept {
-	options.controllerRightStickSensitivity = sensitivity;
-}
-
-void InputManager::setControllerLeftStickDeadzone(float deadzone) noexcept {
-	options.controllerLeftStickDeadzone = deadzone;
-}
-
-void InputManager::setControllerRightStickDeadzone(float deadzone) noexcept {
-	options.controllerRightStickDeadzone = deadzone;
-}
-
-void InputManager::setControllerLeftTriggerDeadzone(float deadzone) noexcept {
-	options.controllerLeftTriggerDeadzone = deadzone;
-}
-
-void InputManager::setControllerRightTriggerDeadzone(float deadzone) noexcept {
-	options.controllerRightTriggerDeadzone = deadzone;
-}
-
-void InputManager::setTouchMotionSensitivity(float sensitivity) noexcept {
-	options.touchMotionSensitivity = sensitivity;
-}
-
-void InputManager::setTouchPressureDeadzone(float deadzone) noexcept {
-	options.touchPressureDeadzone = deadzone;
-}
-
-bool InputManager::hasAnyBindings() const noexcept {
-	return !bindings.empty();
-}
-
-std::vector<InputManager::Binding> InputManager::getBindings() const {
-	std::vector<Binding> result{};
-	result.reserve(bindings.size());
-	for (const auto& [input, outputs] : bindings) {
-		result.push_back(Binding{.input = input, .outputs = outputs});
-	}
-	return result;
-}
-
-std::optional<InputManager::Outputs> InputManager::findBinding(Input input) const noexcept {
-	if (const auto it = bindings.find(input); it != bindings.end()) {
-		return it->second;
-	}
-	return {};
-}
-
-std::optional<vec2> InputManager::getMousePosition() const noexcept {
-	return mousePosition;
-}
-
-bool InputManager::mouseJustMoved() const noexcept {
-	return mouseTransientMotion;
-}
-
-bool InputManager::mouseWheelJustScrolledHorizontally() const noexcept {
-	return mouseWheelHorizontalTransientMotion;
-}
-
-bool InputManager::mouseWheelJustScrolledVertically() const noexcept {
-	return mouseWheelVerticalTransientMotion;
-}
-
-bool InputManager::isControllerConnected() const noexcept {
-	return static_cast<bool>(controller);
-}
-
-std::optional<vec2> InputManager::getControllerLeftStickPosition() const noexcept {
-	return controllerLeftStickPosition;
-}
-
-std::optional<vec2> InputManager::getControllerRightStickPosition() const noexcept {
-	return controllerRightStickPosition;
-}
-
-std::optional<float> InputManager::getControllerLeftTriggerPosition() const noexcept {
-	return controllerLeftTriggerPosition;
-}
-
-std::optional<float> InputManager::getControllerRightTriggerPosition() const noexcept {
-	return controllerRightTriggerPosition;
-}
-
-bool InputManager::controllerLeftStickJustMoved() const noexcept {
-	return controllerLeftStickTransientMotion;
-}
-
-bool InputManager::controllerRightStickJustMoved() const noexcept {
-	return controllerRightStickTransientMotion;
-}
-
-bool InputManager::controllerLeftTriggerJustMoved() const noexcept {
-	return controllerLeftTriggerTransientMotion;
-}
-
-bool InputManager::controllerRightTriggerJustMoved() const noexcept {
-	return controllerRightTriggerTransientMotion;
-}
-
-std::optional<vec2> InputManager::getTouchPosition() const noexcept {
-	return touchPosition;
-}
-
-std::optional<float> InputManager::getTouchPressure() const noexcept {
-	return touchPressure;
-}
-
-bool InputManager::touchJustMoved() const noexcept {
-	return touchTransientMotion;
-}
-
-bool InputManager::touchJustChangedPressure() const noexcept {
-	return touchTransientPressure;
-}
-
-InputManager::Outputs InputManager::getCurrentOutputs() const noexcept {
-	return currentPersistentOutputs;
-}
-
-InputManager::Outputs InputManager::getPreviousOutputs() const noexcept {
-	return previousPersistentOutputs;
-}
-
-InputManager::Outputs InputManager::getJustPressedOutputs() const noexcept {
-	return transientOutputPresses | (currentPersistentOutputs & ~previousPersistentOutputs);
-}
-
-InputManager::Outputs InputManager::getJustReleasedOutputs() const noexcept {
-	return transientOutputReleases | (previousPersistentOutputs & ~currentPersistentOutputs);
-}
-
-bool InputManager::isPressed(std::size_t output) const noexcept {
-	return getCurrentOutputs().test(output);
-}
-
-bool InputManager::justPressed(std::size_t output) const noexcept {
-	return getJustPressedOutputs().test(output);
-}
-
-bool InputManager::justReleased(std::size_t output) const noexcept {
-	return getJustReleasedOutputs().test(output);
-}
-
-i32 InputManager::getAbsoluteState(std::size_t output) const noexcept {
-	return outputAbsoluteStates[output];
-}
-
-i32 InputManager::getRelativeState(std::size_t output) const noexcept {
-	return outputRelativeStates[output];
-}
-
-float InputManager::getAbsoluteValue(std::size_t outputPositive) const noexcept {
-	return getFloatValue(max(i32{0}, getAbsoluteState(outputPositive)));
-}
-
-float InputManager::getRelativeValue(std::size_t outputPositive) const noexcept {
-	return getFloatValue(max(i32{0}, getRelativeState(outputPositive)));
-}
-
-float InputManager::getAbsoluteValue(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
-	return getAbsoluteValue(outputPositive) - getAbsoluteValue(outputNegative);
-}
-
-float InputManager::getRelativeValue(std::size_t outputNegative, std::size_t outputPositive) const noexcept {
-	return getRelativeValue(outputPositive) - getRelativeValue(outputNegative);
-}
-
-vec2 InputManager::getAbsoluteValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
-	return {
-		getAbsoluteValue(outputNegativeX, outputPositiveX),
-		getAbsoluteValue(outputNegativeY, outputPositiveY),
-	};
-}
-
-vec2 InputManager::getRelativeValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY) const noexcept {
-	return {
-		getRelativeValue(outputNegativeX, outputPositiveX),
-		getRelativeValue(outputNegativeY, outputPositiveY),
-	};
-}
-
-vec3 InputManager::getAbsoluteValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY, std::size_t outputNegativeZ,
-	std::size_t outputPositiveZ) const noexcept {
-	return {
-		getAbsoluteValue(outputNegativeX, outputPositiveX),
-		getAbsoluteValue(outputNegativeY, outputPositiveY),
-		getAbsoluteValue(outputNegativeZ, outputPositiveZ),
-	};
-}
-
-vec3 InputManager::getRelativeValue(std::size_t outputNegativeX, std::size_t outputPositiveX, std::size_t outputNegativeY, std::size_t outputPositiveY, std::size_t outputNegativeZ,
-	std::size_t outputPositiveZ) const noexcept {
-	return {
-		getRelativeValue(outputNegativeX, outputPositiveX),
-		getRelativeValue(outputNegativeY, outputPositiveY),
-		getRelativeValue(outputNegativeZ, outputPositiveZ),
-	};
-}
-
-bool InputManager::isPressed(Input input) const noexcept {
-	return currentPersistentInputs.test(getInputIndex(input));
-}
-
-bool InputManager::justPressed(Input input) const noexcept {
-	return (transientInputPresses | (currentPersistentInputs & ~previousPersistentInputs)).test(getInputIndex(input));
-}
-
-bool InputManager::justReleased(Input input) const noexcept {
-	return (transientInputReleases | (previousPersistentInputs & ~currentPersistentInputs)).test(getInputIndex(input));
-}
-
-void InputManager::ControllerDeleter::operator()(void* handle) const noexcept {
-	SDL_GameControllerClose(static_cast<SDL_GameController*>(handle));
-}
-
-void InputManager::setMousePosition(vec2 position, vec2 relativeMotion) noexcept {
-	mousePosition = position;
-	mouseTransientMotion = true;
-	const vec2 offset = relativeMotion * options.mouseSensitivity;
-	move(Input::MOUSE_MOTION_UP, getIntegerValue(-offset.y));
-	move(Input::MOUSE_MOTION_DOWN, getIntegerValue(offset.y));
-	move(Input::MOUSE_MOTION_LEFT, getIntegerValue(-offset.x));
-	move(Input::MOUSE_MOTION_RIGHT, getIntegerValue(offset.x));
-}
-
-void InputManager::scrollMouseWheelHorizontally(float offset) noexcept {
-	mouseWheelHorizontalTransientMotion = true;
-	move(Input::MOUSE_SCROLL_LEFT, getIntegerValue(-offset));
-	move(Input::MOUSE_SCROLL_RIGHT, getIntegerValue(offset));
-}
-
-void InputManager::scrollMouseWheelVertically(float offset) noexcept {
-	mouseWheelVerticalTransientMotion = true;
-	move(Input::MOUSE_SCROLL_DOWN, getIntegerValue(-offset));
-	move(Input::MOUSE_SCROLL_UP, getIntegerValue(offset));
-}
-
-void InputManager::setControllerLeftStickPosition(vec2 position) noexcept {
-	const float sensitivity = options.controllerLeftStickSensitivity;
-	const float deadzone = options.controllerLeftStickDeadzone;
-	const vec2 oldPosition = controllerLeftStickPosition.value_or(vec2{0.0f, 0.0f});
-	const float oldLength = length(oldPosition);
-	const float newLength = length(position);
-	const vec2 oldAdjustedPosition = (oldLength > deadzone) ? oldPosition * (sensitivity * ((oldLength - deadzone) / (oldLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
-	const vec2 newAdjustedPosition = (newLength > deadzone) ? position * (sensitivity * ((newLength - deadzone) / (newLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
-	const i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
-	const i32vec2 newIntegerPosition{getIntegerValue(newAdjustedPosition.x), getIntegerValue(newAdjustedPosition.y)};
-	const i32vec2 offset = newIntegerPosition - oldIntegerPosition;
-	const i32vec2 clampedOffsetNegative = max(min(i32vec2{0, 0}, oldIntegerPosition), min(-offset, -offset - oldIntegerPosition));
-	const i32vec2 clampedOffsetPositive = max(min(i32vec2{0, 0}, -oldIntegerPosition), min(offset, offset + oldIntegerPosition));
-	controllerLeftStickPosition = position;
-	controllerLeftStickTransientMotion = true;
-	if (newLength > deadzone) {
-		if (abs(static_cast<float>(newIntegerPosition.x) / static_cast<float>(newIntegerPosition.y)) > DIAGONAL_RATIO) {
-			if (newIntegerPosition.x < 0) {
-				press(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, clampedOffsetNegative.x);
-				release(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetPositive.x);
-			} else {
-				release(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetNegative.x);
-				press(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetPositive.x);
+			if (options.emitOutputEvents) {
+				pendingOutputEvents.emplace_back(OutputMoved{OutputEventBase{timestamp, outputIndex, ControlState{.activePresses = 0, .value = 0.0f},
+					ControlDelta{.addedPresses = -state.activePresses, .motion = -state.value}}});
+				if (state.activePresses > 0) {
+					pendingOutputEvents.emplace_back(
+						OutputReleased{OutputEventBase{timestamp, outputIndex, ControlState{.activePresses = 0, .value = 0.0f}, ControlDelta{.addedPresses = 0, .motion = 0.0f}}});
+				}
 			}
-		} else {
-			release(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, clampedOffsetNegative.x);
-			release(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetPositive.x);
 		}
-		if (abs(static_cast<float>(newIntegerPosition.y) / static_cast<float>(newIntegerPosition.x)) > DIAGONAL_RATIO) {
-			if (newIntegerPosition.y < 0) {
-				press(Input::CONTROLLER_AXIS_LEFT_STICK_UP, clampedOffsetNegative.y);
-				release(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, clampedOffsetPositive.y);
-			} else {
-				release(Input::CONTROLLER_AXIS_LEFT_STICK_UP, clampedOffsetNegative.y);
-				press(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, clampedOffsetPositive.y);
-			}
-		} else {
-			release(Input::CONTROLLER_AXIS_LEFT_STICK_UP, clampedOffsetNegative.y);
-			release(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, clampedOffsetPositive.y);
+
+		relativeState.outputExternalDeltas[outputIndex].addedPresses -= currentState.outputExternalStates[outputIndex].activePresses;
+		relativeState.outputExternalDeltas[outputIndex].motion -= currentState.outputExternalStates[outputIndex].value;
+	}
+
+	for (size_t inputIndex = 0; inputIndex < INPUT_COUNT; ++inputIndex) {
+		const ControlState state = currentState.inputStates[inputIndex];
+		if (state.activePresses != 0 || state.value != 0.0f) {
+			relativeState.inputDeltas[inputIndex].addedPresses -= state.activePresses;
+			relativeState.inputDeltas[inputIndex].motion -= state.value;
+			relativeState.transientInputReleases[inputIndex] = true;
 		}
-	} else {
-		release(Input::CONTROLLER_AXIS_LEFT_STICK_UP, clampedOffsetNegative.y);
-		release(Input::CONTROLLER_AXIS_LEFT_STICK_DOWN, clampedOffsetPositive.y);
-		release(Input::CONTROLLER_AXIS_LEFT_STICK_LEFT, clampedOffsetNegative.x);
-		release(Input::CONTROLLER_AXIS_LEFT_STICK_RIGHT, clampedOffsetPositive.x);
 	}
+
+	currentState = {};
 }
 
-void InputManager::setControllerRightStickPosition(vec2 position) noexcept {
-	const float sensitivity = options.controllerRightStickSensitivity;
-	const float deadzone = options.controllerRightStickDeadzone;
-	const vec2 oldPosition = controllerRightStickPosition.value_or(vec2{0.0f, 0.0f});
-	const float oldLength = length(oldPosition);
-	const float newLength = length(position);
-	const vec2 oldAdjustedPosition = (oldLength > deadzone) ? oldPosition * (sensitivity * ((oldLength - deadzone) / (oldLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
-	const vec2 newAdjustedPosition = (newLength > deadzone) ? position * (sensitivity * ((newLength - deadzone) / (newLength * (1.0f - deadzone)))) : vec2{0.0f, 0.0f};
-	const i32vec2 oldIntegerPosition{getIntegerValue(oldAdjustedPosition.x), getIntegerValue(oldAdjustedPosition.y)};
-	const i32vec2 newIntegerPosition{getIntegerValue(newAdjustedPosition.x), getIntegerValue(newAdjustedPosition.y)};
-	const i32vec2 offset = newIntegerPosition - oldIntegerPosition;
-	const i32vec2 clampedOffsetNegative = max(min(i32vec2{0, 0}, oldIntegerPosition), min(-offset, -offset - oldIntegerPosition));
-	const i32vec2 clampedOffsetPositive = max(min(i32vec2{0, 0}, -oldIntegerPosition), min(offset, offset + oldIntegerPosition));
-	controllerRightStickPosition = position;
-	controllerRightStickTransientMotion = true;
-	if (newLength > deadzone) {
-		if (abs(static_cast<float>(newIntegerPosition.x) / static_cast<float>(newIntegerPosition.y)) > DIAGONAL_RATIO) {
-			if (newIntegerPosition.x < 0) {
-				press(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, clampedOffsetNegative.x);
-				release(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, clampedOffsetPositive.x);
-			} else {
-				release(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, clampedOffsetNegative.x);
-				press(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, clampedOffsetPositive.x);
-			}
-		} else {
-			release(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, clampedOffsetNegative.x);
-			release(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, clampedOffsetPositive.x);
-		}
-		if (abs(static_cast<float>(newIntegerPosition.y) / static_cast<float>(newIntegerPosition.x)) > DIAGONAL_RATIO) {
-			if (newIntegerPosition.y < 0) {
-				press(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, clampedOffsetNegative.y);
-				release(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, clampedOffsetPositive.y);
-			} else {
-				release(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, clampedOffsetNegative.y);
-				press(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, clampedOffsetPositive.y);
-			}
-		} else {
-			release(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, clampedOffsetNegative.y);
-			release(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, clampedOffsetPositive.y);
-		}
-	} else {
-		release(Input::CONTROLLER_AXIS_RIGHT_STICK_UP, clampedOffsetNegative.y);
-		release(Input::CONTROLLER_AXIS_RIGHT_STICK_DOWN, clampedOffsetPositive.y);
-		release(Input::CONTROLLER_AXIS_RIGHT_STICK_LEFT, clampedOffsetNegative.x);
-		release(Input::CONTROLLER_AXIS_RIGHT_STICK_RIGHT, clampedOffsetPositive.x);
+void InputManager::setCursorPosition(TimePoint timestamp, Optional<vec2>& position, vec2 newPosition, vec2 relativeMotion, vec2 sensitivity, Input inputLeft, Input inputRight,
+	Input inputUp, Input inputDown) {
+	position = newPosition;
+
+	const bool isHorizontal = abs(relativeMotion.x / relativeMotion.y) > DIAGONAL_RATIO_THRESHOLD;
+	const bool isVertical = abs(relativeMotion.y / relativeMotion.x) > DIAGONAL_RATIO_THRESHOLD;
+	const vec2 motion = relativeMotion * sensitivity;
+
+	addRelativeState(timestamp, inputLeft, ControlDelta{.addedPresses = (isHorizontal) ? ((relativeMotion.x < 0.0f) ? 1 : -1) : 0, .motion = -motion.x});
+	addRelativeState(timestamp, inputRight, ControlDelta{.addedPresses = (isHorizontal) ? ((relativeMotion.x < 0.0f) ? -1 : 1) : 0, .motion = motion.x});
+	addRelativeState(timestamp, inputUp, ControlDelta{.addedPresses = (isVertical) ? ((relativeMotion.y < 0.0f) ? 1 : -1) : 0, .motion = -motion.y});
+	addRelativeState(timestamp, inputDown, ControlDelta{.addedPresses = (isVertical) ? ((relativeMotion.y < 0.0f) ? -1 : 1) : 0, .motion = motion.y});
+}
+
+void InputManager::scrollMouseWheel(TimePoint timestamp, vec2 scrollAmount) {
+	relativeState.transientMouseWheelScroll += scrollAmount;
+
+	const vec2 motion = scrollAmount * options.preferences.mouseWheelScrollSensitivity;
+
+	addRelativeState(timestamp, Input::MOUSE_SCROLL_LEFT, ControlDelta{.addedPresses = static_cast<int32_t>(-scrollAmount.x), .motion = -motion.x});
+	addRelativeState(timestamp, Input::MOUSE_SCROLL_RIGHT, ControlDelta{.addedPresses = static_cast<int32_t>(scrollAmount.x), .motion = motion.x});
+	addRelativeState(timestamp, Input::MOUSE_SCROLL_DOWN, ControlDelta{.addedPresses = static_cast<int32_t>(-scrollAmount.y), .motion = -motion.y});
+	addRelativeState(timestamp, Input::MOUSE_SCROLL_UP, ControlDelta{.addedPresses = static_cast<int32_t>(scrollAmount.y), .motion = motion.y});
+}
+
+void InputManager::setControllerStickPosition(TimePoint timestamp, Optional<i16vec2>& position, i16vec2 newPosition, vec2 sensitivity, float curveExponent, float innerDeadzone,
+	float outerDeadzone, Input inputLeft, Input inputRight, Input inputUp, Input inputDown) {
+	position = newPosition;
+
+	ControlState newStateLeft{.activePresses = 0, .value = 0.0f};
+	ControlState newStateRight{.activePresses = 0, .value = 0.0f};
+	ControlState newStateUp{.activePresses = 0, .value = 0.0f};
+	ControlState newStateDown{.activePresses = 0, .value = 0.0f};
+
+	const vec2 vector = max(vec2{-1.0f}, vec2{newPosition} / static_cast<float>(Limits<int16_t>::MAX));
+	const float distance = length(vector);
+	if (distance > innerDeadzone) {
+		const bool isHorizontal = abs(vector.x / vector.y) > DIAGONAL_RATIO_THRESHOLD;
+		const bool isVertical = abs(vector.y / vector.x) > DIAGONAL_RATIO_THRESHOLD;
+
+		const float activeZoneEnd = (outerDeadzone >= 1.0f || innerDeadzone >= outerDeadzone) ? 1.0f : outerDeadzone;
+		const float activeZoneRange = activeZoneEnd - innerDeadzone;
+		const float deadzoneAdjustedDistance = (innerDeadzone <= 0.0f) ? distance : min((distance - innerDeadzone) / activeZoneRange, 1.0f);
+		const float curveAndDeadzoneAdjustedDistance = (curveExponent <= 0.0f) ? deadzoneAdjustedDistance : pow(deadzoneAdjustedDistance, curveExponent);
+		const vec2 value = vector * sensitivity * (32767.0f * curveAndDeadzoneAdjustedDistance / distance);
+
+		newStateLeft = {.activePresses = (isHorizontal) ? ((newPosition.x < 0) ? 1 : -1) : 0, .value = -value.x};
+		newStateRight = {.activePresses = (isHorizontal) ? ((newPosition.x < 0) ? -1 : 1) : 0, .value = value.x};
+		newStateUp = {.activePresses = (isVertical) ? ((newPosition.y < 0) ? 1 : -1) : 0, .value = -value.y};
+		newStateDown = {.activePresses = (isVertical) ? ((newPosition.y < 0) ? -1 : 1) : 0, .value = value.y};
 	}
+
+	setCurrentState(timestamp, inputLeft, newStateLeft);
+	setCurrentState(timestamp, inputRight, newStateRight);
+	setCurrentState(timestamp, inputUp, newStateUp);
+	setCurrentState(timestamp, inputDown, newStateDown);
 }
 
-void InputManager::setControllerLeftTriggerPosition(float position) noexcept {
-	const float deadzone = options.controllerLeftTriggerDeadzone;
-	const float oldPosition = controllerLeftTriggerPosition.value_or(0.0f);
-	const i32 oldAdjustedPosition = getIntegerValue((oldPosition - deadzone) / (1.0f - deadzone));
-	const i32 adjustedPosition = getIntegerValue((position - deadzone) / (1.0f - deadzone));
-	const i32 offset = adjustedPosition - oldAdjustedPosition;
-	controllerLeftTriggerPosition = position;
-	controllerLeftTriggerTransientMotion = true;
-	if (position > deadzone) {
-		press(Input::CONTROLLER_AXIS_LEFT_TRIGGER, offset);
-	} else {
-		release(Input::CONTROLLER_AXIS_LEFT_TRIGGER, offset);
+void InputManager::setControllerTriggerPosition(TimePoint timestamp, Optional<int16_t>& position, int16_t newPosition, float lowerDeadzone, float upperDeadzone, Input inputAxis) {
+	position = newPosition;
+
+	ControlState newState{.activePresses = 0, .value = 0.0f};
+
+	const float signedDistance = max(-1.0f, static_cast<float>(newPosition) / static_cast<float>(Limits<int16_t>::MAX));
+	if (signedDistance > lowerDeadzone) {
+		const float activeZoneEnd = (upperDeadzone >= 1.0f || lowerDeadzone >= upperDeadzone) ? 1.0f : upperDeadzone;
+		const float activeZoneRange = activeZoneEnd - lowerDeadzone;
+		const float deadzoneAdjustedDistance = (lowerDeadzone <= 0.0f) ? signedDistance : min((signedDistance - lowerDeadzone) / activeZoneRange, 1.0f);
+		const float value = deadzoneAdjustedDistance;
+
+		newState = {.activePresses = 1, .value = value};
 	}
+
+	setCurrentState(timestamp, inputAxis, newState);
 }
 
-void InputManager::setControllerRightTriggerPosition(float position) noexcept {
-	const float deadzone = options.controllerRightTriggerDeadzone;
-	const float oldPosition = controllerRightTriggerPosition.value_or(0.0f);
-	const i32 oldAdjustedPosition = getIntegerValue((oldPosition - deadzone) / (1.0f - deadzone));
-	const i32 adjustedPosition = getIntegerValue((position - deadzone) / (1.0f - deadzone));
-	const i32 offset = adjustedPosition - oldAdjustedPosition;
-	controllerRightTriggerPosition = position;
-	controllerRightTriggerTransientMotion = true;
-	if (position > deadzone) {
-		press(Input::CONTROLLER_AXIS_RIGHT_TRIGGER, offset);
-	} else {
-		release(Input::CONTROLLER_AXIS_RIGHT_TRIGGER, offset);
+void InputManager::setTouchPressure(TimePoint timestamp, float newPressure) {
+	const float lowerDeadzone = options.preferences.touchPressureLowerDeadzone;
+	const float upperDeadzone = options.preferences.touchPressureUpperDeadzone;
+
+	currentState.touchPressure = newPressure;
+
+	ControlState newState{.activePresses = 0, .value = 0.0f};
+
+	const float signedDistance = newPressure;
+	if (signedDistance > lowerDeadzone) {
+		const float activeZoneEnd = (upperDeadzone >= 1.0f || lowerDeadzone >= upperDeadzone) ? 1.0f : upperDeadzone;
+		const float activeZoneRange = activeZoneEnd - lowerDeadzone;
+		const float deadzoneAdjustedDistance = (lowerDeadzone <= 0.0f) ? signedDistance : min((signedDistance - lowerDeadzone) / activeZoneRange, 1.0f);
+		const float value = deadzoneAdjustedDistance;
+
+		newState = {.activePresses = 1, .value = value};
 	}
+
+	setCurrentState(timestamp, Input::TOUCH_FINGER_PRESSURE, newState);
 }
 
-void InputManager::setTouchPosition(vec2 position) noexcept {
-	const float sensitivity = options.touchMotionSensitivity;
-	const vec2 offset = (touchPosition) ? (position - *touchPosition) * sensitivity : vec2{0.0f, 0.0f};
-	touchPosition = position;
-	touchTransientMotion = true;
-	move(Input::TOUCH_FINGER_MOTION_UP, getIntegerValue(-offset.y));
-	move(Input::TOUCH_FINGER_MOTION_DOWN, getIntegerValue(offset.y));
-	move(Input::TOUCH_FINGER_MOTION_LEFT, getIntegerValue(-offset.x));
-	move(Input::TOUCH_FINGER_MOTION_RIGHT, getIntegerValue(offset.x));
-}
-
-void InputManager::setTouchPressure(float pressure) noexcept {
-	const float deadzone = options.touchPressureDeadzone;
-	const float oldPressure = touchPressure.value_or(0.0f);
-	const i32 oldAdjustedPressure = getIntegerValue((oldPressure - deadzone) / (1.0f - deadzone));
-	const i32 adjustedPressure = getIntegerValue((pressure - deadzone) / (1.0f - deadzone));
-	const i32 offset = adjustedPressure - oldAdjustedPressure;
-	touchPressure = pressure;
-	touchTransientPressure = true;
-	if (pressure > deadzone) {
-		press(Input::TOUCH_FINGER_PRESSURE, offset);
-	} else {
-		release(Input::TOUCH_FINGER_PRESSURE, offset);
-	}
-}
-
-} // namespace donut::events
+} // namespace grem::events

@@ -1,0 +1,168 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 28,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "hidden": true,
+            "name": "my-custom-preset-base",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/build/${presetName}/install",
+            "cacheVariables": {
+                "BUILD_SHARED_LIBS": "OFF",
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "CMAKE_C_COMPILER": "/usr/lib/llvm19/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/lib/llvm19/bin/clang++",
+                "CMAKE_C_STANDARD": "17",
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_C_FLAGS": "-std=c11 -Wall -Wextra -Wconversion -pedantic",
+                "CMAKE_CXX_FLAGS": "-std=c++23 -Wall -Wextra -Wconversion -pedantic",
+                "CMAKE_C_FLAGS_DEBUG": "-O0 -g",
+                "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g",
+                "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                "CMAKE_C_FLAGS_MINSIZEREL": "-Os -DNDEBUG",
+                "CMAKE_CXX_FLAGS_MINSIZEREL": "-Os -DNDEBUG",
+                "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O3 -g -DNDEBUG",
+                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -g -DNDEBUG"
+            },
+            "environment": {
+                "CMAKE_BUILD_PARALLEL_LEVEL": "16"
+            }
+        },
+        {
+            "name": "my-custom-preset-debug",
+            "displayName": "My custom preset (Debug)",
+            "description": "My project's custom preset (Debug)",
+            "inherits": "my-custom-preset-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "my-custom-preset-release",
+            "displayName": "My custom preset (Release)",
+            "description": "My project's custom preset (Release)",
+            "inherits": "my-custom-preset-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "my-custom-preset-minsizerel",
+            "displayName": "My custom preset (MinSizeRel)",
+            "description": "My project's custom preset (MinSizeRel)",
+            "inherits": "my-custom-preset-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "my-custom-preset-relwithdebinfo",
+            "displayName": "My custom preset (RelWithDebInfo)",
+            "description": "My project's custom preset (RelWithDebInfo)",
+            "inherits": "my-custom-preset-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "my-custom-preset-debug",
+            "displayName": "My custom preset (Debug)",
+            "description": "My project's custom preset (Debug)",
+            "configurePreset": "my-custom-preset-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "my-custom-preset-release",
+            "displayName": "My custom preset (Release)",
+            "description": "My project's custom preset (Release)",
+            "configurePreset": "my-custom-preset-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "my-custom-preset-minsizerel",
+            "displayName": "My custom preset (MinSizeRel)",
+            "description": "My project's custom preset (MinSizeRel)",
+            "configurePreset": "my-custom-preset-minsizerel",
+            "configuration": "MinSizeRel"
+        },
+        {
+            "name": "my-custom-preset-relwithdebinfo",
+            "displayName": "My custom preset (RelWithDebInfo)",
+            "description": "My project's custom preset (RelWithDebInfo)",
+            "configurePreset": "my-custom-preset-relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "my-custom-preset-debug",
+            "displayName": "My custom preset (Debug)",
+            "description": "My project's custom preset (Debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "my-custom-preset-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "my-custom-preset-debug"
+                }
+            ]
+        },
+        {
+            "name": "my-custom-preset-release",
+            "displayName": "My custom preset (Release)",
+            "description": "My project's custom preset (Release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "my-custom-preset-release"
+                },
+                {
+                    "type": "build",
+                    "name": "my-custom-preset-release"
+                }
+            ]
+        },
+        {
+            "name": "my-custom-preset-minsizerel",
+            "displayName": "My custom preset (MinSizeRel)",
+            "description": "My project's custom preset (MinSizeRel)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "my-custom-preset-minsizerel"
+                },
+                {
+                    "type": "build",
+                    "name": "my-custom-preset-minsizerel"
+                }
+            ]
+        },
+        {
+            "name": "my-custom-preset-relwithdebinfo",
+            "displayName": "My custom preset (RelWithDebInfo)",
+            "description": "My project's custom preset (RelWithDebInfo)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "my-custom-preset-relwithdebinfo"
+                },
+                {
+                    "type": "build",
+                    "name": "my-custom-preset-relwithdebinfo"
+                }
+            ]
+        }
+    ]
+}

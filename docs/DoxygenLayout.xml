@@ -40,8 +40,7 @@
     -->
     <tab type="mainpage" visible="yes" title=""/>
     <tab type="namespacelist" visible="yes" title="Full API" intro="This page lists all public namespaces and their nested classes, structs, unions and concepts with brief descriptions. Click on a category to view its documentation page with all associated members."/>
-    <tab type="filelist" visible="yes" title="File List" intro="Here is a list of all public files:"/>
-    <tab type="examples" visible="yes" title="Examples" intro="Here is a list of examples:"/>
+    <tab type="filelist" visible="yes" title="File List" intro="Here is a list of all public header files:"/>
   </navindex>
 
   <!-- Layout definition for a class page -->

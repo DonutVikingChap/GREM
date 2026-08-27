@@ -1,5 +1,5 @@
-.vs/
-.vscode/
+/.vs/
+/.vscode/
 .cache/
 build*/
 bin*/
@@ -11,3 +11,9 @@ CMakeLists.txt.user*
 \#*\#
 .\#*
 *~
+.gdbinit
+__pycache__/
+/CMakeUserPresets.json
+examples/data/fps/systems/
+!template/.vscode/
+Doxyfile.bak

@@ -1,0 +1,11 @@
+{
+    name: "Robot NPC",
+    entities: [
+        {
+            EntityType: "NPC",
+            ModelType: "ROBOT",
+            DamageableType: "ROBOT",
+            Health: { health: 250 },
+        },
+    ],
+}

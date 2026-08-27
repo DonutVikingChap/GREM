@@ -1,0 +1,80 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 28,
+        "patch": 0
+    },
+    "include": ["template/CMakePresets.json"],
+    "configurePresets": [
+        {
+            "name": "bootstrap-builtin-shaders",
+            "displayName": "Bootstrap built-in shaders",
+            "inherits": "gcc-ninja-release",
+            "cacheVariables": {
+                "GREM_USE_RELEASE_ASSERTIONS": "ON",
+                "GREM_GRAPHICS_BACKEND": "Vulkan",
+                "GREM_GRAPHICS_VULKAN_USE_GLSL_COMPILATION": "ON",
+                "GREM_BUILD_SHADER_BOOTSTRAPPER": "ON",
+                "GREM_BUILD_TESTS": "OFF",
+                "GREM_BUILD_EXAMPLES": "ON",
+                "GREM_BUILD_DOCS": "OFF"
+            }
+        },
+        {
+            "name": "generate-documentation",
+            "displayName": "Generate documentation",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/build/${presetName}/install",
+            "cacheVariables": {
+                "GREM_BUILD_LIBS": "OFF",
+                "GREM_BUILD_DOCS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "bootstrap-builtin-shaders",
+            "displayName": "Bootstrap built-in shaders",
+            "inherits": "gcc-ninja-release",
+            "configurePreset": "bootstrap-builtin-shaders",
+            "targets": ["GREM-bootstrap-shaders"]
+        },
+        {
+            "name": "generate-documentation",
+            "displayName": "Generate documentation",
+            "configurePreset": "generate-documentation",
+            "targets": ["GREM-generate-documentation"]
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "bootstrap-builtin-shaders",
+            "displayName": "Bootstrap built-in shaders",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "bootstrap-builtin-shaders"
+                },
+                {
+                    "type": "build",
+                    "name": "bootstrap-builtin-shaders"
+                }
+            ]
+        },
+        {
+            "name": "generate-documentation",
+            "displayName": "Generate documentation",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "generate-documentation"
+                },
+                {
+                    "type": "build",
+                    "name": "generate-documentation"
+                }
+            ]
+        }
+    ]
+}

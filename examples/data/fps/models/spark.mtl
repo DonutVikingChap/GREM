@@ -1,0 +1,4 @@
+newmtl Spark
+map_Kd spark.png
+Ke 0.25 0.1 0.02
+illum 4

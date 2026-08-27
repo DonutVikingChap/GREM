@@ -1,0 +1,155 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v3.2.43",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "carrot_cake"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "carrot_cake",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "carrot_cake_Model_3.001",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "carrot_cake_nor_gl",
+      "uri": "textures/carrot_cake_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "carrot_cake_diff",
+      "uri": "textures/carrot_cake_diff_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "carrot_cake_metal-carrot_cake_rough",
+      "uri": "textures/carrot_cake_arm_1k.jpg"
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 9211,
+      "max": [
+        0.11214792728424072,
+        0.09536007791757584,
+        0.11087862402200699
+      ],
+      "min": [
+        -0.11327344924211502,
+        -0.002212886232882738,
+        -0.11450491100549698
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 9211,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 9211,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 41370,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 110532,
+      "byteOffset": 0
+    },
+    {
+      "buffer": 0,
+      "byteLength": 110532,
+      "byteOffset": 110532
+    },
+    {
+      "buffer": 0,
+      "byteLength": 73688,
+      "byteOffset": 221064
+    },
+    {
+      "buffer": 0,
+      "byteLength": 82740,
+      "byteOffset": 294752
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 377492,
+      "uri": "carrot_cake.bin"
+    }
+  ]
+}

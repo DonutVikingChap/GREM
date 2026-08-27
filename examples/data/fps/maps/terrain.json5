@@ -1,0 +1,35 @@
+{
+    name: "Terrain",
+    reflectionProbes: {
+        probes: [
+            {
+                center: [0, 50, 0],
+                size: [400, 150, 400],
+                blendWidthsOnNegativeSides: [0, 25, 0],
+                blendWidthsOnPositiveSides: [0, 25, 0],
+            },
+        ],
+    },
+    entities: [
+        {
+            EntityType: "DIRECTIONAL_LIGHT",
+            DirectionalLightOptions3D: {
+                direction: [-1.4, -1.3, -1.02],
+                color: [1, 1, 1, 6],
+            },
+        },
+        {
+            EntityType: "POINT_LIGHT",
+            PointLightOptions3D: {
+                position: [0, 1, 0],
+                range: 10,
+                color: [1.2, 1.18, 1.14, 30],
+            },
+        },
+        {
+            EntityType: "STATIC_MODEL_OBJECT",
+            ModelType: "TERRAIN",
+            Position3D: [0, 0, 0],
+        },
+    ],
+}

@@ -1,0 +1,21 @@
+{
+    "bindings": {
+        "key_return": "confirm",
+        "key_space": "confirm",
+        "key_escape": "cancel",
+        "key_tab": "next_item",
+        "key_w": "previous_item",
+        "key_s": "next_item",
+        "key_arrow_up": "previous_item",
+        "key_arrow_down": "next_item",
+        "mouse_button_right": "cancel",
+        "controller_button_south": "confirm",
+        "controller_button_east": "cancel",
+        "controller_button_dpad_up": "previous_item",
+        "controller_button_dpad_down": "next_item",
+        "controller_axis_left_trigger": "cancel",
+        "controller_axis_right_trigger": "confirm",
+        "controller_axis_left_stick_up": "previous_item",
+        "controller_axis_left_stick_down": "next_item"
+    }
+}

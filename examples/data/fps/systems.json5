@@ -1,0 +1,100 @@
+{
+    layers: {
+        SESSION: {
+            resources: {
+                state: ["SessionState", "MapState"],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: [],
+        },
+        SIMULATION: {
+            resources: {
+                state: [],
+                intermediate: ["TickPerformanceStats"],
+                clientside: [],
+            },
+            systems: [
+                "NPCControlSystem",
+                "MovementControlSystem",
+                "WeaponHandlingSystem",
+                "ProjectileHitDetectionSystem",
+                "WeaponDropSystem",
+                "DestroyCountdownSystem",
+                "DecalCleanupSystem",
+                "ModelJointCleanupSystem",
+                "PhysicsSimulationSystem",
+                "MovementGroundingSystem",
+                "ParticleCollisionSystem",
+                "MapBoundsEnforcementSystem",
+                "VelocityOrientationSystem",
+                "PlayerRespawnSystem",
+            ],
+        },
+        AUDIO_STAGING: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: ["SoundAudioStagingSystem"],
+        },
+        GRAPHICS_STAGING_3D: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: [
+                "DecalGraphicsStagingSystem",
+                "LightProbeDebugGraphicsStagingSystem",
+                "ModelGraphicsStagingSystem",
+                "SpriteGraphicsStagingSystem",
+                "LightGraphicsStagingSystem",
+            ],
+        },
+        GRAPHICS_STAGING_2D: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: [
+                "HUDGraphicsStagingSystem",
+                "ClientStatisticsGraphicsStagingSystem",
+            ],
+        },
+        LIGHT_BAKING: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: ["LightBakingSystem"],
+        },
+        LOADING_SCREEN_GRAPHICS_RENDERING: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: ["LoadingScreenGraphicsRenderingSystem"],
+        },
+        WORLD_VIEW_AUDIO_RENDERING: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: ["WorldViewAudioRenderingSystem"],
+        },
+        WORLD_VIEW_GRAPHICS_RENDERING: {
+            resources: {
+                state: [],
+                intermediate: [],
+                clientside: [],
+            },
+            systems: ["WorldViewGraphicsRenderingSystem"],
+        },
+    },
+}

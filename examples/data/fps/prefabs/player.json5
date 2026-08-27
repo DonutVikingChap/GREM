@@ -1,0 +1,19 @@
+{
+    name: "Player",
+    entities: [
+        {
+            id: "player",
+            EntityType: "PLAYER",
+            ModelType: "PLAYER",
+            MovementType: "PLAYER",
+            DamageableType: "PLAYER",
+            Inventory: { equippedWeapon: "weapon" },
+        },
+        {
+            id: "weapon",
+            EntityType: "WEAPON",
+            WeaponType: "RIFLE",
+            WeaponState: { holder: "player" },
+        },
+    ],
+}
