@@ -329,7 +329,7 @@ void readNonCompressedBlock(Buffer<byte>& output, BitSpanReader& bitReader, size
 
 	NonCompressedBlockHeader header{};
 	bitReader.readAlignedBytes(asWritableBytes(Span{&header, 1}));
-	if (header.lengthComplement != ~header.length) {
+	if (header.lengthComplement != static_cast<uint16_t>(~header.length)) {
 		throw std::invalid_argument{"Invalid non-compressed deflate block header in deflate-compressed data."};
 	}
 	const size_t dataLength{convertLittleEndianToHostEndian(header.length)};
