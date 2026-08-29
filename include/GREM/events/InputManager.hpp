@@ -265,17 +265,24 @@ struct InputManagerOptions {
  * After handling the events received in a frame, the input manager can be
  * queried for the current state of any specific physical inputs, or the values
  * of the abstract outputs to which they are bound, as well as the corresponding
- * state of the previous frame. This combination also allows the inputs or
- * outputs which were just triggered since the previous frame to be derived as
+ * state on the previous frame. This combination also allows the inputs or
+ * outputs which were just pressed since the previous frame to be derived as
  * well.
  *
  * The supported input types include keyboard, mouse, touch and game controller
- * devices, and it is possible for the value of any given output to be affected
- * by the input of different device types simultaneously. However,
- * differentiating the source of an input between multiple connected devices of
- * the same type within a single input manager is not possible. Therefore, if
- * any filtering of events by their source/user is desired, it needs to be done
- * _before_ feeding the events to the appropriate input manager.
+ * devices, which can all be bound to and affect the same abstract output(s)
+ * simultaneously.
+ *
+ * If there are multiple connected input devices of the same type, such as
+ * multiple game controllers, their outputs cannot be differentiated between
+ * within a single input manager. Therefore, if any filtering of events by their
+ * source/user is desired, such as in a splitscreen game, the filtering must be
+ * done manually _before_ calling handleEvent(), for example by having one input
+ * manager per source/user and choosing which one to feed each input event to by
+ * searching for the user matching the event's
+ * ControllerEventBase::controllerID.
+ *
+ * ## Configuration JSON format
  *
  * When saving and loading an input manager configuration, the expected JSON
  * format is a JSON object consisting of optional properties corresponding to
@@ -516,8 +523,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 *
 	 * \sa addBinding()
 	 * \sa unbindAll()
@@ -546,8 +553,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 *
 	 * \sa addBinding()
 	 * \sa unbindAll()
@@ -582,8 +589,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 *
 	 * \sa addBinding()
 	 * \sa unbindAll()
@@ -623,8 +630,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 *
 	 * \sa addBinding()
 	 * \sa unbindAll()
@@ -658,8 +665,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 *
 	 * \sa addBinding()
 	 * \sa unbindAll()
@@ -688,8 +695,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 */
 	[[nodiscard]] GREM_API(events) String
 		saveConfiguration(FunctionView<Optional<String>(OutputIndex outputIndex)> getActionName, Span<const Pair<StringView, json::Variant>> extraProperties = {}) const;
@@ -714,8 +721,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 */
 	template <enumeration Action>
 	[[nodiscard]] String saveConfiguration(Span<const Pair<StringView, json::Variant>> extraProperties = {}) const {
@@ -749,13 +756,13 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
-	 * \note Any preferences that have the same value as the initial values from
-	 *       when the input manager was constructed are not written to the
+	 * \note %Any preferences that have the same value as the initial values
+	 *       from when the input manager was constructed are not written to the
 	 *       configuration.
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 */
 	void saveConfiguration(Filesystem& filesystem, CStringView filepath, FunctionView<Optional<String>(OutputIndex outputIndex)> getActionName,
 		Span<const Pair<StringView, json::Variant>> extraProperties = {}) const {
@@ -784,13 +791,13 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
-	 * \note Any preferences that have the same value as the initial values from
-	 *       when the input manager was constructed are not written to the
+	 * \note %Any preferences that have the same value as the initial values
+	 *       from when the input manager was constructed are not written to the
 	 *       configuration.
-	 * \note See the documentation of the InputManager class for a description
-	 *       of the configuration file JSON format.
+	 * \note See the detailed description of the InputManager class for the
+	 *       specification of the configuration file JSON format.
 	 */
 	template <enumeration Action>
 	void saveConfiguration(Filesystem& filesystem, CStringView filepath, Span<const Pair<StringView, json::Variant>> extraProperties = {}) const {
@@ -932,7 +939,7 @@ public:
 	}
 
 	/**
-	 * Remove all outputs from a specific input.
+	 * Remove all bindings from a specific input.
 	 *
 	 * \param input physical input to remove the binding from.
 	 *
@@ -957,7 +964,7 @@ public:
 	GREM_API(events) void unbindAll() noexcept;
 
 	/**
-	 * Reset the states of all inputs and output for the current and previous
+	 * Reset the states of all inputs and outputs for the current and previous
 	 * frames, and clear all polled and pending events.
 	 *
 	 * \note Does not affect bindings or options/preferences.
