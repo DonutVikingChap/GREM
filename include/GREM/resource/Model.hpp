@@ -1222,9 +1222,10 @@ struct Model {
 	 *
 	 * \note The file format is determined entirely from the file contents; the
 	 *       filename extension is not taken into account.
-	 * \note Any material libraries, data files and texture image files required
-	 *       by the model are also loaded as needed. See the documentation of
-	 *       Image for a description of the supported image file formats.
+	 * \note %Any material libraries, data files and texture image files
+	 *       required by the model are also loaded as needed. See the
+	 *       documentation of Image for a description of the supported image
+	 *       file formats.
 	 *
 	 * \remark When authoring models, the glTF format should generally be
 	 *         preferred over OBJ, since glTF is more memory efficient, faster
@@ -1383,9 +1384,10 @@ struct Model {
 	 *
 	 * \note The file format is determined entirely from the file contents; the
 	 *       filename extension is not taken into account.
-	 * \note Any material libraries, data files and texture image files required
-	 *       by the model are also loaded as needed. See the documentation of
-	 *       Image for a description of the supported image file formats.
+	 * \note %Any material libraries, data files and texture image files
+	 *       required by the model are also loaded as needed. See the
+	 *       documentation of Image for a description of the supported image
+	 *       file formats.
 	 *
 	 * \remark When authoring models, the glTF format should generally be
 	 *         preferred over OBJ, since glTF is more memory efficient, faster

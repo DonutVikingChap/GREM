@@ -2355,7 +2355,7 @@ public:
 	 * \throws std::length_error if the maximum image size was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
 	 */
 	GREM_API(resource) static void savePNG(const ImageView& image, Filesystem& filesystem, CStringView filepath, const ImageSavePNGOptions& options = {});
@@ -2393,7 +2393,7 @@ public:
 	 * \throws std::length_error if the maximum image size was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
 	 */
 	GREM_API(resource) static void saveJPEG(const ImageView& image, Filesystem& filesystem, CStringView filepath, const ImageSaveJPEGOptions& options = {});
@@ -2432,7 +2432,7 @@ public:
 	 * \throws std::length_error if the maximum image size was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
 	 */
 	GREM_API(resource) static void saveHDR(const ImageView& image, Filesystem& filesystem, CStringView filepath, const ImageSaveHDROptions& options = {});
@@ -2468,7 +2468,7 @@ public:
 	 * \throws std::length_error if the maximum image size was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
 	 */
 	GREM_API(resource) static void saveKTX2(const ImageView& image, Filesystem& filesystem, CStringView filepath, const ImageSaveKTX2Options& options = {});
@@ -2514,7 +2514,7 @@ public:
 	 * \throws std::length_error if the maximum image size was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note Any parent directories of the specified output filepath will be
+	 * \note %Any parent directories of the specified output filepath will be
 	 *       created if they don't already exist.
 	 */
 	GREM_API(resource) static void save(const ImageView& image, Filesystem& filesystem, CStringView filepath, const ImageSaveOptions& options = {});

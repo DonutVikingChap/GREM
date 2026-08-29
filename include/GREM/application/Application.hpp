@@ -395,8 +395,8 @@ protected:
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
+	 * \note %Any exception that is thrown out of this function will percolate
+	 *       up to run() and cause the main loop to stop.
 	 * \note The default implementation of this function does nothing.
 	 *
 	 * \sa tick()
@@ -417,8 +417,8 @@ protected:
 	 *
 	 * \param tickInfo information about the current tick, see TickInfo.
 	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
+	 * \note %Any exception that is thrown out of this function will percolate
+	 *       up to run() and cause the main loop to stop.
 	 * \note The default implementation of this function does nothing.
 	 *
 	 * \sa update()
@@ -437,8 +437,8 @@ protected:
 	 * \param tickInterval the average time that would have elapsed for this
 	 *        tick if it hadn't been skipped.
 	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
+	 * \note %Any exception that is thrown out of this function will percolate
+	 *       up to run() and cause the main loop to stop.
 	 * \note The default implementation of this function does nothing.
 	 *
 	 * \sa tick()
@@ -458,8 +458,8 @@ protected:
 	 *
 	 * \param frameInfo information about the current frame, see FrameInfo.
 	 *
-	 * \note Any exception that is thrown out of this function will percolate up
-	 *       to run() and cause the main loop to stop.
+	 * \note %Any exception that is thrown out of this function will percolate
+	 *       up to run() and cause the main loop to stop.
 	 * \note The default implementation of this function does nothing.
 	 *
 	 * \sa update()
