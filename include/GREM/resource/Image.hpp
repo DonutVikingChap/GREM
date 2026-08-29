@@ -2602,17 +2602,10 @@ public:
 	 *       filename extension is not taken into account.
 	 * \note The image format is determined by its source format, unless
 	 *       ImageOptions::requiredFormat is specified.
-	 * \note For JPEG files, 12 bits per component and arithmetic coding are not
-	 *       supported.
-	 * \note PNG files support 1, 2, 4, 8 and 16 bits per channel.
-	 * \note For BMP files, 1 bit per component and run-length encoding are not
-	 *       supported.
-	 * \note PSD files support 8 and 16 bits per pixel.
-	 * \note For PSD files, only composited view is supported, with no extra
-	 *       channels.
-	 * \note For GIF files, animation is not supported, and the reported number
-	 *       of channels is always 4.
-	 * \note For PPM and PGM files, only binary format is supported.
+	 * \note PNG files support 1/2/4/8/16 bits per channel (always converted to
+	 *       8), as well as PLTE (palette) and tRNS (transparency) chunks.
+	 * \note HDR files support 32-bit_rle_rgbe format and +Y +X or -Y +X layout
+	 *       only.
 	 */
 	GREM_API(resource) Image(const Filesystem& filesystem, CStringView filepath, const ImageOptions& options = {});
 
@@ -2635,17 +2628,10 @@ public:
 	 * \note The file format is determined entirely from the file contents.
 	 * \note The image format is determined by its source format, unless
 	 *       ImageOptions::requiredFormat is specified.
-	 * \note For JPEG files, 12 bits per component and arithmetic coding are not
-	 *       supported.
-	 * \note PNG files support 1, 2, 4, 8 and 16 bits per channel.
-	 * \note For BMP files, 1 bit per component and run-length encoding are not
-	 *       supported.
-	 * \note PSD files support 8 and 16 bits per pixel.
-	 * \note For PSD files, only composited view is supported, with no extra
-	 *       channels.
-	 * \note For GIF files, animation is not supported, and the reported number
-	 *       of channels is always 4.
-	 * \note For PPM and PGM files, only binary format is supported.
+	 * \note PNG files support 1/2/4/8/16 bits per channel (always converted to
+	 *       8), as well as PLTE (palette) and tRNS (transparency) chunks.
+	 * \note HDR files support 32-bit_rle_rgbe format and +Y +X or -Y +X layout
+	 *       only.
 	 */
 	GREM_API(resource) explicit Image(Span<const byte> fileContents, const ImageOptions& options = {});
 
