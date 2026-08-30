@@ -46,6 +46,15 @@ constexpr mat4 BIAS_MATRIX{
 	// clang-format on
 };
 
+template <typename T>
+struct ArenaDeleter {
+	void operator()(T* p) const noexcept {
+		if (p) {
+			p->~T();
+		}
+	}
+};
+
 } // namespace
 
 constexpr Array<vec3, 8> Renderer3D::CUBE_MODEL_3D_VERTEX_POSITIONS{
@@ -759,10 +768,11 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 	const float tileSize = static_cast<float>(tileExtent);
 	const vec2 viewportSize{viewport.region.size};
 	const float framebufferHeight = static_cast<float>(framebufferSize.height + (framebufferSize.height & 1));
-	const float depthBinCount = static_cast<float>(options.depthBinCount);
+	const uint32_t depthBinCount = min(options.depthBinCount, uint32_t{ScreenDepthBinParameters::MAX_DEPTH_BIN_COUNT});
+	const float depthBinCountFloat = static_cast<float>(depthBinCount);
 	const float depthRangeBegin = nearZ;
 	const float depthRangeLength = farZ - depthRangeBegin;
-	const float inverseDepthBinLength = depthBinCount / depthRangeLength;
+	const float inverseDepthBinLength = depthBinCountFloat / depthRangeLength;
 
 	struct DepthBinnedRectangularScreenItem {
 		Box<2, float> shapeInScreenSpace;
@@ -781,7 +791,7 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 		const float depth = -centerInViewSpace.z - depthRangeBegin;
 		const float minDepthIndex = floor((depth - radius) * inverseDepthBinLength);
 		const float maxDepthIndex = ceil((depth + radius) * inverseDepthBinLength);
-		if (maxDepthIndex <= 0.0f || minDepthIndex >= depthBinCount) {
+		if (maxDepthIndex <= 0.0f || minDepthIndex >= depthBinCountFloat) {
 			return {};
 		}
 
@@ -830,8 +840,8 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 
 		return DepthBinnedRectangularScreenItem{
 			.shapeInScreenSpace = shapeInScreenSpace,
-			.depthBinsBegin = (minDepthIndex <= 0.0f) ? 0 : min(static_cast<uint32_t>(minDepthIndex), options.depthBinCount),
-			.depthBinsEnd = min(static_cast<uint32_t>(maxDepthIndex), options.depthBinCount),
+			.depthBinsBegin = (minDepthIndex <= 0.0f) ? 0 : min(static_cast<uint32_t>(minDepthIndex), depthBinCount),
+			.depthBinsEnd = min(static_cast<uint32_t>(maxDepthIndex), depthBinCount),
 			.data = data,
 		};
 	};
@@ -968,27 +978,15 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 		return reflectionProbes.worldSpaceBoxVolumes[reflectionProbeIndexA] < reflectionProbes.worldSpaceBoxVolumes[reflectionProbeIndexB];
 	});
 
-	struct ScreenTileParametersDestructor {
-		void operator()(ScreenTileParameters* p) const noexcept {
-			if (p) {
-				p->~ScreenTileParameters();
-			}
-		}
-	};
-	UniquePointer<ScreenTileParameters, ScreenTileParametersDestructor> screenTiles{};
-	Allocation<ScreenDepthBinFields, ArenaAllocator<ScreenDepthBinFields>> screenDepthBins{&arena};
+	UniquePointer<ScreenTileParameters, ArenaDeleter<ScreenTileParameters>> screenTiles{};
+	UniquePointer<ScreenDepthBinParameters, ArenaDeleter<ScreenDepthBinParameters>> screenDepthBins{};
 	Buffer<ScreenItemFields, ArenaAllocator<ScreenItemFields>> screenItems{&arena};
 	Buffer<ScreenDecalFields, ArenaAllocator<ScreenDecalFields>> screenDecals{&arena};
 	Buffer<ScreenLightFields, ArenaAllocator<ScreenLightFields>> screenLights{&arena};
 
-	screenTiles.reset(new (ArenaAllocator<ScreenTileParameters>{&arena}.allocate(1)) ScreenTileParameters); // NOLINT(cppcoreguidelines-owning-memory)
-	screenDepthBins.assign(static_cast<size_t>(options.depthBinCount),
-		ScreenDepthBinFields{
-			.depthBinLightsBegin = Limits<uint32_t>::MAX,
-			.depthBinLightsEnd = 0,
-			.depthBinDecalsBegin = Limits<uint32_t>::MAX,
-			.depthBinDecalsEnd = 0,
-		});
+	screenTiles.reset(new (ArenaAllocator<ScreenTileParameters>{&arena}.allocate(1)) ScreenTileParameters);             // NOLINT(cppcoreguidelines-owning-memory)
+	screenDepthBins.reset(new (ArenaAllocator<ScreenDepthBinParameters>{&arena}.allocate(1)) ScreenDepthBinParameters); // NOLINT(cppcoreguidelines-owning-memory)
+	fill(Span{screenDepthBins->depthBins}.first(depthBinCount), u32vec4{Limits<uint32_t>::MAX, 0, Limits<uint32_t>::MAX, 0});
 	screenItems.reserve(min(idOrderedDecals.size(), size_t{0xFF}) +                //
 						min(depthOrderedLights.size(), size_t{0xFF}) +             //
 						min(volumeOrderedLightProbeVolumes.size(), size_t{0xFF}) + //
@@ -999,17 +997,21 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 	for (uint32_t itemIndex = 0; itemIndex < idOrderedDecals.size(); ++itemIndex) {
 		const DepthBinnedRectangularScreenItem& item = idOrderedDecals[itemIndex];
 		for (uint32_t z = item.depthBinsBegin; z < item.depthBinsEnd; ++z) {
-			ScreenDepthBinFields& depthBin = screenDepthBins[z];
-			depthBin.depthBinDecalsBegin = min(depthBin.depthBinDecalsBegin, itemIndex);
-			depthBin.depthBinDecalsEnd = max(depthBin.depthBinDecalsEnd, itemIndex + 1);
+			u32vec4& depthBin = screenDepthBins->depthBins[z];
+			uint32_t& depthBinDecalsBegin = depthBin.x;
+			uint32_t& depthBinDecalsEnd = depthBin.y;
+			depthBinDecalsBegin = min(depthBinDecalsBegin, itemIndex);
+			depthBinDecalsEnd = max(depthBinDecalsEnd, itemIndex + 1);
 		}
 	}
 	for (uint32_t itemIndex = 0; itemIndex < depthOrderedLights.size(); ++itemIndex) {
 		const DepthBinnedRectangularScreenItem& item = depthOrderedLights[itemIndex];
 		for (uint32_t z = item.depthBinsBegin; z < item.depthBinsEnd; ++z) {
-			ScreenDepthBinFields& depthBin = screenDepthBins[z];
-			depthBin.depthBinLightsBegin = min(depthBin.depthBinLightsBegin, globalLightCount + itemIndex);
-			depthBin.depthBinLightsEnd = max(depthBin.depthBinLightsEnd, globalLightCount + itemIndex + 1);
+			u32vec4& depthBin = screenDepthBins->depthBins[z];
+			uint32_t& depthBinLightsBegin = depthBin.z;
+			uint32_t& depthBinLightsEnd = depthBin.w;
+			depthBinLightsBegin = min(depthBinLightsBegin, globalLightCount + itemIndex);
+			depthBinLightsEnd = max(depthBinLightsEnd, globalLightCount + itemIndex + 1);
 		}
 	}
 
@@ -1133,7 +1135,7 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 	}
 
 	screenBuffers.upload<ScreenTileBuffer>(*screenTiles);
-	screenBuffers.upload<ScreenDepthBinBuffer>(screenDepthBins);
+	screenBuffers.upload<ScreenDepthBinBuffer>(*screenDepthBins);
 	screenBuffers.upload<ScreenItemBuffer>(screenItems);
 	screenBuffers.upload<ScreenDecalBuffer>(screenDecals);
 	screenBuffers.upload<ScreenLightBuffer>(screenLights);
@@ -1142,7 +1144,7 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 		.screenFramebufferHeight = framebufferHeight,
 		.screenInverseTileSize = 1.0f / tileSize,
 		.screenTileCounts{tileCountX, tileCountY},
-		.screenDepthBinCount = options.depthBinCount,
+		.screenDepthBinCount = depthBinCount,
 		.screenCascadedShadowMaps = (lights.cascadedShadowMaps) ? lights.cascadedShadowMaps : getDefaultDepthTexture2DArray(),
 		.screenPointLightShadowMaps = (lights.pointLightShadowMaps) ? lights.pointLightShadowMaps : getDefaultDepthTextureCubeArray(),
 		.screenSpotLightShadowMaps = (lights.spotLightShadowMaps) ? lights.spotLightShadowMaps : getDefaultDepthTexture2DArray(),

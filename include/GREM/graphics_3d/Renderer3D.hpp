@@ -74,7 +74,7 @@ struct Renderer3DOptions {
 	 *
 	 * Must be positive.
 	 */
-	uint32_t depthBinCount = 2048;
+	uint32_t depthBinCount = 1024;
 
 	/**
 	 * The width, in texels, of the generated bidirectional reflectance
@@ -193,7 +193,7 @@ public:
 	/** Shader buffer for on-screen lights. */
 	using ScreenLightBuffer = StorageBuffer<ScreenLightFields, "Renderer3DScreenLights">;
 
-	/** Struct of shader fields representing a tile of the screen. */
+	/** Struct of shader parameters representing the tiles of the screen. */
 	struct ScreenTileParameters {
 		/**
 		 * Maximum number of on-screen tiles.
@@ -218,23 +218,26 @@ public:
 	/** Shader buffer for screen tiles. */
 	using ScreenTileBuffer = UniformBuffer<ScreenTileParameters, "Renderer3DScreenTiles">;
 
-	/** Struct of shader fields representing a depth bin of the screen. */
-	struct ScreenDepthBinFields {
-		/** First index in the range of lights belonging to this depth bin. */
-		uint32_t depthBinLightsBegin;
+	/** Struct of shader parameters representing the depth bins of the screen. */
+	struct ScreenDepthBinParameters {
+		/**
+		 * Maximum number of depth bins.
+		 */
+		static constexpr size_t MAX_DEPTH_BIN_COUNT = 1024;
 
-		/** End index of the range of lights belonging to this depth bin. */
-		uint32_t depthBinLightsEnd;
-
-		/** First index in the range of decals belonging to this depth bin. */
-		uint32_t depthBinDecalsBegin;
-
-		/** End index of the range of decals belonging to this depth bin. */
-		uint32_t depthBinDecalsEnd;
+		/**
+		 * Depth bins, each containing the following data:
+		 * - 32 bits: depthBinDecalsBegin
+		 * - 32 bits: depthBinDecalsEnd
+		 * - 32 bits: depthBinLightsBegin
+		 * - 32 bits: depthBinLightsEnd
+		 */
+		Array<u32vec4, MAX_DEPTH_BIN_COUNT> depthBins;
 	};
+	static_assert(sizeof(ScreenDepthBinParameters) <= 16384);
 
 	/** Shader buffer for screen depth bins. */
-	using ScreenDepthBinBuffer = StorageBuffer<ScreenDepthBinFields, "Renderer3DScreenDepthBins">;
+	using ScreenDepthBinBuffer = UniformBuffer<ScreenDepthBinParameters, "Renderer3DScreenDepthBins">;
 
 	/** Struct of shader fields representing an item belonging to a screen tile. */
 	struct ScreenItemFields {

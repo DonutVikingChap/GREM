@@ -49,10 +49,11 @@ void main() {
 	uint reflectionProbeItemsBegin = lightProbeVolumeItemsEnd;
 	uint reflectionProbeItemsEnd = reflectionProbeItemsBegin + reflectionProbeCount;
 
-	uint lightsBegin = depthBinLightsBegin(depthBinIndex);
-	uint lightsEnd = depthBinLightsEnd(depthBinIndex);
-	uint decalsBegin = depthBinDecalsBegin(depthBinIndex);
-	uint decalsEnd = depthBinDecalsEnd(depthBinIndex);
+	uvec4 depthBin = depthBins[depthBinIndex];
+	uint decalsBegin = depthBin.x;
+	uint decalsEnd = depthBin.y;
+	uint lightsBegin = depthBin.z;
+	uint lightsEnd = depthBin.w;
 
 	// Sample material parameters.
 	GREM_Material material = GREM_Model3D_getMaterial();
