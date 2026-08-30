@@ -819,6 +819,7 @@ vec4 GREM_Sky3D_getReflection(float roughness, vec3 reflectionDirection) {
 
 constexpr CStringView DECALS_3D_FRAGMENT_HEADER_SOURCE_CODE = R"GLSL(
 #include <GREM/blending.glsl>
+#include <GREM/gamma_correction.glsl>
 #include <GREM/material.glsl>
 
 void GREM_Decals3D_applyDecalToMaterial(inout GREM_Material material, uint decalIndex, vec3 samplePosition, vec3 rawNormal, uint instanceIdentifier) {	
@@ -837,10 +838,10 @@ void GREM_Decals3D_applyDecalToMaterial(inout GREM_Material material, uint decal
 	vec2 occlusionRoughnessMetallicTextureCoordinates = occlusionRoughnessMetallicTextureOffsetAndScale.xy + decalCoordinates.xy * occlusionRoughnessMetallicTextureOffsetAndScale.zw;
 	vec2 emissiveTextureCoordinates = emissiveTextureOffsetAndScale.xy + decalCoordinates.xy * emissiveTextureOffsetAndScale.zw;
 
-	vec4 sampledBaseColor = GREM_textureSample2D(decalsBaseColorAtlasTexture, baseColorTextureCoordinates);
-	vec3 sampledNormal = GREM_textureSample2D(decalsNormalAtlasTexture, normalTextureCoordinates).xyz * 2.0 - vec3(1.0);
-	vec3 sampledOcclusionRoughnessMetallic = GREM_textureSample2D(decalsOcclusionRoughnessMetallicAtlasTexture, occlusionRoughnessMetallicTextureCoordinates).xyz;
-	vec3 sampledEmissive = GREM_textureSample2D(decalsEmissiveAtlasTexture, emissiveTextureCoordinates).rgb;
+	vec4 sampledBaseColor = GREM_convertSRGBToLinear(GREM_textureSample2D(decalsAtlasTexture, baseColorTextureCoordinates));
+	vec3 sampledNormal = GREM_textureSample2D(decalsAtlasTexture, normalTextureCoordinates).xyz * 2.0 - vec3(1.0);
+	vec3 sampledOcclusionRoughnessMetallic = GREM_textureSample2D(decalsAtlasTexture, occlusionRoughnessMetallicTextureCoordinates).xyz;
+	vec3 sampledEmissive = GREM_convertSRGBToLinear(GREM_textureSample2D(decalsAtlasTexture, emissiveTextureCoordinates).rgb);
 
 	vec4 baseColorFactor = decalBaseColorFactor(decalIndex);
 	vec4 occlusionRoughnessMetallicFactorAndNormalScale = decalOcclusionRoughnessMetallicFactorAndNormalScale(decalIndex);

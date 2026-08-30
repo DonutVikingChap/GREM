@@ -1070,16 +1070,13 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 		const vec3 direction = decal.orientation * vec3{0.0f, 0.0f, -1.0f};
 		const vec3 up = decal.orientation * vec3{0.0f, 1.0f, 0.0f};
 		const mat4 viewMatrix = lookAt(decal.position, decal.position + direction, up);
-		const vec2 inverseBaseColorAtlasTextureSize = 1.0f / vec2{decals.baseColorAtlasTexture.getSize2D()};
-		const vec2 inverseNormalAtlasTextureSize = 1.0f / vec2{decals.normalAtlasTexture.getSize2D()};
-		const vec2 inverseOcclusionRoughnessMetallicAtlasTextureSize = 1.0f / vec2{decals.occlusionRoughnessMetallicAtlasTexture.getSize2D()};
-		const vec2 inverseEmissiveAtlasTextureSize = 1.0f / vec2{decals.emissiveAtlasTexture.getSize2D()};
+		const vec2 inverseAtlasTextureSize = 1.0f / vec2{decals.atlasTexture.getSize2D()};
 		const Decals3D::DecalMaterial& decalMaterial = decals.decalMaterials[decal.materialID.index];
-		const vec4 baseColorTextureOffsetAndScale = decalMaterial.baseColorMapPositionAndSize * vec4{inverseBaseColorAtlasTextureSize, inverseBaseColorAtlasTextureSize};
-		const vec4 normalTextureOffsetAndScale = decalMaterial.normalMapPositionAndSize * vec4{inverseNormalAtlasTextureSize, inverseNormalAtlasTextureSize};
+		const vec4 baseColorTextureOffsetAndScale = decalMaterial.baseColorMapPositionAndSize * vec4{inverseAtlasTextureSize, inverseAtlasTextureSize};
+		const vec4 normalTextureOffsetAndScale = decalMaterial.normalMapPositionAndSize * vec4{inverseAtlasTextureSize, inverseAtlasTextureSize};
 		const vec4 occlusionRoughnessMetallicTextureOffsetAndScale =
-			decalMaterial.occlusionRoughnessMetallicMapPositionAndSize * vec4{inverseOcclusionRoughnessMetallicAtlasTextureSize, inverseOcclusionRoughnessMetallicAtlasTextureSize};
-		const vec4 emissiveTextureOffsetAndScale = decalMaterial.emissiveMapPositionAndSize * vec4{inverseEmissiveAtlasTextureSize, inverseEmissiveAtlasTextureSize};
+			decalMaterial.occlusionRoughnessMetallicMapPositionAndSize * vec4{inverseAtlasTextureSize, inverseAtlasTextureSize};
+		const vec4 emissiveTextureOffsetAndScale = decalMaterial.emissiveMapPositionAndSize * vec4{inverseAtlasTextureSize, inverseAtlasTextureSize};
 		screenDecals.push_back(ScreenDecalFields{
 			.decalMatrix = BIAS_MATRIX * projectionMatrix * viewMatrix,
 			.decalDirectionAndRange = vec4{direction, decal.range},

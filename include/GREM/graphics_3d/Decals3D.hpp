@@ -256,17 +256,8 @@ class Decals3D {
 public:
 	/** Struct of shader parameters representing the decals. */
 	struct Parameters {
-		/** Sampler for the decal base color atlas texture. */
-		sampler2D decalsBaseColorAtlasTexture;
-
-		/** Sampler for the decal normal atlas texture. */
-		sampler2D decalsNormalAtlasTexture;
-
-		/** Sampler for the decal occlusion-roughness-metallic atlas texture. */
-		sampler2D decalsOcclusionRoughnessMetallicAtlasTexture;
-
-		/** Sampler for the decal emissive atlas texture. */
-		sampler2D decalsEmissiveAtlasTexture;
+		/** Sampler for the decal atlas texture. */
+		sampler2D decalsAtlasTexture;
 	};
 
 	/** Shader buffer for decal parameters. */
@@ -532,14 +523,8 @@ private:
 	[[no_unique_address]] Decals3DOptions options;
 	OrderedMap<DecalID, Decal> decals{};
 	uint64_t lastDecalIDValue = 0;
-	resource::AtlasPacker baseColorAtlasPacker{{.initialResolution = INITIAL_RESOLUTION, .padding = PADDING, .alignment = ALIGNMENT}};
-	resource::AtlasPacker normalAtlasPacker{{.initialResolution = INITIAL_RESOLUTION, .padding = PADDING, .alignment = ALIGNMENT}};
-	resource::AtlasPacker occlusionRoughnessMetallicAtlasPacker{{.initialResolution = INITIAL_RESOLUTION, .padding = PADDING, .alignment = ALIGNMENT}};
-	resource::AtlasPacker emissiveAtlasPacker{{.initialResolution = INITIAL_RESOLUTION, .padding = PADDING, .alignment = ALIGNMENT}};
-	Texture baseColorAtlasTexture{};
-	Texture normalAtlasTexture{};
-	Texture occlusionRoughnessMetallicAtlasTexture{};
-	Texture emissiveAtlasTexture{};
+	resource::AtlasPacker atlasPacker{{.initialResolution = INITIAL_RESOLUTION, .padding = PADDING, .alignment = ALIGNMENT}};
+	Texture atlasTexture{};
 	Optional<vec2> defaultBaseColorMapPosition{};
 	Optional<vec2> defaultNormalMapPosition{};
 	Optional<vec2> defaultOcclusionRoughnessMetallicMapPosition{};

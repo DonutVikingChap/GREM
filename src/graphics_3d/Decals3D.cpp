@@ -20,9 +20,11 @@ namespace grem::graphics {
 
 namespace {
 
-[[nodiscard]] vec4 insertSprite(Device& device, resource::AtlasPacker& atlasPacker, Texture& atlasTexture, uint32_t padding, TextureFormat internalFormat,
-	const resource::ImageView& image, bool convertToPremultipliedAlpha) {
-	if (!Texture::isCompatibleFormat(internalFormat, image.getFormat())) {
+constexpr TextureFormat DECAL_ATLAS_INTERNAL_FORMAT = TextureFormat::R8G8B8A8_UNORM;
+
+[[nodiscard]] vec4 insertSprite(Device& device, resource::AtlasPacker& atlasPacker, Texture& atlasTexture, uint32_t padding, const resource::ImageView& image,
+	Color::TransferFunction transferFunction, bool convertToPremultipliedAlpha) {
+	if (!Texture::isCompatibleFormat(DECAL_ATLAS_INTERNAL_FORMAT, image.getFormat())) {
 		throw graphics::Error{"Failed to insert sprite image: Incompatible image format."};
 	}
 
@@ -30,7 +32,7 @@ namespace {
 	if (!atlasTexture || resized) {
 		Texture oldAtlasTexture = std::move(atlasTexture);
 		const Extent2D size{atlasPacker.getResolution()};
-		atlasTexture = Texture::create(device, TextureType::TEXTURE_2D, internalFormat, size, resource::Image::getMaxMipLevelCount(size), ClearValues{},
+		atlasTexture = Texture::create(device, TextureType::TEXTURE_2D, DECAL_ATLAS_INTERNAL_FORMAT, size, resource::Image::getMaxMipLevelCount(size), ClearValues{},
 			TextureSamplerOptions{
 				.horizontalWrappingMode = TextureWrappingMode::CLAMP_TO_EDGE,
 				.verticalWrappingMode = TextureWrappingMode::CLAMP_TO_EDGE,
@@ -44,7 +46,7 @@ namespace {
 	resource::ImageView transformedImageView = image;
 	if (convertToPremultipliedAlpha && resource::Image::isRGBAColorFormat(transformedImageView.getFormat()) && resource::Image::isRawFormat(transformedImageView.getFormat())) {
 		transformedImage = resource::Image{transformedImageView};
-		transformedImage.transformFromStraightToPremultipliedAlpha(Texture::getTransferFunction(internalFormat));
+		transformedImage.transformFromStraightToPremultipliedAlpha(transferFunction);
 		transformedImageView = transformedImage;
 	}
 	if (padding > 0) {
@@ -68,11 +70,7 @@ Decals3D::Decals3D(Device& device, const Decals3DOptions& options)
 void Decals3D::clearDecalMaterials() noexcept {
 	clearDecals();
 	decalMaterials.clear();
-	baseColorAtlasPacker = resource::AtlasPacker{{.initialResolution = baseColorAtlasPacker.getResolution(), .padding = PADDING, .alignment = ALIGNMENT}};
-	normalAtlasPacker = resource::AtlasPacker{{.initialResolution = normalAtlasPacker.getResolution(), .padding = PADDING, .alignment = ALIGNMENT}};
-	occlusionRoughnessMetallicAtlasPacker =
-		resource::AtlasPacker{{.initialResolution = occlusionRoughnessMetallicAtlasPacker.getResolution(), .padding = PADDING, .alignment = ALIGNMENT}};
-	emissiveAtlasPacker = resource::AtlasPacker{{.initialResolution = emissiveAtlasPacker.getResolution(), .padding = PADDING, .alignment = ALIGNMENT}};
+	atlasPacker = resource::AtlasPacker{{.initialResolution = atlasPacker.getResolution(), .padding = PADDING, .alignment = ALIGNMENT}};
 	defaultBaseColorMapPosition.reset();
 	defaultNormalMapPosition.reset();
 	defaultOcclusionRoughnessMetallicMapPosition.reset();
@@ -83,22 +81,20 @@ DecalMaterialID Decals3D::createDecalMaterial(const DecalMaterialOptions& option
 	const vec4 baseColorMapPositionAndSize =
 		(options.baseColorMapImage.getType() == resource::ImageType::EMPTY)
 			? vec4{getDefaultDecalBaseColorMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, baseColorAtlasPacker, baseColorAtlasTexture, PADDING, TextureFormat::R8G8B8A8_SRGB, options.baseColorMapImage,
-				  options.convertToPremultipliedAlpha);
+			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.baseColorMapImage, Color::TransferFunction::SRGB, options.convertToPremultipliedAlpha);
 	const vec4 normalMapPositionAndSize =
 		(options.normalMapImage.getType() == resource::ImageType::EMPTY)
 			? vec4{getDefaultDecalNormalMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, normalAtlasPacker, normalAtlasTexture, PADDING, TextureFormat::R8G8B8A8_UNORM, options.normalMapImage, options.convertToPremultipliedAlpha);
+			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.normalMapImage, Color::TransferFunction::LINEAR, options.convertToPremultipliedAlpha);
 	const vec4 occlusionRoughnessMetallicMapPositionAndSize =
 		(options.occlusionRoughnessMetallicMapImage.getType() == resource::ImageType::EMPTY)
 			? vec4{getDefaultDecalOcclusionRoughnessMetallicMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, occlusionRoughnessMetallicAtlasPacker, occlusionRoughnessMetallicAtlasTexture, PADDING, TextureFormat::R8G8B8A8_UNORM,
-				  options.occlusionRoughnessMetallicMapImage, options.convertToPremultipliedAlpha);
+			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.occlusionRoughnessMetallicMapImage, Color::TransferFunction::LINEAR,
+				  options.convertToPremultipliedAlpha);
 	const vec4 emissiveMapPositionAndSize =
 		(options.emissiveMapImage.getType() == resource::ImageType::EMPTY)
 			? vec4{getDefaultDecalEmissiveMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, emissiveAtlasPacker, emissiveAtlasTexture, PADDING, TextureFormat::R8G8B8A8_SRGB, options.emissiveMapImage,
-				  options.convertToPremultipliedAlpha);
+			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.emissiveMapImage, Color::TransferFunction::SRGB, options.convertToPremultipliedAlpha);
 	const uint32_t index = static_cast<uint32_t>(decalMaterials.size());
 	decalMaterials.push_back(DecalMaterial{
 		.baseColorMapPositionAndSize = baseColorMapPositionAndSize,
@@ -198,8 +194,9 @@ void Decals3D::setDecalModelInstanceIdentifier(DecalID id, uint32_t newModelInst
 vec2 Decals3D::getDefaultDecalBaseColorMapPosition() {
 	if (!defaultBaseColorMapPosition) {
 		constexpr Array WHITE_PIXEL{uint8_t{255}, uint8_t{255}, uint8_t{255}, uint8_t{255}};
-		defaultBaseColorMapPosition = vec2{insertSprite(*device, baseColorAtlasPacker, baseColorAtlasTexture, PADDING, TextureFormat::R8G8B8A8_SRGB,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, false)};
+		defaultBaseColorMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, Color::TransferFunction::SRGB,
+			false)};
 	}
 	return *defaultBaseColorMapPosition;
 }
@@ -207,8 +204,9 @@ vec2 Decals3D::getDefaultDecalBaseColorMapPosition() {
 vec2 Decals3D::getDefaultDecalNormalMapPosition() {
 	if (!defaultNormalMapPosition) {
 		constexpr Array FLAT_NORMAL_PIXEL{uint8_t{128}, uint8_t{128}, uint8_t{255}, uint8_t{255}};
-		defaultNormalMapPosition = vec2{insertSprite(*device, normalAtlasPacker, normalAtlasTexture, PADDING, TextureFormat::R8G8B8A8_UNORM,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{FLAT_NORMAL_PIXEL})}, false)};
+		defaultNormalMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{FLAT_NORMAL_PIXEL})},
+			Color::TransferFunction::LINEAR, false)};
 	}
 	return *defaultNormalMapPosition;
 }
@@ -216,9 +214,9 @@ vec2 Decals3D::getDefaultDecalNormalMapPosition() {
 vec2 Decals3D::getDefaultDecalOcclusionRoughnessMetallicMapPosition() {
 	if (!defaultOcclusionRoughnessMetallicMapPosition) {
 		constexpr Array WHITE_PIXEL{uint8_t{255}, uint8_t{255}, uint8_t{255}, uint8_t{255}};
-		defaultOcclusionRoughnessMetallicMapPosition =
-			vec2{insertSprite(*device, occlusionRoughnessMetallicAtlasPacker, occlusionRoughnessMetallicAtlasTexture, PADDING, TextureFormat::R8G8B8A8_UNORM,
-				resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, false)};
+		defaultOcclusionRoughnessMetallicMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})},
+			Color::TransferFunction::LINEAR, false)};
 	}
 	return *defaultOcclusionRoughnessMetallicMapPosition;
 }
@@ -226,8 +224,9 @@ vec2 Decals3D::getDefaultDecalOcclusionRoughnessMetallicMapPosition() {
 vec2 Decals3D::getDefaultDecalEmissiveMapPosition() {
 	if (!defaultEmissiveMapPosition) {
 		constexpr Array WHITE_PIXEL{uint8_t{255}, uint8_t{255}, uint8_t{255}, uint8_t{255}};
-		defaultEmissiveMapPosition = vec2{insertSprite(*device, emissiveAtlasPacker, emissiveAtlasTexture, PADDING, TextureFormat::R8G8B8A8_SRGB,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, false)};
+		defaultEmissiveMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, Color::TransferFunction::SRGB,
+			false)};
 	}
 	return *defaultEmissiveMapPosition;
 }
@@ -235,10 +234,7 @@ vec2 Decals3D::getDefaultDecalEmissiveMapPosition() {
 void Decals3D::flush(Renderer3D& renderer3D) const {
 	if (parameterBufferDirty) {
 		parameterBuffer.upload(Parameters{
-			.decalsBaseColorAtlasTexture = (baseColorAtlasTexture) ? baseColorAtlasTexture : renderer3D.getWhiteTexture2D(),
-			.decalsNormalAtlasTexture = (normalAtlasTexture) ? normalAtlasTexture : renderer3D.getFlatNormalTexture2D(),
-			.decalsOcclusionRoughnessMetallicAtlasTexture = (occlusionRoughnessMetallicAtlasTexture) ? occlusionRoughnessMetallicAtlasTexture : renderer3D.getWhiteTexture2D(),
-			.decalsEmissiveAtlasTexture = (emissiveAtlasTexture) ? emissiveAtlasTexture : renderer3D.getWhiteTexture2D(),
+			.decalsAtlasTexture = (atlasTexture) ? atlasTexture : renderer3D.getWhiteTexture2D(),
 		});
 		parameterBufferDirty = false;
 	}
