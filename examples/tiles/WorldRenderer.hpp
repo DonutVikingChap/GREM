@@ -82,19 +82,19 @@ public:
 						}
 						tilemapLayer.chunkIndicesBounds = *newChunkIndicesBounds;
 						tilemapLayer.chunkTextureIndices = std::move(newChunkTextureIndices);
-						tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R32_FLOAT,
+						tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R8G8B8A8_UNORM,
 							Extent2D::from(u32vec2{newChunkIndicesExtents}), 1, nullptr, gfx::TextureSamplerOptions::UNFILTERED);
 					}
 				} else {
 					const uzvec2 newChunkIndicesExtents{u32vec2{newChunkIndicesBounds->max} - u32vec2{newChunkIndicesBounds->min} + u32vec2{1}};
 					tilemapLayer.chunkIndicesBounds = *newChunkIndicesBounds;
 					tilemapLayer.chunkTextureIndices = Allocation<uint32_t>(newChunkIndicesExtents.x * newChunkIndicesExtents.y, uint32_t{0xFFFFFFFF});
-					tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R32_FLOAT,
+					tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R8G8B8A8_UNORM,
 						Extent2D::from(u32vec2{newChunkIndicesExtents}), 1, nullptr, gfx::TextureSamplerOptions::UNFILTERED);
 				}
 			} else {
-				tilemapLayer.chunkTextureIndexTexture =
-					gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R32_FLOAT, Extent2D{1, 1}, 1, nullptr, gfx::TextureSamplerOptions::UNFILTERED);
+				tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R8G8B8A8_UNORM, Extent2D{1, 1}, 1, nullptr,
+					gfx::TextureSamplerOptions::UNFILTERED);
 			}
 		}
 

@@ -13,7 +13,8 @@ void main() {
 		tile = tilemapDefaultTile;
 	} else {
 		ivec2 relativeChunkIndices = chunkIndices - tilemapChunkIndicesMin;
-		uint chunkTextureIndex = floatBitsToUint(GREM_texelFetch2D(tilemapChunkTextureIndexTexture, relativeChunkIndices, 0).r);
+		uvec4 chunkTextureIndexSample = uvec4(GREM_texelFetch2D(tilemapChunkTextureIndexTexture, relativeChunkIndices, 0) * 255.0 + vec4(0.5));
+		uint chunkTextureIndex = (chunkTextureIndexSample.a << 24) | (chunkTextureIndexSample.b << 16) | (chunkTextureIndexSample.g << 8) | chunkTextureIndexSample.r;
 		if (chunkTextureIndex == 0xFFFFFFFFu) {
 			tile = tilemapDefaultTile;
 		} else {
