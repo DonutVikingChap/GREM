@@ -41,9 +41,9 @@
 
 namespace grem::graphics {
 
-namespace {
+namespace detail {
 
-[[nodiscard]] GLuint flushStorageBufferTexture(Device& device) {
+[[nodiscard]] inline GLuint flushStorageBufferTexture(Device& device) {
 	const detail::TextureBinding2DPreserver textureBinding2DPreserver{};
 	glBindTexture(GL_TEXTURE_2D, device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get());
 
@@ -114,7 +114,7 @@ namespace {
 	return device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get();
 }
 
-} // namespace
+} // namespace detail
 
 struct RenderPassImplementation {
 	struct RenderTargets {
@@ -818,7 +818,7 @@ struct RenderPassImplementation {
 				storageBufferBindingsUniformLocations = command.storageBufferBindingsUniformLocations;
 				if (!storageBufferBindingsUniformLocations.empty()) {
 					if (!storageBufferTextureHandle) {
-						storageBufferTextureHandle = flushStorageBufferTexture(device);
+						storageBufferTextureHandle = detail::flushStorageBufferTexture(device);
 					}
 					glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + command.storageBufferTextureUnit));
 					glBindTexture(GL_TEXTURE_2D, *storageBufferTextureHandle);
