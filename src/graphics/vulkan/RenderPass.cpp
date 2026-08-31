@@ -416,7 +416,7 @@ RenderPass& RenderPass::drawShaded(SharedPointer<ShaderPipelineImplementation> s
 
 		if (instanceRange.meshHandle->indexType) {
 			implementation->commands->push_back(RenderPassImplementation::CommandDrawIndexed{
-				.indexCount = mesh.indexRange.end - mesh.indexRange.begin,
+				.indexCount = mesh.indexRange.size(),
 				.instanceCount = instanceRange.count,
 				.firstIndex = mesh.indexRange.begin,
 				.vertexOffset = static_cast<int32_t>(mesh.vertexRange.begin),

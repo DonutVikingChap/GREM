@@ -262,6 +262,7 @@ if(GREM_BUILD_LIBS)
 				"include/GREM/core/data/Span.hpp"
 				"include/GREM/core/data/SPSCQueue.hpp"
 				"include/GREM/core/data/SPSCSlidingWindowQueue.hpp"
+				"include/GREM/core/data/SquareAllocator.hpp"
 				"include/GREM/core/data/StridedSpan.hpp"
 				"include/GREM/core/data/String.hpp"
 				"include/GREM/core/data/StringPool.hpp"

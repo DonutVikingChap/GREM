@@ -6,6 +6,7 @@
 #include <GREM/core/algorithms.hpp>
 #include <GREM/core/assertions.hpp>
 #include <GREM/core/data/Array.hpp>
+#include <GREM/core/data/ArrayList.hpp>
 #include <GREM/core/data/CStringView.hpp>
 #include <GREM/core/data/SharedPointer.hpp>
 #include <GREM/core/data/SmallArrayList.hpp>
@@ -326,14 +327,15 @@ void writeStorageBufferDeclarations(String& output, CStringView bufferName, Span
 		return;
 	}
 
-	output.append(formatString("uniform sampler2D {}Texture;\n", bufferName));
+	output.append(formatString("uniform uvec4 {}Binding;\n", bufferName));
 	writeVec4BufferGetters(output, {}, fieldDescriptions, [&](String& output, StringView nameString, StringView indexString) -> void {
-		output.append(formatString("vec4 {0} = texelFetch({1}Texture, ivec2(int(({2}) % uint(textureSize({1}Texture, 0).x)), int(({2}) / uint(textureSize({1}Texture, 0).x))), 0);",
-			nameString, bufferName, indexString));
+		output.append(
+			formatString("vec4 {0} = texelFetch(GREM_private_storageBuffer, ivec2(int({1}Binding.x + (({2}) & {1}Binding.z)), int({1}Binding.y + (({2}) >> {1}Binding.w))), 0);",
+				nameString, bufferName, indexString));
 	});
 }
 
-void writeBufferDeclarations(String& output, Span<const BufferLayoutReference> bufferLayouts) {
+void writeBufferDeclarations(String& output, bool& hasStorageBuffer, Span<const BufferLayoutReference> bufferLayouts) {
 	for (const BufferLayoutReference& bufferLayout : bufferLayouts) {
 		GREM_MATCH(bufferLayout) {
 			GREM_CASE(const UniformBufferLayoutReference& uniformBufferLayout) {
@@ -347,11 +349,15 @@ void writeBufferDeclarations(String& output, Span<const BufferLayoutReference> b
 				if (!isValidName(storageBufferLayout.name)) {
 					throw graphics::Error{formatString("Invalid buffer name \"{}\".", storageBufferLayout.name)};
 				}
+				if (!hasStorageBuffer) {
+					output.append("uniform sampler2D GREM_private_storageBuffer;\n\n");
+					hasStorageBuffer = true;
+				}
 				writeStorageBufferDeclarations(output, formatString("GREM_private_{}", storageBufferLayout.name), storageBufferLayout.fieldDescriptions);
 				break;
 			}
 			GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
-				writeBufferDeclarations(output, bufferSetLayout.bufferLayouts);
+				writeBufferDeclarations(output, hasStorageBuffer, bufferSetLayout.bufferLayouts);
 				break;
 			}
 		}
@@ -378,7 +384,9 @@ void writeBufferDeclarations(String& output, Span<const BufferLayoutReference> b
 	writeIODeclarations(prologue, "out", outputFieldDescriptions);
 
 	writeUniformBufferDeclarations(prologue, "GREM_private_MeshParameters", parameterDescriptions);
-	writeBufferDeclarations(prologue, bufferLayouts);
+
+	bool hasStorageBuffer = false;
+	writeBufferDeclarations(prologue, hasStorageBuffer, bufferLayouts);
 
 	if (isFragmentShader) {
 		const bool usesGamma = anyOf(outputFieldDescriptions, [](const FieldDescription& fieldDescription) -> bool {
@@ -456,12 +464,12 @@ void writeBufferDeclarations(String& output, Span<const BufferLayoutReference> b
 				"\t\tdefault: break; \\\n"
 				"\t}\n"
 				"\n"
-				"uniform int GREM_private_srgbCorrectionMode;\n");
+				"uniform int GREM_private_srgbCorrectionMode;\n\n");
 		} else {
 			prologue.append("#define GREM_PRIVATE_GAMMA_CORRECTION_CODE\n\n");
 		}
 		if (usesFragmentCoordinates) {
-			prologue.append("uniform float GREM_private_framebufferHeight;\n");
+			prologue.append("uniform float GREM_private_framebufferHeight;\n\n");
 		}
 	}
 
@@ -625,6 +633,7 @@ ShaderPipelineBase::ShaderPipelineBase(Device&, std::type_index meshTypeIndex, S
 
 	GLuint uniformBlockBinding = 0;
 	GLint textureUnit = 0;
+	ArrayList<GLint> storageBufferBindingsUniformLocations{};
 	if (!vertexShaderHandle->parameterDescriptions.empty()) {
 		if (anyOf(vertexShaderHandle->parameterDescriptions,
 				[](const ParameterDescription& parameterDescription) -> bool { return !isTextureParameter(parameterDescription.type); })) {
@@ -668,11 +677,8 @@ ShaderPipelineBase::ShaderPipelineBase(Device&, std::type_index meshTypeIndex, S
 				break;
 			}
 			GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) {
-				const GLint location = glGetUniformLocation(programObjectHandle, formatString("GREM_private_{}Texture", storageBufferLayout.name).c_str());
-				if (location != -1) {
-					glUniform1i(location, textureUnit);
-				}
-				++textureUnit;
+				const GLint location = glGetUniformLocation(programObjectHandle, formatString("GREM_private_{}Binding", storageBufferLayout.name).c_str());
+				storageBufferBindingsUniformLocations.push_back(location);
 				break;
 			}
 			GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
@@ -704,6 +710,15 @@ ShaderPipelineBase::ShaderPipelineBase(Device&, std::type_index meshTypeIndex, S
 		while (it != fragmentShaderHandle->bufferLayouts.end()) {
 			setupBufferLayout(setupBufferLayout, *it);
 			++it;
+		}
+	}
+
+	if (!storageBufferBindingsUniformLocations.empty()) {
+		implementation->storageBufferBindingsUniformLocations.assign_range(storageBufferBindingsUniformLocations);
+		implementation->storageBufferTextureUnit = textureUnit;
+		const GLint location = glGetUniformLocation(programObjectHandle, "GREM_private_storageBuffer");
+		if (location != -1) {
+			glUniform1i(location, textureUnit);
 		}
 	}
 

@@ -865,7 +865,7 @@ struct InstanceBufferImplementation : detail::ReusableCopyOnWriteResourceBase<In
 	InstanceBufferImplementation(Device& device, size_t instanceSize, uint32_t instanceCapacity)
 		: device(device)
 		, instanceSize(instanceSize)
-		, instanceStride(detail::convertFloatCountToVec4Count(instanceSize / sizeof(float)) * sizeof(float) * 4)
+		, instanceStride(detail::convertFloatCountToVec4Count(instanceSize / sizeof(float)) * (sizeof(float) * 4))
 		, instanceBuffer(device.get()->allocator.get(), static_cast<size_t>(instanceCapacity) * instanceStride, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
 		allocateDescriptorSet();
 	}
@@ -1076,7 +1076,7 @@ struct DrawCommandBufferImplementation : detail::ReusableCopyOnWriteResourceBase
 
 		const bool isIndexed = meshHandle->indexType.has_value();
 		const uint32_t vertexCount = meshHandle->vertexCount;
-		const uint32_t indexCount = (isIndexed) ? meshHandle->indexRange.end - meshHandle->indexRange.begin : vertexCount;
+		const uint32_t indexCount = (isIndexed) ? meshHandle->indexRange.size() : vertexCount;
 		statistics.totalDrawnVertexCount += static_cast<size_t>(instanceCount) * static_cast<size_t>(vertexCount);
 		statistics.totalDrawnIndexCount += static_cast<size_t>(instanceCount) * static_cast<size_t>(indexCount);
 		statistics.totalDrawnInstanceCount += static_cast<size_t>(instanceCount);
@@ -1286,7 +1286,7 @@ struct UnorderedDrawCommandBufferImplementation : detail::ReusableCopyOnWriteRes
 				const MeshImplementation& unflushedMesh = *usedMeshes.back();
 				if (unflushedMesh.indexType) {
 					const VkDrawIndexedIndirectCommand drawIndexedIndirectCommand{
-						.indexCount = unflushedMesh.indexRange.end - unflushedMesh.indexRange.begin,
+						.indexCount = unflushedMesh.indexRange.size(),
 						.instanceCount = unflushedRangeInstanceCount,
 						.firstIndex = unflushedMesh.indexRange.begin,
 						.vertexOffset = static_cast<int32_t>(unflushedMesh.vertexRange.begin),
@@ -1316,7 +1316,7 @@ struct UnorderedDrawCommandBufferImplementation : detail::ReusableCopyOnWriteRes
 				const MeshImplementation& unflushedMesh = *usedMeshes.back();
 				if (unflushedMesh.indexType) {
 					const VkDrawIndexedIndirectCommand drawIndexedIndirectCommand{
-						.indexCount = unflushedMesh.indexRange.end - unflushedMesh.indexRange.begin,
+						.indexCount = unflushedMesh.indexRange.size(),
 						.instanceCount = unflushedRangeInstanceCount,
 						.firstIndex = unflushedMesh.indexRange.begin,
 						.vertexOffset = static_cast<int32_t>(unflushedMesh.vertexRange.begin),
@@ -1472,7 +1472,7 @@ struct UnorderedDrawCommandBufferImplementation : detail::ReusableCopyOnWriteRes
 			device);
 		const bool isIndexed = meshHandle->indexType.has_value();
 		const uint32_t vertexCount = meshHandle->vertexCount;
-		const uint32_t indexCount = (isIndexed) ? meshHandle->indexRange.end - meshHandle->indexRange.begin : vertexCount;
+		const uint32_t indexCount = (isIndexed) ? meshHandle->indexRange.size() : vertexCount;
 		statistics.totalDrawnVertexCount += static_cast<size_t>(instanceCount) * static_cast<size_t>(vertexCount);
 		statistics.totalDrawnIndexCount += static_cast<size_t>(instanceCount) * static_cast<size_t>(indexCount);
 		statistics.totalDrawnInstanceCount += static_cast<size_t>(instanceCount);

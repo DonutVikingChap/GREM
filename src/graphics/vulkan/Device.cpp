@@ -2662,7 +2662,7 @@ RangeAllocation<uint32_t> DeviceImplementation::uploadIndices(std::type_index me
 	const RangeAllocation<uint32_t> allocation = acquireElementRange(meshContext.indexRangeAllocator, meshContext.indexRangeReferenceCounts, indexCount);
 	try {
 		const size_t byteOffset = static_cast<size_t>(allocation.begin) * indexStride;
-		const size_t sizeBytes = static_cast<size_t>(allocation.end - allocation.begin) * indexStride;
+		const size_t sizeBytes = static_cast<size_t>(allocation.size()) * indexStride;
 		GREM_ASSERT(indexData.size_bytes() == sizeBytes);
 
 		detail::StagingBuffer stagingBuffer = acquireStagingBuffer(sizeBytes);

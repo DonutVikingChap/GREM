@@ -216,6 +216,8 @@ void setupInstanceContext(RenderPassImplementation& implementation, bool& boundN
 		implementation.currentShaderMeshTypeIndex = shaderPipelineHandle->meshTypeIndex;
 		implementation.currentInstanceStride = shaderPipelineHandle->instanceStride;
 		implementation.commands->push_back(RenderPassImplementation::CommandUseProgram{
+			.storageBufferBindingsUniformLocations = implementation.commands->append(Span{shaderPipelineHandle->storageBufferBindingsUniformLocations}),
+			.storageBufferTextureUnit = shaderPipelineHandle->storageBufferTextureUnit,
 			.shaderProgramObjectHandle = shaderPipelineHandle->programObject.get(),
 			.srgbCorrectionModeUniformLocation = shaderPipelineHandle->srgbCorrectionModeUniformLocation,
 			.framebufferHeightUniformLocation = shaderPipelineHandle->framebufferHeightUniformLocation,
@@ -245,6 +247,7 @@ void setupInstanceContext(RenderPassImplementation& implementation, bool& boundN
 	}
 
 	GLuint uniformBlockBinding = 0;
+	GLuint storageBufferBinding = 0;
 	GLint textureUnit = 0;
 
 	if (!shaderPipelineHandle->parameterDescriptions.empty()) {
@@ -301,11 +304,11 @@ void setupInstanceContext(RenderPassImplementation& implementation, bool& boundN
 				}
 				GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) {
 					const StorageBufferImplementation* const storageBuffer = static_cast<const StorageBufferImplementation*>(buffer);
-					implementation.commands->push_back(RenderPassImplementation::CommandUseTexture2D{
-						.textureUnit = textureUnit,
-						.textureObjectHandle = storageBuffer->textureObject.get(),
+					implementation.commands->push_back(RenderPassImplementation::CommandUseStorageBuffer{
+						.storageBuffer = storageBuffer,
+						.storageBufferBinding = storageBufferBinding,
 					});
-					++textureUnit;
+					++storageBufferBinding;
 					break;
 				}
 				GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
@@ -348,6 +351,8 @@ void setupInstanceContext(RenderPassImplementation& implementation, bool& boundN
 				setupBuffer(bufferLayout);
 			}
 		}
+
+		GREM_ASSERT(shaderPipelineHandle->storageBufferTextureUnit == -1 || textureUnit == shaderPipelineHandle->storageBufferTextureUnit);
 	}
 }
 

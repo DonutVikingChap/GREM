@@ -158,7 +158,9 @@ public:
 	 * \note This does not compare the values of any associated objects. It only
 	 *       compares the values of the pointers themselves.
 	 */
-	[[nodiscard]] constexpr bool operator==(const UniquePointer& other) const noexcept = default;
+	[[nodiscard]] constexpr bool operator==(const UniquePointer& other) const noexcept {
+		return handle.get() == other.handle.get();
+	}
 
 	/**
 	 * Check if this pointer is null and has no associated object.
@@ -352,7 +354,9 @@ public:
 	 * \note This does not compare the values of any associated arrays. It only
 	 *       compares the values of the pointers themselves.
 	 */
-	[[nodiscard]] constexpr bool operator==(const UniquePointer& other) const noexcept = default;
+	[[nodiscard]] constexpr bool operator==(const UniquePointer& other) const noexcept {
+		return handle.get() == other.handle.get();
+	}
 
 	/**
 	 * Check if this pointer is null and has no associated array.

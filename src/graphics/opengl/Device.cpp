@@ -25,7 +25,12 @@
 namespace grem::graphics {
 
 Device::Device(Window& window, const DeviceOptions& options)
-	: implementation(UniquePointer<DeviceImplementation>::create(window, options)) {}
+	: implementation(UniquePointer<DeviceImplementation>::create(window, options)) {
+	constexpr uint32_t INITIAL_STORAGE_BUFFER_RESOLUTION = 64;
+	implementation->storageBufferTexture = Texture::create(*this, TextureType::TEXTURE_2D, TextureFormat::R32G32B32A32_FLOAT, Extent2D{INITIAL_STORAGE_BUFFER_RESOLUTION}, 1,
+		nullptr, TextureSamplerOptions::UNFILTERED);
+	implementation->storageBufferSquareAllocator.expandTo(INITIAL_STORAGE_BUFFER_RESOLUTION);
+}
 
 Device::Device(Filesystem&, Window& window, const DeviceOptions& options)
 	: Device(window, options) {}

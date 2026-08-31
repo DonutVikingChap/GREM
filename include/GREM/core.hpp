@@ -55,6 +55,7 @@
 #include <GREM/core/data/SmallArrayList.hpp>                // IWYU pragma: export
 #include <GREM/core/data/SmallBuffer.hpp>                   // IWYU pragma: export
 #include <GREM/core/data/Span.hpp>                          // IWYU pragma: export
+#include <GREM/core/data/SquareAllocator.hpp>               // IWYU pragma: export
 #include <GREM/core/data/StridedSpan.hpp>                   // IWYU pragma: export
 #include <GREM/core/data/String.hpp>                        // IWYU pragma: export
 #include <GREM/core/data/StringPool.hpp>                    // IWYU pragma: export

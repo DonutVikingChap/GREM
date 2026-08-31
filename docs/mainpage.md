@@ -286,6 +286,7 @@ The core module is shared across all main modules and provides the following uti
     - [Span](@ref grem::Span) - View over a contiguous sequence of values (replacement for std::span)
     - [SPSCQueue](@ref grem::SPSCQueue) - Single-producer single-consumer queue
     - [SPSCSlidingWindowQueue](@ref grem::SPSCSlidingWindowQueue) - Single-producer single-consumer queue with a sliding window of readable data
+    - [SquareAllocator](@ref grem::SquareAllocator) - Allocates square integer ranges without associated memory
     - [StridedSpan](@ref grem::StridedSpan) - View over a sequence of values with an arbitrary constant stride between them
     - [String](@ref grem::String) - Small-buffer-optimized owning string of characters (alias of std::string)
     - [StringPool](@ref grem::StringPool) - Compact growable set of interned immutable strings with associated [StringID](@ref grem::StringID)s

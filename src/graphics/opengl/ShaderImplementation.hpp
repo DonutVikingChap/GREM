@@ -74,6 +74,8 @@ struct ShaderPipelineImplementation {
 	Span<const BufferLayoutReference> vertexShaderBufferLayouts;
 	Span<const BufferLayoutReference> fragmentShaderBufferLayouts;
 	ShaderPipelineOptions shaderPipelineOptions;
+	Allocation<GLint> storageBufferBindingsUniformLocations{};
+	GLint storageBufferTextureUnit = -1;
 	GLint srgbCorrectionModeUniformLocation = -1;
 	GLint framebufferHeightUniformLocation = -1;
 	bool hasColorOutput = false;

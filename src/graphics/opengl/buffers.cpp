@@ -12,6 +12,7 @@
 #include <GREM/core/data/StridedSpan.hpp>
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/core/math.hpp>
+#include <GREM/graphics/Device.hpp>
 #include <GREM/graphics/Error.hpp>
 #include <GREM/graphics/Mesh.hpp>
 #include <GREM/graphics/Texture.hpp>
@@ -19,9 +20,7 @@
 #include <GREM/graphics/shaders.hpp>
 
 #include "../reusable_copy_on_write_resource.hpp"
-#include "StatePreserver.hpp"
 #include "buffer_implementations.hpp"
-#include "opengl.hpp"
 
 #include <utility> // std::move, std::exchange
 
@@ -42,25 +41,8 @@ void UniformBufferBase::upload(Span<const byte> newParameterValuesBytes, Span<Sh
 
 void UniformBufferBase::flush() const {}
 
-StorageBufferBase::StorageBufferBase(Device&, BufferLayoutReference, size_t elementSize)
-	: implementation(StorageBufferImplementation::create(elementSize)) {
-	GREM_ASSERT(elementSize > 0);
-	GREM_ASSERT(elementSize % sizeof(float) == 0);
-	const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-	size_t initialResolution = 8;
-	while (initialResolution * initialResolution < elementStrideInVec4s) {
-		GREM_ASSERT(initialResolution * 2 > initialResolution);
-		initialResolution *= 2;
-	}
-
-	implementation->stagingMemory.resize(initialResolution * initialResolution * sizeof(float) * 4);
-	implementation->textureResolution = initialResolution;
-
-	const detail::TextureBinding2DPreserver textureBinding2DPreserver{};
-	glBindTexture(GL_TEXTURE_2D, implementation->textureObject.get());
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, static_cast<GLsizei>(initialResolution), static_cast<GLsizei>(initialResolution), 0, GL_RGBA, GL_FLOAT, nullptr);
-}
+StorageBufferBase::StorageBufferBase(Device& device, BufferLayoutReference, size_t elementSize)
+	: implementation(StorageBufferImplementation::create(device, elementSize)) {}
 
 void StorageBufferBase::upload(StridedSpan<const byte> elementsData, size_t elementSize) {
 	if (elementsData.empty()) {
@@ -71,7 +53,7 @@ void StorageBufferBase::upload(StridedSpan<const byte> elementsData, size_t elem
 	detail::ensureExclusiveResourceAccess(
 		implementation,
 		[&]() -> SharedPointer<StorageBufferImplementation> { //
-			return StorageBufferImplementation::create(elementSize);
+			return StorageBufferImplementation::create(implementation->device, elementSize);
 		},
 		[](StorageBufferImplementation&) -> void {});
 
@@ -87,7 +69,7 @@ void StorageBufferBase::write(uint32_t elementOffset, StridedSpan<const byte> el
 	detail::ensureExclusiveResourceAccess(
 		implementation,
 		[&]() -> SharedPointer<StorageBufferImplementation> { //
-			SharedPointer<StorageBufferImplementation> newBuffer = StorageBufferImplementation::create(elementSize);
+			SharedPointer<StorageBufferImplementation> newBuffer = StorageBufferImplementation::create(implementation->device, elementSize);
 			newBuffer->assign(*implementation);
 			return newBuffer;
 		},
@@ -100,14 +82,14 @@ void StorageBufferBase::write(uint32_t elementOffset, StridedSpan<const byte> el
 
 void StorageBufferBase::flush() const {}
 
-BufferSetBase::BufferSetBase(Device&, BufferLayoutReference bufferSetLayout, Allocation<SharedPointer<void>> buffers)
-	: implementation(BufferSetImplementation::create(bufferSetLayout, std::move(buffers))) {}
+BufferSetBase::BufferSetBase(Device& device, BufferLayoutReference bufferSetLayout, Allocation<SharedPointer<void>> buffers)
+	: implementation(BufferSetImplementation::create(device, bufferSetLayout, std::move(buffers))) {}
 
 void BufferSetBase::setBuffer(size_t bufferIndex, SharedPointer<void> newBuffer) {
 	detail::ensureExclusiveResourceAccess(
 		implementation,
 		[&]() -> SharedPointer<BufferSetImplementation> { //
-			return BufferSetImplementation::create(implementation->bufferSetLayout, implementation->buffers);
+			return BufferSetImplementation::create(implementation->device, implementation->bufferSetLayout, implementation->buffers);
 		},
 		[&](BufferSetImplementation& oldBufferSet) -> void { //
 			GREM_ASSERT(oldBufferSet.bufferSetLayout == implementation->bufferSetLayout);
@@ -121,7 +103,7 @@ void BufferSetBase::setBuffers(Span<SharedPointer<void>> newBuffers) {
 	detail::ensureExclusiveResourceAccess(
 		implementation,
 		[&]() -> SharedPointer<BufferSetImplementation> { //
-			return BufferSetImplementation::create(implementation->bufferSetLayout, Allocation<SharedPointer<void>>(newBuffers.size(), nullptr));
+			return BufferSetImplementation::create(implementation->device, implementation->bufferSetLayout, Allocation<SharedPointer<void>>(newBuffers.size(), nullptr));
 		},
 		[&](BufferSetImplementation& oldBufferSet) -> void { //
 			GREM_ASSERT(oldBufferSet.bufferSetLayout == implementation->bufferSetLayout);
@@ -165,7 +147,7 @@ void BufferSetBase::uploadToUniformBuffer(size_t bufferIndex, Span<const byte> n
 		[&]() -> SharedPointer<BufferSetImplementation> { //
 			Allocation<SharedPointer<void>> newBuffers{};
 			setNewBuffers(newBuffers);
-			return BufferSetImplementation::create(implementation->bufferSetLayout, std::move(newBuffers));
+			return BufferSetImplementation::create(implementation->device, implementation->bufferSetLayout, std::move(newBuffers));
 		},
 		[&](BufferSetImplementation& oldBufferSet) -> void { //
 			GREM_ASSERT(oldBufferSet.bufferSetLayout == implementation->bufferSetLayout);
@@ -195,7 +177,7 @@ void BufferSetBase::uploadToStorageBuffer(size_t bufferIndex, StridedSpan<const 
 				}
 				GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) {
 					if (i == bufferIndex) {
-						newBuffers[i] = StorageBufferImplementation::create(elementSize);
+						newBuffers[i] = StorageBufferImplementation::create(implementation->device, elementSize);
 					} else {
 						newBuffers[i] = buffers[i];
 					}
@@ -212,7 +194,7 @@ void BufferSetBase::uploadToStorageBuffer(size_t bufferIndex, StridedSpan<const 
 		[&]() -> SharedPointer<BufferSetImplementation> { //
 			Allocation<SharedPointer<void>> newBuffers{};
 			setNewBuffers(newBuffers);
-			return BufferSetImplementation::create(implementation->bufferSetLayout, std::move(newBuffers));
+			return BufferSetImplementation::create(implementation->device, implementation->bufferSetLayout, std::move(newBuffers));
 		},
 		[&](BufferSetImplementation& oldBufferSet) -> void { //
 			GREM_ASSERT(oldBufferSet.bufferSetLayout == implementation->bufferSetLayout);
@@ -230,6 +212,7 @@ void BufferSetBase::writeToStorageBuffer(size_t bufferIndex, uint32_t elementOff
 	}
 
 	const auto setNewBuffers = [&](Allocation<SharedPointer<void>>& newBuffers) -> void {
+		Device& device = implementation->device;
 		const Span<const SharedPointer<void>> buffers = implementation->buffers;
 		const Span<const BufferLayoutReference> bufferLayouts = implementation->bufferSetLayout.as<BufferSetLayoutReference>().bufferLayouts;
 		GREM_ASSERT(buffers.size() == bufferLayouts.size());
@@ -242,7 +225,7 @@ void BufferSetBase::writeToStorageBuffer(size_t bufferIndex, uint32_t elementOff
 				}
 				GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) {
 					if (i == bufferIndex) {
-						newBuffers[i] = StorageBufferImplementation::create(elementSize);
+						newBuffers[i] = StorageBufferImplementation::create(device, elementSize);
 						static_cast<StorageBufferImplementation*>(newBuffers[i].get())->assign(*static_cast<const StorageBufferImplementation*>(buffers[i].get()));
 					} else {
 						newBuffers[i] = buffers[i];
@@ -260,7 +243,7 @@ void BufferSetBase::writeToStorageBuffer(size_t bufferIndex, uint32_t elementOff
 		[&]() -> SharedPointer<BufferSetImplementation> { //
 			Allocation<SharedPointer<void>> newBuffers{};
 			setNewBuffers(newBuffers);
-			return BufferSetImplementation::create(implementation->bufferSetLayout, std::move(newBuffers));
+			return BufferSetImplementation::create(implementation->device, implementation->bufferSetLayout, std::move(newBuffers));
 		},
 		[&](BufferSetImplementation& oldBufferSet) -> void { //
 			GREM_ASSERT(oldBufferSet.bufferSetLayout == implementation->bufferSetLayout);

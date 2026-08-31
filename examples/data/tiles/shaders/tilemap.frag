@@ -12,8 +12,8 @@ void main() {
 	if (any(lessThan(chunkIndices, tilemapChunkIndicesMin)) || any(greaterThan(chunkIndices, tilemapChunkIndicesMax))) {
 		tile = tilemapDefaultTile;
 	} else {
-		uvec2 relativeChunkIndices = uvec2(chunkIndices) - uvec2(tilemapChunkIndicesMin);
-		uint chunkTextureIndex = tilemapChunkTextureIndex(relativeChunkIndices.y * (uint(tilemapChunkIndicesMax.x) - uint(tilemapChunkIndicesMin.x) + 1u) + relativeChunkIndices.x);
+		ivec2 relativeChunkIndices = chunkIndices - tilemapChunkIndicesMin;
+		uint chunkTextureIndex = floatBitsToUint(GREM_texelFetch2D(tilemapChunkTextureIndexTexture, relativeChunkIndices, 0).r);
 		if (chunkTextureIndex == 0xFFFFFFFFu) {
 			tile = tilemapDefaultTile;
 		} else {

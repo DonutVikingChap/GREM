@@ -51,7 +51,7 @@ void StorageBufferBase::upload(StridedSpan<const byte> elementsData, size_t elem
 	GREM_ASSERT(elementSize % sizeof(float) == 0);
 
 	const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-	const size_t elementStrideInBytes = elementStrideInVec4s * sizeof(float) * 4;
+	const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
 	const size_t requiredSizeInBytes = elementsData.size() * elementStrideInBytes;
 
 	detail::ensureExclusiveResourceAccess(
@@ -83,7 +83,7 @@ void StorageBufferBase::write(uint32_t elementOffset, StridedSpan<const byte> el
 	}
 
 	const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-	const size_t elementStrideInBytes = elementStrideInVec4s * sizeof(float) * 4;
+	const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
 	const size_t elementOffsetInBytes = static_cast<size_t>(elementOffset) * elementStrideInBytes;
 	const size_t addedElementsSizeInBytes = elementsData.size() * elementStrideInBytes;
 	const size_t writtenRangeEnd = elementOffsetInBytes + addedElementsSizeInBytes;
@@ -181,7 +181,7 @@ void BufferSetBase::uploadToStorageBuffer(size_t bufferIndex, StridedSpan<const 
 		});
 
 	const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-	const size_t elementStrideInBytes = elementStrideInVec4s * sizeof(float) * 4;
+	const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
 	const size_t requiredSizeInBytes = elementsData.size() * elementStrideInBytes;
 	implementation->resizeStorageBuffer(bufferIndex, requiredSizeInBytes, true);
 	if (elementSize == elementStrideInBytes && elementSize == elementsData.stride()) {
@@ -214,7 +214,7 @@ void BufferSetBase::writeToStorageBuffer(size_t bufferIndex, uint32_t elementOff
 		});
 
 	const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-	const size_t elementStrideInBytes = elementStrideInVec4s * sizeof(float) * 4;
+	const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
 	const size_t elementOffsetInBytes = static_cast<size_t>(elementOffset) * elementStrideInBytes;
 	if (elementSize == elementStrideInBytes && elementSize == elementsData.stride()) {
 		implementation->writeBytesToStorageBuffer(bufferIndex, elementOffsetInBytes, Span{elementsData.base(), elementsData.size() * elementSize}, false);

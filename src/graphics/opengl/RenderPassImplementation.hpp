@@ -20,6 +20,8 @@
 #include <GREM/core/extents.hpp>
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/core/math.hpp>
+#include <GREM/core/profiling.hpp>
+#include <GREM/graphics/Device.hpp>
 #include <GREM/graphics/Mesh.hpp>
 #include <GREM/graphics/Texture.hpp>
 #include <GREM/graphics/Viewport.hpp>
@@ -28,6 +30,7 @@
 #include "DeviceImplementation.hpp"
 #include "MeshImplementation.hpp"
 #include "TextureImplementation.hpp"
+#include "buffer_implementations.hpp"
 #include "opengl.hpp"
 
 #include <typeindex> // std::type_index
@@ -38,7 +41,80 @@
 
 namespace grem::graphics {
 
-class Device; // Forward declaration, to avoid including Device.hpp.
+namespace {
+
+[[nodiscard]] GLuint flushStorageBufferTexture(Device& device) {
+	const detail::TextureBinding2DPreserver textureBinding2DPreserver{};
+	glBindTexture(GL_TEXTURE_2D, device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get());
+
+	const detail::UnpackAlignmentPreserver unpackAlignmentPreserver{};
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	const detail::UnpackRowLengthPreserver unpackRowLengthPreserver{};
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	const detail::UnpackSkipPixelsPreserver unpackSkipPixelsPreserver{};
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+	const detail::UnpackSkipRowsPreserver unpackSkipRowsPreserver{};
+	glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+	const detail::UnpackImageHeightPreserver unpackImageHeightPreserver{};
+	glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
+	const detail::UnpackSkipImagesPreserver unpackSkipImagesPreserver{};
+	glPixelStorei(GL_UNPACK_SKIP_IMAGES, 0);
+
+	for (StorageBufferImplementation* const storageBuffer : device.get()->storageBuffers) {
+		if (storageBuffer->stagingMemoryWidth == 0 || !storageBuffer->dirty) {
+			continue;
+		}
+
+		if (storageBuffer->squareAllocation.allocatedWidth != storageBuffer->stagingMemoryWidth) {
+			device.get()->storageBufferSquareAllocator.deallocateSquare(std::exchange(storageBuffer->squareAllocation, {}));
+
+			bool expandedStorageBufferTexture = false;
+			while (true) {
+				if (const Optional<SquareAllocation<uint32_t>> newSquareAllocation = device.get()->storageBufferSquareAllocator.allocateSquare(storageBuffer->stagingMemoryWidth)) {
+					storageBuffer->squareAllocation = *newSquareAllocation;
+					break;
+				}
+				const uint32_t newResolution = max(device.get()->storageBufferSquareAllocator.getFullWidth() * 2, storageBuffer->stagingMemoryWidth);
+				if (newResolution > Limits<uint32_t>::MAX / newResolution) {
+					throw std::length_error{"Maximum shader storage buffer memory size exceeded."};
+				}
+				device.get()->storageBufferSquareAllocator.expandTo(newResolution);
+				expandedStorageBufferTexture = true;
+			}
+
+			if (expandedStorageBufferTexture) {
+				GREM_PROFILE_BLOCK("Expand shader storage buffer texture");
+
+				device.get()->storageBufferTexture = {};
+				device.get()->storageBufferTexture = Texture::create(device, TextureType::TEXTURE_2D, TextureFormat::R32G32B32A32_FLOAT,
+					Extent2D{device.get()->storageBufferSquareAllocator.getFullWidth()}, 1, nullptr, TextureSamplerOptions::UNFILTERED);
+				glBindTexture(GL_TEXTURE_2D, device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get());
+
+				for (StorageBufferImplementation* const flushedStorageBuffer : device.get()->storageBuffers) {
+					if (flushedStorageBuffer->stagingMemoryWidth == 0 || flushedStorageBuffer->dirty) {
+						continue;
+					}
+
+					GREM_ASSERT(flushedStorageBuffer->squareAllocation.allocatedWidth == flushedStorageBuffer->stagingMemoryWidth);
+					glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(flushedStorageBuffer->squareAllocation.x), static_cast<GLint>(flushedStorageBuffer->squareAllocation.y),
+						static_cast<GLsizei>(flushedStorageBuffer->stagingMemoryWidth), static_cast<GLsizei>(flushedStorageBuffer->stagingMemoryWidth), GL_RGBA, GL_FLOAT,
+						flushedStorageBuffer->stagingMemory.data());
+				}
+			}
+		}
+
+		GREM_ASSERT(storageBuffer->squareAllocation.allocatedWidth == storageBuffer->stagingMemoryWidth);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(storageBuffer->squareAllocation.x), static_cast<GLint>(storageBuffer->squareAllocation.y),
+			static_cast<GLsizei>(storageBuffer->stagingMemoryWidth), static_cast<GLsizei>(storageBuffer->stagingMemoryWidth), GL_RGBA, GL_FLOAT,
+			storageBuffer->stagingMemory.data());
+
+		storageBuffer->dirty = false;
+	}
+
+	return device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get();
+}
+
+} // namespace
 
 struct RenderPassImplementation {
 	struct RenderTargets {
@@ -66,6 +142,8 @@ struct RenderPassImplementation {
 	};
 
 	struct CommandUseProgram {
+		Span<const GLint> storageBufferBindingsUniformLocations;
+		GLint storageBufferTextureUnit;
 		GLuint shaderProgramObjectHandle;
 		GLint srgbCorrectionModeUniformLocation;
 		GLint framebufferHeightUniformLocation;
@@ -79,6 +157,11 @@ struct RenderPassImplementation {
 	struct CommandUseUniformBuffer {
 		GLuint uniformBlockBinding;
 		GLuint uniformBufferObjectHandle;
+	};
+
+	struct CommandUseStorageBuffer {
+		const StorageBufferImplementation* storageBuffer;
+		GLuint storageBufferBinding;
 	};
 
 	struct CommandUseTexture2D {
@@ -131,6 +214,7 @@ struct RenderPassImplementation {
 		CommandUseProgram,               //
 		CommandUseShaderPipelineOptions, //
 		CommandUseUniformBuffer,         //
+		CommandUseStorageBuffer,         //
 		CommandUseTexture2D,             //
 		CommandUseTexture2DArray,        //
 		CommandUseTextureCube,           //
@@ -138,6 +222,7 @@ struct RenderPassImplementation {
 		CommandUseVertexArray,           //
 		CommandDrawArraysInstanced,      //
 		CommandDrawElementsInstanced,    //
+		GLint[],                         //
 		byte[]>;
 
 	[[nodiscard]] static GLenum translateMeshIndexType(MeshIndexType indexType) noexcept {
@@ -393,6 +478,16 @@ struct RenderPassImplementation {
 		commandArena.release();
 		commands.emplace(&commandArena, decltype(commandArena)::INPLACE_SIZE);
 		other.commands->visit(Overloaded{
+			[&](const RenderPassImplementation::CommandUseProgram& command) -> void { //
+				commands->push_back(RenderPassImplementation::CommandUseProgram{
+					.storageBufferBindingsUniformLocations = commands->append(command.storageBufferBindingsUniformLocations),
+					.storageBufferTextureUnit = command.storageBufferTextureUnit,
+					.shaderProgramObjectHandle = command.shaderProgramObjectHandle,
+					.srgbCorrectionModeUniformLocation = command.srgbCorrectionModeUniformLocation,
+					.framebufferHeightUniformLocation = command.framebufferHeightUniformLocation,
+					.hasColorOutput = command.hasColorOutput,
+				});
+			},
 			[&](const RenderPassImplementation::CommandDrawArraysInstanced& command) -> void { //
 				commands->push_back(RenderPassImplementation::CommandDrawArraysInstanced{
 					.instanceData = commands->append(Span{command.instanceData, command.instanceCount * command.instanceStride}).data(),
@@ -414,6 +509,7 @@ struct RenderPassImplementation {
 					.indexCount = command.indexCount,
 				});
 			},
+			[&](const Span<const GLint>) -> void {},
 			[&](const Span<const byte>) -> void {},
 			[&](const auto& command) -> void { commands->push_back(command); },
 		});
@@ -508,6 +604,8 @@ struct RenderPassImplementation {
 		bool hasColorOutput = true;
 		GLint srgbCorrectionMode = 0;
 		uint32_t actualFramebufferHeight = 0;
+		Span<const GLint> storageBufferBindingsUniformLocations{};
+		Optional<GLuint> storageBufferTextureHandle{};
 		if (renderTargets.colorTarget) {
 			const TextureFormat internalFormat = renderTargets.colorTarget->texture->get()->internalFormat;
 			const TextureAspects aspects = (isDefaultFramebufferTarget) ? TextureAspects::COLOR_DEPTH_STENCIL : Texture::getFormatAspects(internalFormat);
@@ -717,6 +815,14 @@ struct RenderPassImplementation {
 			},
 			[&](const RenderPassImplementation::CommandUseProgram& command) -> void { //
 				GREM_ASSERT(activeViewport);
+				storageBufferBindingsUniformLocations = command.storageBufferBindingsUniformLocations;
+				if (!storageBufferBindingsUniformLocations.empty()) {
+					if (!storageBufferTextureHandle) {
+						storageBufferTextureHandle = flushStorageBufferTexture(device);
+					}
+					glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + command.storageBufferTextureUnit));
+					glBindTexture(GL_TEXTURE_2D, *storageBufferTextureHandle);
+				}
 				glUseProgram(command.shaderProgramObjectHandle);
 				if (command.srgbCorrectionModeUniformLocation != -1) {
 					glUniform1i(command.srgbCorrectionModeUniformLocation, srgbCorrectionMode);
@@ -744,6 +850,23 @@ struct RenderPassImplementation {
 			},
 			[&](const RenderPassImplementation::CommandUseUniformBuffer& command) -> void { //
 				glBindBufferBase(GL_UNIFORM_BUFFER, command.uniformBlockBinding, command.uniformBufferObjectHandle);
+			},
+			[&](const RenderPassImplementation::CommandUseStorageBuffer& command) -> void { //
+				GREM_ASSERT(storageBufferTextureHandle);
+				const GLint location = storageBufferBindingsUniformLocations[command.storageBufferBinding];
+				if (location != -1) {
+					GREM_ASSERT(command.storageBuffer);
+					if (command.storageBuffer->squareAllocation.allocatedWidth == 0) {
+						glUniform4ui(location, GLuint{0}, GLuint{0}, GLuint{0}, GLuint{0});
+					} else {
+						GREM_ASSERT(isPowerOf2(command.storageBuffer->squareAllocation.allocatedWidth));
+						const GLuint x = command.storageBuffer->squareAllocation.x;
+						const GLuint y = command.storageBuffer->squareAllocation.y;
+						const GLuint strideMask = command.storageBuffer->squareAllocation.allocatedWidth - 1;
+						const GLuint strideShift = static_cast<uint32_t>(countTrailingZeroBits(command.storageBuffer->squareAllocation.allocatedWidth));
+						glUniform4ui(location, x, y, strideMask, strideShift);
+					}
+				}
 			},
 			[&](const RenderPassImplementation::CommandUseTexture2D& command) -> void { //
 				glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + command.textureUnit));
@@ -782,6 +905,7 @@ struct RenderPassImplementation {
 				GREM_ASSERT(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 				glDrawElementsInstanced(command.primitiveType, static_cast<GLsizei>(command.indexCount), command.indexType, nullptr, static_cast<GLsizei>(command.instanceCount));
 			},
+			[](const Span<const GLint>) -> void {},
 			[](const Span<const byte>) -> void {},
 		});
 

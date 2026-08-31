@@ -27,7 +27,6 @@ public:
 	WorldRenderer(const Filesystem& filesystem, gfx::Device& device)
 		: tileShaderParameterBuffer(device)
 		, tilemapShaderParameterBuffer(device)
-		, tilemapShaderChunkBuffer(device)
 		, tileShaderPipeline(loadTileShaderPipeline(filesystem, device))
 		, tilemapShaderPipeline(loadTilemapShaderPipeline(filesystem, device))
 		, dummyChunkTextures(gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D_ARRAY, TILEMAP_TEXTURE_FORMAT, Extent3D{1, 1, 1}, 1, gfx::ClearValues{},
@@ -72,9 +71,9 @@ public:
 					if (any(lessThan(newChunkIndicesBounds->min, oldChunkIndicesBounds->min) | greaterThan(newChunkIndicesBounds->max, oldChunkIndicesBounds->max))) {
 						const uzvec2 newChunkIndicesExtents{u32vec2{newChunkIndicesBounds->max} - u32vec2{newChunkIndicesBounds->min} + u32vec2{1}};
 						const uzvec2 oldChunkIndicesExtents{u32vec2{oldChunkIndicesBounds->max} - u32vec2{oldChunkIndicesBounds->min} + u32vec2{1}};
-						const uzvec2 offset{u32vec2{oldChunkIndicesBounds->min} - u32vec2{newChunkIndicesBounds->min}};
-						Allocation<TilemapShaderChunkFields> newChunkTextureIndices(newChunkIndicesExtents.x * newChunkIndicesExtents.y,
-							TilemapShaderChunkFields{.tilemapChunkTextureIndex = 0xFFFFFFFF});
+						const uzvec2 difference{u32vec2{oldChunkIndicesBounds->min} - u32vec2{newChunkIndicesBounds->min}};
+						const uzvec2 offset{difference.x, newChunkIndicesExtents.y - oldChunkIndicesExtents.y - difference.y};
+						Allocation<uint32_t> newChunkTextureIndices(newChunkIndicesExtents.x * newChunkIndicesExtents.y, uint32_t{0xFFFFFFFF});
 						for (size_t y = 0; y < oldChunkIndicesExtents.y; ++y) {
 							for (size_t x = 0; x < oldChunkIndicesExtents.x; ++x) {
 								newChunkTextureIndices[(offset.y + y) * newChunkIndicesExtents.x + (offset.x + x)] =
@@ -83,13 +82,19 @@ public:
 						}
 						tilemapLayer.chunkIndicesBounds = *newChunkIndicesBounds;
 						tilemapLayer.chunkTextureIndices = std::move(newChunkTextureIndices);
+						tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R32_FLOAT,
+							Extent2D::from(u32vec2{newChunkIndicesExtents}), 1, nullptr, gfx::TextureSamplerOptions::UNFILTERED);
 					}
 				} else {
 					const uzvec2 newChunkIndicesExtents{u32vec2{newChunkIndicesBounds->max} - u32vec2{newChunkIndicesBounds->min} + u32vec2{1}};
 					tilemapLayer.chunkIndicesBounds = *newChunkIndicesBounds;
-					tilemapLayer.chunkTextureIndices =
-						Allocation<TilemapShaderChunkFields>(newChunkIndicesExtents.x * newChunkIndicesExtents.y, TilemapShaderChunkFields{.tilemapChunkTextureIndex = 0xFFFFFFFF});
+					tilemapLayer.chunkTextureIndices = Allocation<uint32_t>(newChunkIndicesExtents.x * newChunkIndicesExtents.y, uint32_t{0xFFFFFFFF});
+					tilemapLayer.chunkTextureIndexTexture = gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R32_FLOAT,
+						Extent2D::from(u32vec2{newChunkIndicesExtents}), 1, nullptr, gfx::TextureSamplerOptions::UNFILTERED);
 				}
+			} else {
+				tilemapLayer.chunkTextureIndexTexture =
+					gfx::Texture::create(device, gfx::TextureType::TEXTURE_2D, gfx::TextureFormat::R32_FLOAT, Extent2D{1, 1}, 1, nullptr, gfx::TextureSamplerOptions::UNFILTERED);
 			}
 		}
 
@@ -98,7 +103,7 @@ public:
 			TilemapLayer& tilemapLayer = tilemapLayers[layer];
 			const uzvec2 chunkIndicesExtents{u32vec2{tilemapLayer.chunkIndicesBounds->max} - u32vec2{tilemapLayer.chunkIndicesBounds->min} + u32vec2{1}};
 			const uzvec2 relativeChunkIndices{u32vec2{chunkIndices} - u32vec2{tilemapLayer.chunkIndicesBounds->min}};
-			uint32_t& chunkTextureIndex = tilemapLayer.chunkTextureIndices[relativeChunkIndices.y * chunkIndicesExtents.x + relativeChunkIndices.x].tilemapChunkTextureIndex;
+			uint32_t& chunkTextureIndex = tilemapLayer.chunkTextureIndices[(chunkIndicesExtents.y - 1 - relativeChunkIndices.y) * chunkIndicesExtents.x + relativeChunkIndices.x];
 			if (chunkTextureIndex == uint32_t{0xFFFFFFFF}) {
 				if (tilemapLayer.nextChunkTextureIndex >= tilemapLayer.chunkTextures.getDepth()) {
 					const uint32_t newCapacity = max(roundUpToPowerOf2(tilemapLayer.nextChunkTextureIndex + 1), uint32_t{16});
@@ -182,15 +187,20 @@ public:
 		for (int32_t z = visibleLayersBegin; z < visibleLayersEnd; ++z) {
 			GREM_ASSERT(z >= 0);
 			const size_t layer = static_cast<size_t>(z);
-			const TilemapLayer& tilemapLayer = tilemapLayers[layer];
+			TilemapLayer& tilemapLayer = tilemapLayers[layer];
+			const Extent2D chunkIndicesExtents =
+				(tilemapLayer.chunkIndicesBounds)
+					? Extent2D::from(u32vec2{u32vec2{tilemapLayer.chunkIndicesBounds->max} - u32vec2{tilemapLayer.chunkIndicesBounds->min} + u32vec2{1}})
+					: Extent2D{1, 1};
+			tilemapLayer.chunkTextureIndexTexture.pasteImage(chunkIndicesExtents, tilemapLayer.chunkTextureIndices.data());
 			tilemapShaderParameterBuffer.upload({
 				.tilemapChunkTextures = (tilemapLayer.nextChunkTextureIndex == 0) ? dummyChunkTextures : tilemapLayer.chunkTextures,
+				.tilemapChunkTextureIndexTexture = tilemapLayer.chunkTextureIndexTexture,
 				.tilemapChunkIndicesMin = (tilemapLayer.chunkIndicesBounds) ? tilemapLayer.chunkIndicesBounds->min : i32vec2{0},
 				.tilemapChunkIndicesMax = (tilemapLayer.chunkIndicesBounds) ? tilemapLayer.chunkIndicesBounds->max : i32vec2{-1},
 				.tilemapDefaultTile = map.getLayers()[layer].tile.value,
 			});
-			tilemapShaderChunkBuffer.upload(tilemapLayer.chunkTextureIndices);
-			renderPass.draw(tilemapDrawCommandBuffer, tileShaderParameterBuffer, tilemapShaderParameterBuffer, tilemapShaderChunkBuffer);
+			renderPass.draw(tilemapDrawCommandBuffer, tileShaderParameterBuffer, tilemapShaderParameterBuffer);
 
 			const auto [objectInstancesBegin, objectInstancesEnd] = equalRange(Span{objectInstances}.subspan(objectInstancesOffset), z, ObjectInstance::Compare{});
 			objectInstancesOffset = static_cast<size_t>(objectInstancesEnd - objectInstances.begin());
@@ -218,8 +228,9 @@ public:
 			}
 		}
 
-		// Release tilemapChunkTextures to make it reusable.
-		tilemapShaderParameterBuffer.upload({.tilemapChunkTextures{}, .tilemapChunkIndicesMin{}, .tilemapChunkIndicesMax{}, .tilemapDefaultTile = 0});
+		// Release the texture bindings to make the textures reusable.
+		tilemapShaderParameterBuffer.upload(
+			{.tilemapChunkTextures{}, .tilemapChunkTextureIndexTexture{}, .tilemapChunkIndicesMin{}, .tilemapChunkIndicesMax{}, .tilemapDefaultTile = 0});
 	}
 
 	void reloadShaders(const Filesystem& filesystem, gfx::Device& device) {
@@ -307,15 +318,13 @@ private:
 	struct TilemapLayer {
 		gfx::Texture chunkTextures{};
 		Optional<Box<2, int32_t>> chunkIndicesBounds{};
-		Allocation<TilemapShaderChunkFields> chunkTextureIndices{
-			TilemapShaderChunkFields{.tilemapChunkTextureIndex = 0xFFFFFFFF},
-		};
+		Allocation<uint32_t> chunkTextureIndices{uint32_t{0xFFFFFFFF}};
+		gfx::Texture chunkTextureIndexTexture{};
 		uint32_t nextChunkTextureIndex = 0;
 	};
 
 	TileShaderParameterBuffer tileShaderParameterBuffer;
 	TilemapShaderParameterBuffer tilemapShaderParameterBuffer;
-	TilemapShaderChunkBuffer tilemapShaderChunkBuffer;
 	TileShaderPipeline tileShaderPipeline;
 	TilemapShaderPipeline tilemapShaderPipeline;
 	ArrayList<TilemapLayer> tilemapLayers{};

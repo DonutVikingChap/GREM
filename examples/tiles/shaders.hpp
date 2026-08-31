@@ -66,20 +66,16 @@ struct TilemapFragmentShaderConstants {
 
 struct TilemapShaderParameters {
 	gfx::sampler2DArray tilemapChunkTextures;
+	gfx::sampler2D tilemapChunkTextureIndexTexture;
 	i32vec2 tilemapChunkIndicesMin;
 	i32vec2 tilemapChunkIndicesMax;
 	uint32_t tilemapDefaultTile;
 };
 using TilemapShaderParameterBuffer = gfx::UniformBuffer<TilemapShaderParameters, "TilemapShaderParameters">;
 
-struct TilemapShaderChunkFields {
-	uint32_t tilemapChunkTextureIndex;
-};
-using TilemapShaderChunkBuffer = gfx::StorageBuffer<TilemapShaderChunkFields, "TilemapShaderChunks">;
-
 using TileFragmentShader = gfx::FragmentShader<TileMesh, TileVertexShaderOutputs, TileFragmentShaderConstants, TileFragmentShaderOutputs, TileShaderParameterBuffer>;
 using TilemapFragmentShader = gfx::FragmentShader<TilemapMesh, TilemapVertexShaderOutputs, TilemapFragmentShaderConstants, TileFragmentShaderOutputs, TileShaderParameterBuffer,
-	TilemapShaderParameterBuffer, TilemapShaderChunkBuffer>;
+	TilemapShaderParameterBuffer>;
 
 using TileShaderPipeline = gfx::ShaderPipeline<TileMesh>;
 using TilemapShaderPipeline = gfx::ShaderPipeline<TilemapMesh>;

@@ -18,13 +18,33 @@ namespace grem {
 
 template <typename Index>
 struct IndexAllocation {
-	Index index{};
+	using size_type = decltype(std::declval<Index>() - std::declval<Index>());
+
+	Index index = std::numeric_limits<Index>::max();
+
+	[[nodiscard]] constexpr size_type size() const noexcept {
+		return (index == std::numeric_limits<Index>::max()) ? size_type{0} : size_type{1};
+	}
+
+	[[nodiscard]] constexpr bool empty() const noexcept {
+		return index == std::numeric_limits<Index>::max();
+	}
 };
 
 template <typename Index>
 struct RangeAllocation {
+	using size_type = decltype(std::declval<Index>() - std::declval<Index>());
+
 	Index begin{};
 	Index end{};
+
+	[[nodiscard]] constexpr size_type size() const noexcept {
+		return end - begin;
+	}
+
+	[[nodiscard]] constexpr bool empty() const noexcept {
+		return begin == end;
+	}
 };
 
 template <typename Index>
@@ -67,14 +87,13 @@ public:
 
 		size_t smallestFittingFreeRangeIndex = freeRanges.size();
 		for (size_t freeRangeIndex = 0; freeRangeIndex < freeRanges.size(); ++freeRangeIndex) {
-			const size_type freeRangeSize = freeRanges[freeRangeIndex].end - freeRanges[freeRangeIndex].begin;
+			const size_type freeRangeSize = freeRanges[freeRangeIndex].size();
 			if (freeRangeSize >= size) {
 				if (freeRangeSize == size) {
 					smallestFittingFreeRangeIndex = freeRangeIndex;
 					break;
 				}
-				if (smallestFittingFreeRangeIndex == freeRanges.size() ||
-					freeRangeSize < freeRanges[smallestFittingFreeRangeIndex].end - freeRanges[smallestFittingFreeRangeIndex].begin) {
+				if (smallestFittingFreeRangeIndex == freeRanges.size() || freeRangeSize < freeRanges[smallestFittingFreeRangeIndex].size()) {
 					smallestFittingFreeRangeIndex = freeRangeIndex;
 				}
 			}
@@ -97,6 +116,10 @@ public:
 	}
 
 	void deallocateIndex(IndexAllocation<Index> allocation) noexcept {
+		if (allocation.empty()) {
+			return;
+		}
+
 		deallocateRange(RangeAllocation<Index>{.begin = allocation.index, .end = allocation.index + 1});
 	}
 
@@ -106,7 +129,7 @@ public:
 		GREM_ASSERT(allocation.begin >= fullRange.begin);
 		GREM_ASSERT(allocation.end <= fullRange.end);
 
-		if (allocation.begin == allocation.end) {
+		if (allocation.empty()) {
 			return;
 		}
 
@@ -143,22 +166,28 @@ public:
 		--allocatedRangeCount;
 	}
 
-	void expandFront(Index newBegin) {
-		if (freeRanges.empty()) {
-			freeRanges.push_back(RangeAllocation<Index>{.begin = newBegin, .end = fullRange.end});
-		} else {
-			freeRanges.front().begin = newBegin;
+	void expandFrontTo(Index newBegin) {
+		GREM_ASSERT(newBegin <= fullRange.begin);
+		if (newBegin < fullRange.begin) {
+			if (freeRanges.empty()) {
+				freeRanges.push_back(RangeAllocation<Index>{.begin = newBegin, .end = fullRange.begin});
+			} else {
+				freeRanges.front().begin = newBegin;
+			}
+			fullRange.begin = newBegin;
 		}
-		fullRange.begin = newBegin;
 	}
 
-	void expandBack(Index newEnd) {
-		if (freeRanges.empty()) {
-			freeRanges.push_back(RangeAllocation<Index>{.begin = fullRange.end, .end = newEnd});
-		} else {
-			freeRanges.back().end = newEnd;
+	void expandBackTo(Index newEnd) {
+		GREM_ASSERT(newEnd >= fullRange.end);
+		if (newEnd > fullRange.end) {
+			if (freeRanges.empty()) {
+				freeRanges.push_back(RangeAllocation<Index>{.begin = fullRange.end, .end = newEnd});
+			} else {
+				freeRanges.back().end = newEnd;
+			}
+			fullRange.end = newEnd;
 		}
-		fullRange.end = newEnd;
 	}
 
 	[[nodiscard]] Index getFullRangeBegin() const noexcept {
@@ -167,6 +196,10 @@ public:
 
 	[[nodiscard]] Index getFullRangeEnd() const noexcept {
 		return fullRange.end;
+	}
+
+	[[nodiscard]] size_type getFullRangeSize() const noexcept {
+		return fullRange.size();
 	}
 
 	[[nodiscard]] Index getUsedRangeBegin() const noexcept {
@@ -181,6 +214,10 @@ public:
 			return fullRange.end;
 		}
 		return freeRanges.back().begin;
+	}
+
+	[[nodiscard]] size_type getUsedRangeSize() const noexcept {
+		return getUsedRangeEnd() - getUsedRangeBegin();
 	}
 
 private:

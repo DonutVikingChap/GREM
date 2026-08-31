@@ -10,7 +10,9 @@
 #include <GREM/core/assertions.hpp>
 #include <GREM/core/data/DoubleEndedQueue.hpp>
 #include <GREM/core/data/HashMap.hpp>
+#include <GREM/core/data/HashSet.hpp>
 #include <GREM/core/data/SharedPointer.hpp>
+#include <GREM/core/data/SquareAllocator.hpp>
 #include <GREM/core/data/String.hpp>
 #include <GREM/core/extents.hpp>
 #include <GREM/core/fundamentals.hpp>
@@ -22,7 +24,9 @@
 #include <GREM/graphics/FeatureSupport.hpp>
 #include <GREM/graphics/RenderPass.hpp>
 #include <GREM/graphics/Swapchain.hpp>
+#include <GREM/graphics/Texture.hpp>
 #include <GREM/graphics/Window.hpp>
+#include <GREM/graphics/buffers.hpp>
 
 #include "../reusable_copy_on_write_resource.hpp"
 #include "StatePreserver.hpp"
@@ -266,6 +270,9 @@ struct DeviceImplementation {
 		.supportsSPIRVShaderCode = false,
 	};
 	Device::PresentationSubmission currentPresentationSubmission{};
+	Texture storageBufferTexture{};
+	SquareAllocator<uint32_t> storageBufferSquareAllocator{};
+	HashSet<StorageBufferImplementation*> storageBuffers{};
 
 	DeviceImplementation(Window& window, const DeviceOptions& options) {
 		(void)window;

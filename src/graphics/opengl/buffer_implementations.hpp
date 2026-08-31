@@ -17,8 +17,10 @@
 #include <GREM/core/data/SharedPointer.hpp>
 #include <GREM/core/data/SmallArrayList.hpp>
 #include <GREM/core/data/Span.hpp>
+#include <GREM/core/data/SquareAllocator.hpp>
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/core/math.hpp>
+#include <GREM/core/profiling.hpp>
 #include <GREM/graphics/Error.hpp>
 #include <GREM/graphics/Mesh.hpp>
 #include <GREM/graphics/Texture.hpp>
@@ -27,11 +29,13 @@
 #include <GREM/graphics/shaders.hpp>
 
 #include "../reusable_copy_on_write_resource.hpp"
+#include "DeviceImplementation.hpp"
 #include "StatePreserver.hpp"
 #include "objects.hpp"
 #include "opengl.hpp"
 
-#include <utility> // std::move
+#include <stdexcept> // std::length_error
+#include <utility>   // std::move, std::exchange
 
 namespace grem::graphics {
 
@@ -65,29 +69,43 @@ struct UniformBufferImplementation : detail::ReusableCopyOnWriteResourceBase<Uni
 };
 
 struct StorageBufferImplementation : detail::ReusableCopyOnWriteResourceBase<StorageBufferImplementation> {
-	[[nodiscard]] static SharedPointer<StorageBufferImplementation> create(size_t elementSize) {
-		return SharedPointer<StorageBufferImplementation>::create(elementSize);
+	[[nodiscard]] static SharedPointer<StorageBufferImplementation> create(Device& device, size_t elementSize) {
+		return SharedPointer<StorageBufferImplementation>::create(device, elementSize);
 	}
 
-	detail::TextureObject textureObject = detail::createTextureObject();
+	Device& device;
+	SquareAllocation<uint32_t> squareAllocation{};
 	size_t elementSize;
-	size_t textureResolution = 0;
 	Allocation<byte> stagingMemory{};
+	uint32_t stagingMemoryWidth = 0;
+	bool dirty = false;
 
-	explicit StorageBufferImplementation(size_t elementSize)
-		: elementSize(elementSize) {
+	StorageBufferImplementation(Device& device, size_t elementSize)
+		: device(device)
+		, elementSize(elementSize) {
 		GREM_ASSERT(elementSize > 0);
 		GREM_ASSERT(elementSize % sizeof(float) == 0);
-
-		const detail::TextureBinding2DPreserver textureBinding2DPreserver{};
-		glBindTexture(GL_TEXTURE_2D, textureObject.get());
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		[[maybe_unused]] const bool inserted = device.get()->storageBuffers.insert(this).second;
+		GREM_ASSERT(inserted);
 	}
+
+	~StorageBufferImplementation() {
+		device.get()->storageBufferSquareAllocator.deallocateSquare(squareAllocation);
+		[[maybe_unused]] const size_t erased = device.get()->storageBuffers.erase(this);
+		GREM_ASSERT(erased == 1);
+	}
+
+	StorageBufferImplementation(const StorageBufferImplementation&) = delete;
+	StorageBufferImplementation(StorageBufferImplementation&&) = delete;
+	StorageBufferImplementation& operator=(const StorageBufferImplementation&) = delete;
+	StorageBufferImplementation& operator=(StorageBufferImplementation&&) = delete;
 
 	void assign(const StorageBufferImplementation& other) {
 		const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-		const size_t elementStrideInBytes = elementStrideInVec4s * sizeof(float) * 4;
+
+		GREM_ASSERT(elementStrideInVec4s < Limits<size_t>::MAX / (sizeof(float) * 4));
+		const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
+
 		write(0, StridedSpan{other.stagingMemory.data(), other.stagingMemory.size() / elementStrideInBytes, elementStrideInBytes});
 	}
 
@@ -97,25 +115,44 @@ struct StorageBufferImplementation : detail::ReusableCopyOnWriteResourceBase<Sto
 			return;
 		}
 
-		const detail::TextureBinding2DPreserver textureBinding2DPreserver{};
-		glBindTexture(GL_TEXTURE_2D, textureObject.get());
-
 		const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
-		const size_t elementStrideInBytes = elementStrideInVec4s * sizeof(float) * 4;
-		const size_t elementOffsetInVec4s = static_cast<size_t>(elementOffset) * elementStrideInVec4s;
-		const size_t elementOffsetInBytes = elementOffsetInVec4s * sizeof(float) * 4;
-		const size_t addedElementsSizeInVec4s = elementsData.size() * elementStrideInVec4s;
-		const size_t requiredSizeInVec4s = elementOffsetInVec4s + addedElementsSizeInVec4s;
-		if (textureResolution * textureResolution < requiredSizeInVec4s) {
-			size_t newResolution = max(textureResolution * 2, size_t{8});
-			while (newResolution * newResolution < requiredSizeInVec4s) {
-				GREM_ASSERT(newResolution * 2 > newResolution);
-				newResolution *= 2;
-			}
-			stagingMemory.resize(newResolution * newResolution * sizeof(float) * 4);
+		GREM_ASSERT(elementStrideInVec4s <= size_t{Limits<uint32_t>::MAX});
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, static_cast<GLsizei>(newResolution), static_cast<GLsizei>(newResolution), 0, GL_RGBA, GL_FLOAT, nullptr);
-			textureResolution = newResolution;
+		GREM_ASSERT(elementStrideInVec4s < Limits<size_t>::MAX / (sizeof(float) * 4));
+		const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
+
+		if (elementOffset > Limits<uint32_t>::MAX / static_cast<uint32_t>(elementStrideInVec4s)) {
+			throw std::length_error{"Maximum shader storage buffer size exceeded."};
+		}
+		const size_t elementOffsetInVec4s = static_cast<size_t>(elementOffset) * elementStrideInVec4s;
+
+		GREM_ASSERT(elementOffsetInVec4s < Limits<size_t>::MAX / (sizeof(float) * 4));
+		const size_t elementOffsetInBytes = elementOffsetInVec4s * (sizeof(float) * 4);
+
+		if (elementsData.size() > size_t{Limits<uint32_t>::MAX} / elementStrideInVec4s) {
+			throw std::length_error{"Maximum shader storage buffer size exceeded."};
+		}
+		const size_t addedElementsSizeInVec4s = elementsData.size() * elementStrideInVec4s;
+
+		if (elementOffsetInVec4s > size_t{Limits<uint32_t>::MAX} - addedElementsSizeInVec4s) {
+			throw std::length_error{"Maximum shader storage buffer size exceeded."};
+		}
+		const size_t requiredSizeInVec4s = elementOffsetInVec4s + addedElementsSizeInVec4s;
+
+		if (requiredSizeInVec4s > stagingMemoryWidth * stagingMemoryWidth) {
+			uint32_t newWidth = max(stagingMemoryWidth, uint32_t{1});
+			do {
+				newWidth *= 2;
+				if (newWidth > Limits<uint32_t>::MAX / newWidth) {
+					throw std::length_error{"Maximum shader storage buffer size exceeded."};
+				}
+			} while (newWidth * newWidth < requiredSizeInVec4s);
+
+			GREM_PROFILE_BLOCK("Expand shader storage buffer staging memory");
+			const uint32_t newSizeInVec4s = newWidth * newWidth;
+			const size_t requiredSizeInBytes = newSizeInVec4s * (sizeof(float) * 4);
+			stagingMemory.resize(requiredSizeInBytes, byte{});
+			stagingMemoryWidth = newWidth;
 		}
 
 		byte* output = stagingMemory.data() + elementOffsetInBytes;
@@ -128,34 +165,22 @@ struct StorageBufferImplementation : detail::ReusableCopyOnWriteResourceBase<Sto
 				output += elementStrideInBytes;
 			}
 		}
-
-		const detail::UnpackAlignmentPreserver unpackAlignmentPreserver{};
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		const detail::UnpackRowLengthPreserver unpackRowLengthPreserver{};
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-		const detail::UnpackSkipPixelsPreserver unpackSkipPixelsPreserver{};
-		glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-		const detail::UnpackSkipRowsPreserver unpackSkipRowsPreserver{};
-		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-		const detail::UnpackImageHeightPreserver unpackImageHeightPreserver{};
-		glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
-		const detail::UnpackSkipImagesPreserver unpackSkipImagesPreserver{};
-		glPixelStorei(GL_UNPACK_SKIP_IMAGES, 0);
-
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, static_cast<GLsizei>(textureResolution), static_cast<GLsizei>(textureResolution), GL_RGBA, GL_FLOAT, stagingMemory.data());
+		dirty = true;
 	}
 };
 
 struct BufferSetImplementation : detail::ReusableCopyOnWriteResourceBase<BufferSetImplementation> {
-	[[nodiscard]] static SharedPointer<BufferSetImplementation> create(BufferLayoutReference bufferSetLayout, Allocation<SharedPointer<void>> buffers) {
-		return SharedPointer<BufferSetImplementation>::create(bufferSetLayout, std::move(buffers));
+	[[nodiscard]] static SharedPointer<BufferSetImplementation> create(Device& device, BufferLayoutReference bufferSetLayout, Allocation<SharedPointer<void>> buffers) {
+		return SharedPointer<BufferSetImplementation>::create(device, bufferSetLayout, std::move(buffers));
 	}
 
+	Device& device;
 	BufferLayoutReference bufferSetLayout;
 	Allocation<SharedPointer<void>> buffers;
 
-	explicit BufferSetImplementation(BufferLayoutReference bufferSetLayout, Allocation<SharedPointer<void>> buffers)
-		: bufferSetLayout(bufferSetLayout)
+	BufferSetImplementation(Device& device, BufferLayoutReference bufferSetLayout, Allocation<SharedPointer<void>> buffers)
+		: device(device)
+		, bufferSetLayout(bufferSetLayout)
 		, buffers(std::move(buffers)) {}
 };
 
