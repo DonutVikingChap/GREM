@@ -333,189 +333,6 @@ namespace {
 
 } // namespace
 
-void Schema::extend(String fileContents, CStringView filepath, const Filesystem* filesystem, HashSet<CStringView>* visitedFilepaths) {
-	GREM_PROFILE_BLOCK_DYNAMIC(formatString("Extend schema {}", filepath));
-
-	if (visitedFilepaths && !visitedFilepaths->insert(filepath).second) {
-		throw Error{"Cycle detected in schema."};
-	}
-
-	crc32.append(fileContents);
-	try {
-		try {
-			std::istringstream stream{std::move(fileContents)};
-			json::Reader reader{stream};
-			reader.readCustomObject([&](const json::SourceLocation& source, const json::String& key) -> void {
-				if (key == "extends") {
-					const StringView filepathPrefix = filepath.substr(0, filepath.find_last_of("/\\") + 1);
-					if (reader.nextIsString()) {
-						if (!filesystem || !visitedFilepaths) {
-							throw json::Error{"Nested schema files are not supported in this context.", source};
-						}
-						const String nestedFilepath = String{filepathPrefix} + reader.readString();
-						extend(filesystem->readInputFileString(nestedFilepath), nestedFilepath, filesystem);
-					} else {
-						reader.readCustomArray([&](const json::SourceLocation&) -> void {
-							if (!filesystem || !visitedFilepaths) {
-								throw json::Error{"Nested schema files are not supported in this context.", source};
-							}
-							const String nestedFilepath = String{filepathPrefix} + reader.readString();
-							extend(filesystem->readInputFileString(nestedFilepath), nestedFilepath, filesystem);
-						});
-					}
-				} else if (key == "name") {
-					name = reader.readString();
-					eprintln("Loading schema \"{}\"...", name);
-				} else if (key == "player") {
-					playerPrefabFilepath = reader.readString();
-				} else if (key == "dead_player") {
-					deadPlayerPrefabFilepath = reader.readString();
-				} else if (key == "modelObjectDefaultLayer") {
-					modelObjectDefaultLayer = parseCollisionLayer(reader.readValue());
-				} else if (key == "modelObjectDefaultDetectionLayers") {
-					modelObjectDefaultDetectionLayers = parseCollisionLayers(reader.readValue());
-				} else if (key == "modelObjectDefaultResponseLayers") {
-					modelObjectDefaultResponseLayers = parseCollisionLayers(reader.readValue());
-				} else if (key == "modelCollisionLayerMap") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						modelCollisionLayerMap.emplace(key, parseCollisionLayer(reader.readValue()));
-					});
-				} else if (key == "sounds") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), soundDescriptions[SoundType{CRC32{key}}]);
-					});
-				} else if (key == "decalMaterials") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), decalMaterialDescriptions[DecalMaterialType{CRC32{key}}]);
-					});
-				} else if (key == "sprites") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), spriteDescriptions[SpriteType{CRC32{key}}]);
-					});
-				} else if (key == "models") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), modelDescriptions[ModelType{CRC32{key}}]);
-					});
-				} else if (key == "projectiles") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), projectileDescriptions[ProjectileType{CRC32{key}}]);
-					});
-				} else if (key == "weapons") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), weaponDescriptions[WeaponType{CRC32{key}}]);
-					});
-				} else if (key == "movements") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), movementDescriptions[MovementType{CRC32{key}}]);
-					});
-				} else if (key == "particles") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), particleDescriptions[ParticleType{CRC32{key}}]);
-					});
-				} else if (key == "damageables") {
-					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
-						parseValue(reader.readValue(), damageableDescriptions[DamageableType{CRC32{key}}]);
-					});
-				} else if (key == "entities") {
-					reader.readCustomObject([&](const json::SourceLocation& entitySource, const json::String& key) -> void {
-						EntityDescription entityDescription{.name = key};
-						reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void {
-							if (key == "flags") {
-								reader.readCustomArray([&](const json::SourceLocation&) -> void {
-									EntityFlag flag{};
-									parseValue(reader.readValue(), flag);
-									entityDescription.flags |= flag;
-								});
-							} else if (key == "state") {
-								reader.readCustomArray([&](const json::SourceLocation& componentSource) -> void {
-									if (entityDescription.stateComponents.size() >= 64) {
-										throw json::Error{"Maximum state component count exceeded.", componentSource};
-									}
-									const String componentName = reader.readString();
-									bool found = false;
-									meta::forEach(VALID_STATE_COMPONENT_TYPES, [&]<typename Component>(const ComponentTypeDeclaration<Component>& validComponent) -> void {
-										if (!found && componentName == validComponent.name) {
-											const StateComponentDescription stateComponentDescription = StateComponentDescription::create<Component>(validComponent.name);
-											if (containsBy<&StateComponentDescription::nameCRC32>(entityDescription.stateComponents, stateComponentDescription.nameCRC32)) {
-												throw json::Error{formatString("Duplicate state component \"{}\".", componentName), componentSource};
-											}
-											entityDescription.stateComponents.push_back(stateComponentDescription);
-											found = true;
-										}
-									});
-									if (!found) {
-										throw json::Error{formatString("Invalid state component type \"{}\".", componentName), componentSource};
-									}
-								});
-								GREM_ASSERT(entityDescription.stateComponents.size() <= tuple_size_v<decltype(VALID_STATE_COMPONENT_TYPES)>);
-							} else if (key == "intermediate") {
-								reader.readCustomArray([&](const json::SourceLocation& componentSource) -> void {
-									const String componentName = reader.readString();
-									bool found = false;
-									meta::forEach(VALID_INTERMEDIATE_COMPONENT_TYPES, [&]<typename Component>(const ComponentTypeDeclaration<Component>& validComponent) -> void {
-										if (!found && componentName == validComponent.name) {
-											const IntermediateComponentDescription intermediateComponentDescription =
-												IntermediateComponentDescription::create<Component>(validComponent.name);
-											if (containsBy<&IntermediateComponentDescription::nameCRC32>(entityDescription.intermediateComponents,
-													intermediateComponentDescription.nameCRC32)) {
-												throw json::Error{formatString("Duplicate intermediate component \"{}\".", componentName), componentSource};
-											}
-											entityDescription.intermediateComponents.push_back(intermediateComponentDescription);
-											found = true;
-										}
-									});
-									if (!found) {
-										throw json::Error{formatString("Invalid intermediate component type \"{}\".", componentName), componentSource};
-									}
-								});
-								GREM_ASSERT(entityDescription.intermediateComponents.size() <= tuple_size_v<decltype(VALID_INTERMEDIATE_COMPONENT_TYPES)>);
-							} else if (key == "clientside") {
-								reader.readCustomArray([&](const json::SourceLocation& componentSource) -> void {
-									const String componentName = reader.readString();
-									bool found = false;
-									meta::forEach(VALID_CLIENTSIDE_COMPONENT_TYPES, [&]<typename Component>(const ComponentTypeDeclaration<Component>& validComponent) -> void {
-										if (!found && componentName == validComponent.name) {
-											const ClientsideComponentDescription clientsideComponentDescription =
-												ClientsideComponentDescription::create<Component>(validComponent.name);
-											if (containsBy<&ClientsideComponentDescription::nameCRC32>(entityDescription.clientsideComponents,
-													clientsideComponentDescription.nameCRC32)) {
-												throw json::Error{formatString("Duplicate clientside component \"{}\".", componentName), componentSource};
-											}
-											entityDescription.clientsideComponents.push_back(clientsideComponentDescription);
-											found = true;
-										}
-									});
-									if (!found) {
-										throw json::Error{formatString("Invalid clientside component type \"{}\".", componentName), componentSource};
-									}
-								});
-								GREM_ASSERT(entityDescription.clientsideComponents.size() <= tuple_size_v<decltype(VALID_CLIENTSIDE_COMPONENT_TYPES)>);
-							} else if (key == "physics") {
-								parseValue(reader.readValue(), entityDescription.physicsObjectOptions);
-							}
-						});
-						const EntityType entityType{CRC32{key}};
-						if (entityType == EntityType{}) {
-							throw json::Error{formatString("Hash collision detected with entity type name \"{}\".", ""), entitySource};
-						}
-						if (const auto [it, inserted] = entityDescriptions.emplace(entityType, std::move(entityDescription)); !inserted) {
-							throw json::Error{formatString("Hash collision detected with entity type name \"{}\".", it->first), entitySource};
-						}
-					});
-				}
-			});
-		} catch (...) {
-			Error::throwWithNestedFilepath(filepath);
-		}
-	} catch (...) {
-		Error::throwWithNested(Error{"Failed to load schema."});
-	}
-
-	if (visitedFilepaths) {
-		visitedFilepaths->erase(filepath);
-	}
-}
-
 void Schema::preloadAssets(AssetCache& assetCache) {
 	GREM_PROFILE_FUNCTION();
 
@@ -800,6 +617,188 @@ const phys::Shape3D& Schema::loadModelTriangleMeshShape(AssetCache& assetCache, 
 		}
 	}
 	return it->second;
+}
+
+void Schema::extendImplementation(String fileContents, CStringView filepath, const Filesystem* filesystem, HashSet<CStringView>* visitedFilepaths) {
+	GREM_PROFILE_BLOCK_DYNAMIC(formatString("Extend schema {}", filepath));
+
+	if (visitedFilepaths && !visitedFilepaths->insert(filepath).second) {
+		throw Error{"Cycle detected in schema."};
+	}
+
+	try {
+		try {
+			std::istringstream stream{std::move(fileContents)};
+			json::Reader reader{stream};
+			reader.readCustomObject([&](const json::SourceLocation& source, const json::String& key) -> void {
+				if (key == "extends") {
+					const StringView filepathPrefix = filepath.substr(0, filepath.find_last_of("/\\") + 1);
+					if (reader.nextIsString()) {
+						if (!filesystem || !visitedFilepaths) {
+							throw json::Error{"Nested schema files are not supported in this context.", source};
+						}
+						const String nestedFilepath = String{filepathPrefix} + reader.readString();
+						extend(filesystem->readInputFileString(nestedFilepath), nestedFilepath, filesystem);
+					} else {
+						reader.readCustomArray([&](const json::SourceLocation&) -> void {
+							if (!filesystem || !visitedFilepaths) {
+								throw json::Error{"Nested schema files are not supported in this context.", source};
+							}
+							const String nestedFilepath = String{filepathPrefix} + reader.readString();
+							extend(filesystem->readInputFileString(nestedFilepath), nestedFilepath, filesystem);
+						});
+					}
+				} else if (key == "name") {
+					name = reader.readString();
+					eprintln("Loading schema \"{}\"...", name);
+				} else if (key == "player") {
+					playerPrefabFilepath = reader.readString();
+				} else if (key == "dead_player") {
+					deadPlayerPrefabFilepath = reader.readString();
+				} else if (key == "modelObjectDefaultLayer") {
+					modelObjectDefaultLayer = parseCollisionLayer(reader.readValue());
+				} else if (key == "modelObjectDefaultDetectionLayers") {
+					modelObjectDefaultDetectionLayers = parseCollisionLayers(reader.readValue());
+				} else if (key == "modelObjectDefaultResponseLayers") {
+					modelObjectDefaultResponseLayers = parseCollisionLayers(reader.readValue());
+				} else if (key == "modelCollisionLayerMap") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						modelCollisionLayerMap.emplace(key, parseCollisionLayer(reader.readValue()));
+					});
+				} else if (key == "sounds") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), soundDescriptions[SoundType{CRC32{key}}]);
+					});
+				} else if (key == "decalMaterials") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), decalMaterialDescriptions[DecalMaterialType{CRC32{key}}]);
+					});
+				} else if (key == "sprites") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), spriteDescriptions[SpriteType{CRC32{key}}]);
+					});
+				} else if (key == "models") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), modelDescriptions[ModelType{CRC32{key}}]);
+					});
+				} else if (key == "projectiles") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), projectileDescriptions[ProjectileType{CRC32{key}}]);
+					});
+				} else if (key == "weapons") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), weaponDescriptions[WeaponType{CRC32{key}}]);
+					});
+				} else if (key == "movements") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), movementDescriptions[MovementType{CRC32{key}}]);
+					});
+				} else if (key == "particles") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), particleDescriptions[ParticleType{CRC32{key}}]);
+					});
+				} else if (key == "damageables") {
+					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void { //
+						parseValue(reader.readValue(), damageableDescriptions[DamageableType{CRC32{key}}]);
+					});
+				} else if (key == "entities") {
+					reader.readCustomObject([&](const json::SourceLocation& entitySource, const json::String& key) -> void {
+						EntityDescription entityDescription{.name = key};
+						reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void {
+							if (key == "flags") {
+								reader.readCustomArray([&](const json::SourceLocation&) -> void {
+									EntityFlag flag{};
+									parseValue(reader.readValue(), flag);
+									entityDescription.flags |= flag;
+								});
+							} else if (key == "state") {
+								reader.readCustomArray([&](const json::SourceLocation& componentSource) -> void {
+									if (entityDescription.stateComponents.size() >= 64) {
+										throw json::Error{"Maximum state component count exceeded.", componentSource};
+									}
+									const String componentName = reader.readString();
+									bool found = false;
+									meta::forEach(VALID_STATE_COMPONENT_TYPES, [&]<typename Component>(const ComponentTypeDeclaration<Component>& validComponent) -> void {
+										if (!found && componentName == validComponent.name) {
+											const StateComponentDescription stateComponentDescription = StateComponentDescription::create<Component>(validComponent.name);
+											if (containsBy<&StateComponentDescription::nameCRC32>(entityDescription.stateComponents, stateComponentDescription.nameCRC32)) {
+												throw json::Error{formatString("Duplicate state component \"{}\".", componentName), componentSource};
+											}
+											entityDescription.stateComponents.push_back(stateComponentDescription);
+											found = true;
+										}
+									});
+									if (!found) {
+										throw json::Error{formatString("Invalid state component type \"{}\".", componentName), componentSource};
+									}
+								});
+								GREM_ASSERT(entityDescription.stateComponents.size() <= tuple_size_v<decltype(VALID_STATE_COMPONENT_TYPES)>);
+							} else if (key == "intermediate") {
+								reader.readCustomArray([&](const json::SourceLocation& componentSource) -> void {
+									const String componentName = reader.readString();
+									bool found = false;
+									meta::forEach(VALID_INTERMEDIATE_COMPONENT_TYPES, [&]<typename Component>(const ComponentTypeDeclaration<Component>& validComponent) -> void {
+										if (!found && componentName == validComponent.name) {
+											const IntermediateComponentDescription intermediateComponentDescription =
+												IntermediateComponentDescription::create<Component>(validComponent.name);
+											if (containsBy<&IntermediateComponentDescription::nameCRC32>(entityDescription.intermediateComponents,
+													intermediateComponentDescription.nameCRC32)) {
+												throw json::Error{formatString("Duplicate intermediate component \"{}\".", componentName), componentSource};
+											}
+											entityDescription.intermediateComponents.push_back(intermediateComponentDescription);
+											found = true;
+										}
+									});
+									if (!found) {
+										throw json::Error{formatString("Invalid intermediate component type \"{}\".", componentName), componentSource};
+									}
+								});
+								GREM_ASSERT(entityDescription.intermediateComponents.size() <= tuple_size_v<decltype(VALID_INTERMEDIATE_COMPONENT_TYPES)>);
+							} else if (key == "clientside") {
+								reader.readCustomArray([&](const json::SourceLocation& componentSource) -> void {
+									const String componentName = reader.readString();
+									bool found = false;
+									meta::forEach(VALID_CLIENTSIDE_COMPONENT_TYPES, [&]<typename Component>(const ComponentTypeDeclaration<Component>& validComponent) -> void {
+										if (!found && componentName == validComponent.name) {
+											const ClientsideComponentDescription clientsideComponentDescription =
+												ClientsideComponentDescription::create<Component>(validComponent.name);
+											if (containsBy<&ClientsideComponentDescription::nameCRC32>(entityDescription.clientsideComponents,
+													clientsideComponentDescription.nameCRC32)) {
+												throw json::Error{formatString("Duplicate clientside component \"{}\".", componentName), componentSource};
+											}
+											entityDescription.clientsideComponents.push_back(clientsideComponentDescription);
+											found = true;
+										}
+									});
+									if (!found) {
+										throw json::Error{formatString("Invalid clientside component type \"{}\".", componentName), componentSource};
+									}
+								});
+								GREM_ASSERT(entityDescription.clientsideComponents.size() <= tuple_size_v<decltype(VALID_CLIENTSIDE_COMPONENT_TYPES)>);
+							} else if (key == "physics") {
+								parseValue(reader.readValue(), entityDescription.physicsObjectOptions);
+							}
+						});
+						const EntityType entityType{CRC32{key}};
+						if (entityType == EntityType{}) {
+							throw json::Error{formatString("Hash collision detected with entity type name \"{}\".", ""), entitySource};
+						}
+						if (const auto [it, inserted] = entityDescriptions.emplace(entityType, std::move(entityDescription)); !inserted) {
+							throw json::Error{formatString("Hash collision detected with entity type name \"{}\".", it->first), entitySource};
+						}
+					});
+				}
+			});
+		} catch (...) {
+			Error::throwWithNestedFilepath(filepath);
+		}
+	} catch (...) {
+		Error::throwWithNested(Error{"Failed to load schema."});
+	}
+
+	if (visitedFilepaths) {
+		visitedFilepaths->erase(filepath);
+	}
 }
 
 void ModelType::setImpliedComponents(EntityBuilder& entityBuilder, EntityRegistry& registry, ResourceRegistry& resources) {

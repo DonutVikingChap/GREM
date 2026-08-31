@@ -1548,7 +1548,11 @@ public:
 	explicit Schema(EntityID::Flags entityFlags)
 		: entityFlags(entityFlags) {}
 
-	FPS_SHARED_API void extend(String fileContents, CStringView filepath = {}, const Filesystem* filesystem = nullptr, HashSet<CStringView>* visitedFilepaths = nullptr);
+	void extend(String fileContents, CStringView filepath = {}, const Filesystem* filesystem = nullptr, HashSet<CStringView>* visitedFilepaths = nullptr) {
+		const CRC32 newCRC32 = crc32 + fileContents;
+		extendImplementation(std::move(fileContents), filepath, filesystem, visitedFilepaths);
+		crc32 = newCRC32;
+	}
 
 	FPS_SHARED_API void preloadAssets(AssetCache& assetCache);
 
@@ -1850,6 +1854,8 @@ public:
 	}
 
 private:
+	FPS_SHARED_API void extendImplementation(String fileContents, CStringView filepath, const Filesystem* filesystem, HashSet<CStringView>* visitedFilepaths);
+
 	EntityID::Flags entityFlags;
 	CRC32 crc32{};
 	String name{};
