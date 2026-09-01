@@ -90,10 +90,12 @@ void MeshBase::uploadVertexAttributes(Span<const Span<const byte>> vertexAttribu
 
 	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(bufferSize), nullptr, GL_STATIC_DRAW);
 	size_t bufferOffset = 0;
-	for (const Span<const byte> data : vertexAttributeData) {
-		if (!data.empty()) {
-			glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(bufferOffset), static_cast<GLsizeiptr>(data.size_bytes()), data.data());
-			bufferOffset += data.size_bytes();
+	for (Span<const byte> data : vertexAttributeData) {
+		while (!data.empty()) {
+			const size_t chunkSize = min(data.size_bytes(), size_t{1073741824});
+			glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(bufferOffset), static_cast<GLsizeiptr>(chunkSize), data.data());
+			bufferOffset += chunkSize;
+			data = data.subspan(chunkSize);
 		}
 	}
 

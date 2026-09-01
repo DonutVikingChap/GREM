@@ -43,6 +43,22 @@ namespace grem::graphics {
 
 namespace detail {
 
+inline void uploadImageToBoundTexture2D(Offset2D offset, Extent2D size, GLenum format, GLenum type, size_t pixelStride, const byte* data) {
+	GREM_ASSERT(offset.x >= 0 && offset.y >= 0);
+	GREM_ASSERT(size.width > 0 && size.height > 0);
+	GREM_ASSERT(pixelStride > 0);
+	const size_t rowStride = static_cast<size_t>(size.width) * pixelStride;
+	const size_t maxRowsPerChunk = max(size_t{1073741824} / rowStride, size_t{1});
+	const size_t yBegin = static_cast<size_t>(offset.y);
+	const size_t yEnd = yBegin + static_cast<size_t>(size.height);
+	for (size_t y = yBegin; y < yEnd; y += maxRowsPerChunk) {
+		const size_t chunkRows = min(yEnd - y, maxRowsPerChunk);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(offset.x), static_cast<GLint>(y), static_cast<GLsizei>(size.width), static_cast<GLsizei>(chunkRows), format, type,
+			data);
+		data += chunkRows * rowStride;
+	}
+}
+
 [[nodiscard]] inline GLuint flushStorageBufferTexture(Device& device) {
 	const detail::TextureBinding2DPreserver textureBinding2DPreserver{};
 	glBindTexture(GL_TEXTURE_2D, device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get());
@@ -96,22 +112,36 @@ namespace detail {
 					}
 
 					GREM_ASSERT(flushedStorageBuffer->squareAllocation.allocatedWidth == flushedStorageBuffer->stagingMemoryWidth);
-					glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(flushedStorageBuffer->squareAllocation.x), static_cast<GLint>(flushedStorageBuffer->squareAllocation.y),
-						static_cast<GLsizei>(flushedStorageBuffer->stagingMemoryWidth), static_cast<GLsizei>(flushedStorageBuffer->stagingMemoryWidth), GL_RGBA, GL_FLOAT,
-						flushedStorageBuffer->stagingMemory.data());
+					uploadImageToBoundTexture2D(
+						Offset2D{static_cast<int32_t>(flushedStorageBuffer->squareAllocation.x), static_cast<int32_t>(flushedStorageBuffer->squareAllocation.y)},
+						Extent2D{flushedStorageBuffer->stagingMemoryWidth}, GL_RGBA, GL_FLOAT, sizeof(vec4), flushedStorageBuffer->stagingMemory.data());
 				}
 			}
 		}
 
 		GREM_ASSERT(storageBuffer->squareAllocation.allocatedWidth == storageBuffer->stagingMemoryWidth);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(storageBuffer->squareAllocation.x), static_cast<GLint>(storageBuffer->squareAllocation.y),
-			static_cast<GLsizei>(storageBuffer->stagingMemoryWidth), static_cast<GLsizei>(storageBuffer->stagingMemoryWidth), GL_RGBA, GL_FLOAT,
-			storageBuffer->stagingMemory.data());
+		uploadImageToBoundTexture2D(Offset2D{static_cast<int32_t>(storageBuffer->squareAllocation.x), static_cast<int32_t>(storageBuffer->squareAllocation.y)},
+			Extent2D{storageBuffer->stagingMemoryWidth}, GL_RGBA, GL_FLOAT, sizeof(vec4), storageBuffer->stagingMemory.data());
 
 		storageBuffer->dirty = false;
 	}
 
 	return device.get()->storageBufferTexture.get()->object.get<detail::TextureObject>().get();
+}
+
+inline void uploadInstancesToBoundInstanceBuffer(Span<const byte> data) {
+	if (data.size() <= size_t{1073741824}) {
+		glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(data.size_bytes()), data.data(), GL_STREAM_DRAW);
+	} else {
+		glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(data.size_bytes()), nullptr, GL_STREAM_DRAW);
+		size_t bufferOffset = 0;
+		while (!data.empty()) {
+			const size_t chunkSize = min(data.size_bytes(), size_t{1073741824});
+			glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(bufferOffset), static_cast<GLsizeiptr>(chunkSize), data.data());
+			bufferOffset += chunkSize;
+			data = data.subspan(chunkSize);
+		}
+	}
 }
 
 } // namespace detail
@@ -890,8 +920,8 @@ struct RenderPassImplementation {
 			[&](const RenderPassImplementation::CommandDrawArraysInstanced& command) -> void { //
 				if (command.instanceBufferObjectHandle != 0) {
 					glBindBuffer(GL_ARRAY_BUFFER, command.instanceBufferObjectHandle);
-					glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(static_cast<size_t>(command.instanceCount) * static_cast<size_t>(command.instanceStride)),
-						command.instanceData, GL_STREAM_DRAW);
+					detail::uploadInstancesToBoundInstanceBuffer(
+						Span<const byte>{command.instanceData, static_cast<size_t>(command.instanceCount) * static_cast<size_t>(command.instanceStride)});
 				}
 				GREM_ASSERT(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 				glDrawArraysInstanced(command.primitiveType, 0, static_cast<GLsizei>(command.vertexCount), static_cast<GLsizei>(command.instanceCount));
@@ -899,8 +929,8 @@ struct RenderPassImplementation {
 			[&](const RenderPassImplementation::CommandDrawElementsInstanced& command) -> void { //
 				if (command.instanceBufferObjectHandle != 0) {
 					glBindBuffer(GL_ARRAY_BUFFER, command.instanceBufferObjectHandle);
-					glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(static_cast<size_t>(command.instanceCount) * static_cast<size_t>(command.instanceStride)),
-						command.instanceData, GL_STREAM_DRAW);
+					detail::uploadInstancesToBoundInstanceBuffer(
+						Span<const byte>{command.instanceData, static_cast<size_t>(command.instanceCount) * static_cast<size_t>(command.instanceStride)});
 				}
 				GREM_ASSERT(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 				glDrawElementsInstanced(command.primitiveType, static_cast<GLsizei>(command.indexCount), command.indexType, nullptr, static_cast<GLsizei>(command.instanceCount));
