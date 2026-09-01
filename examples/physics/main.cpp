@@ -126,9 +126,9 @@ protected:
 					break;
 				}
 				GREM_CASE(const evt::MouseMovedEvent& moved) {
-					simulation.registry.getComponent<phys::Position2D>(cursorObjectID) =
-						vec2{moved.mousePosition.x, static_cast<float>(window.getSize().height) - moved.mousePosition.y} * PIXEL_LENGTH_UNIT;
-					simulation.registry.getComponent<phys::ObjectActivity>(cursorObjectID).energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+					const phys::Position2D newPosition = vec2{moved.mousePosition.x, static_cast<float>(window.getSize().height) - moved.mousePosition.y} * PIXEL_LENGTH_UNIT;
+					cursorMotion += newPosition - cursorPosition;
+					cursorPosition = newPosition;
 					break;
 				}
 				GREM_CASE(const evt::KeyPressedEvent& pressed) {
@@ -172,12 +172,20 @@ protected:
 			}
 		}
 
+		if (cursorMotion != 0) {
+			simulation.registry.getComponent<phys::ObjectActivity>(cursorObjectID).energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
+			simulation.registry.getComponent<phys::LinearVelocity2D>(cursorObjectID) = cursorMotion / simulation.resources.getResource<phys::SimulationOptions2D>().stepInterval;
+			cursorMotion = {};
+		}
+
 		simulation.step();
 
 		debugVisualization.clear();
 		if (showDebugVisualization) {
 			simulation.drawDebugVisualization(debugVisualization);
 		}
+
+		simulation.registry.getComponent<phys::Position2D>(cursorObjectID) = cursorPosition;
 	}
 
 	void skipTick(Duration tickInterval) override {
@@ -454,6 +462,8 @@ private:
 	Offset2D lastWindowPosition = window.getPosition();
 	phys::EntityID cursorObjectID = createCursorObject();
 	phys::EntityID cursorJointID{};
+	phys::Position2D cursorPosition{};
+	phys::Length2D cursorMotion{};
 	Duration skippedSimulationTime{};
 	rng::DefaultRandomEngine numberGenerator{};
 	rng::UniformIntegerDistribution<int> shapeSizeInSixteensOfPixelsDistribution{2, 8};
