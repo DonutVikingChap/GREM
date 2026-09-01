@@ -176,6 +176,8 @@ protected:
 			simulation.registry.getComponent<phys::ObjectActivity>(cursorObjectID).energyLevel = phys::ObjectActivity::MAX_ENERGY_LEVEL;
 			simulation.registry.getComponent<phys::LinearVelocity2D>(cursorObjectID) = cursorMotion / simulation.resources.getResource<phys::SimulationOptions2D>().stepInterval;
 			cursorMotion = {};
+		} else {
+			simulation.registry.getComponent<phys::LinearVelocity2D>(cursorObjectID) = {};
 		}
 
 		simulation.step();
