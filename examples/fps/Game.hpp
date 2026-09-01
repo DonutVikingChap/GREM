@@ -86,7 +86,7 @@ struct GameSettings {
 	bool vSync = false;
 #endif
 	uint32_t rendererTileSize = 64;
-	uint32_t rendererDepthBins = 2048;
+	uint32_t rendererDepthBins = 1024;
 	uint32_t rendererBRDFResolution = 512;
 	uint32_t rendererBRDFSamples = 2048;
 	uint32_t audioOutputChannels = 2;
