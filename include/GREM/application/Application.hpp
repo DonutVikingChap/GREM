@@ -163,6 +163,10 @@ public:
 	 * Start the main loop of the application and keep running until the
 	 * application quits or an unhandled exception is thrown.
 	 *
+	 * \throws any unhandled exception which was thrown during the execution of
+	 *         the main loop, unless running under emscripten, in which case
+	 *         exceptions are simply printed before shutting down.
+	 *
 	 * \note Under emscripten-based WebAssembly builds, this function will never
 	 *       return. Instead, it explicitly calls the virtual application
 	 *       destructor in order to perform any necessary cleanup when the main
@@ -170,11 +174,6 @@ public:
 	 *       specific cleanup or shutdown code be called from the overriden
 	 *       destructor, rather than being called from main after run() has
 	 *       finished.
-	 *
-	 * \throws any unhandled exception which was thrown during the execution of
-	 *         the main loop, unless running under emscripten, in which case
-	 *         exceptions are simply printed before shutting down.
-	 *
 	 * \note If the application has already been shut down, it will not enter
 	 *       the running state again. To start a new main loop, a new
 	 *       application must be constructed.
