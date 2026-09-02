@@ -77,6 +77,10 @@ struct DeviceImplementation {
 		uint32_t depthStencilAttachmentMipLevel = 0;
 
 		[[nodiscard]] bool operator==(const ReadFramebufferContextKey&) const = default;
+
+		[[nodiscard]] bool isExpired() const {
+			return colorAttachmentHandle.use_count() <= 1 || depthStencilAttachmentHandle.use_count() <= 1;
+		}
 	};
 
 	struct DrawFramebufferContextKey {
@@ -365,6 +369,7 @@ struct DeviceImplementation {
 		}
 		const TimePoint waitEndTime = Clock::now();
 		currentPresentationSubmission.totalWaitTime += waitEndTime - waitStartTime;
+		cleanupRenderPassesAvailableForReuse();
 		cleanupExpiredFramebufferContexts();
 		currentPresentationSubmission.id = static_cast<PresentationSubmissionID>(static_cast<uint64_t>(currentPresentationSubmission.id) + 1);
 		return std::exchange(currentPresentationSubmission, Device::PresentationSubmission{.id = currentPresentationSubmission.id});
@@ -457,8 +462,10 @@ struct DeviceImplementation {
 		return drawFramebufferContextMap.try_emplace(key, GL_DRAW_FRAMEBUFFER, key).first->second;
 	}
 
+	void cleanupRenderPassesAvailableForReuse();
+
 	void cleanupExpiredFramebufferContexts() {
-		readFramebufferContextMap.clear();
+		erase_if(readFramebufferContextMap, [](const auto& kv) -> bool { return kv.first.isExpired(); });
 		erase_if(drawFramebufferContextMap, [](const auto& kv) -> bool { return kv.first.isExpired(); });
 	}
 };

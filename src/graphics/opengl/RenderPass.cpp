@@ -384,6 +384,23 @@ void enqueueInstanceRange(RenderPassImplementation& implementation, const MeshIm
 
 } // namespace
 
+void RenderPassImplementation::invalidateContentsOfOldBuffersAvailableForReuse() noexcept {
+	for (UniformBufferImplementation* const uniformBuffer : usedUniformBuffers) {
+		for (UniformBufferImplementation* handle = uniformBuffer; handle->oldResource; handle = handle->oldResource.get()) {
+			if (handle->oldResource.use_count() == 1) {
+				handle->oldResource->invalidateContents();
+			}
+		}
+	}
+	for (BufferSetImplementation* const bufferSet : usedBufferSets) {
+		for (BufferSetImplementation* handle = bufferSet; handle->oldResource; handle = handle->oldResource.get()) {
+			if (handle->oldResource.use_count() == 1) {
+				handle->oldResource->invalidateContents();
+			}
+		}
+	}
+}
+
 RenderPass::RenderPass(Device& device, Span<const TextureSubresourceReference> renderTargets, const ClearMode& clearMode, Optional<Viewport> viewport)
 	: implementation(acquireRenderPass(device, {}, renderTargets)) {
 	implementation->renderTargets.clearMode = clearMode;
@@ -510,6 +527,20 @@ RenderPass& RenderPass::drawShaded(SharedPointer<ShaderPipelineImplementation> s
 	if (instanceBufferHandle) {
 		implementation->usedResources.push_back(std::move(instanceBufferHandle));
 	}
+	for (const Pair<BufferLayoutReference, SharedPointer<void>>& bufferHandle : bufferHandles) {
+		implementation->usedResources.push_back(bufferHandle.second);
+		GREM_MATCH(bufferHandle.first) {
+			GREM_CASE(const UniformBufferLayoutReference& uniformBufferLayout) {
+				implementation->usedUniformBuffers.push_back(static_cast<UniformBufferImplementation*>(bufferHandle.second.get()));
+				break;
+			}
+			GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) break;
+			GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
+				implementation->usedBufferSets.push_back(static_cast<BufferSetImplementation*>(bufferHandle.second.get()));
+				break;
+			}
+		}
+	}
 	return *this;
 }
 
@@ -541,6 +572,20 @@ RenderPass& RenderPass::drawShadedUnordered(SharedPointer<ShaderPipelineImplemen
 	implementation->usedResources.push_back(std::move(drawCommandBufferHandle));
 	if (instanceBufferHandle) {
 		implementation->usedResources.push_back(std::move(instanceBufferHandle));
+	}
+	for (const Pair<BufferLayoutReference, SharedPointer<void>>& bufferHandle : bufferHandles) {
+		implementation->usedResources.push_back(bufferHandle.second);
+		GREM_MATCH(bufferHandle.first) {
+			GREM_CASE(const UniformBufferLayoutReference& uniformBufferLayout) {
+				implementation->usedUniformBuffers.push_back(static_cast<UniformBufferImplementation*>(bufferHandle.second.get()));
+				break;
+			}
+			GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) break;
+			GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
+				implementation->usedBufferSets.push_back(static_cast<BufferSetImplementation*>(bufferHandle.second.get()));
+				break;
+			}
+		}
 	}
 	return *this;
 }

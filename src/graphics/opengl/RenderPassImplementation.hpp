@@ -470,6 +470,8 @@ struct RenderPassImplementation {
 	RenderPass::Statistics statistics{};
 	Optional<Commands> commands{};
 	ArrayList<SharedPointer<void>> usedResources{};
+	ArrayList<UniformBufferImplementation*> usedUniformBuffers{};
+	ArrayList<BufferSetImplementation*> usedBufferSets{};
 	Buffer<void*> currentBufferHandles{};
 	std::type_index currentShaderMeshTypeIndex = typeid(void);
 	MeshImplementation* currentMeshHandle = nullptr;
@@ -479,7 +481,7 @@ struct RenderPassImplementation {
 	uint32_t currentInstanceCount = 0;
 	uint32_t currentInstanceStride = 0;
 	Optional<Viewport> currentViewport{};
-	Arena<3072> commandArena{};
+	Arena<3040> commandArena{};
 
 	explicit RenderPassImplementation(Device& device)
 		: device(device) {
@@ -502,6 +504,7 @@ struct RenderPassImplementation {
 		if (this == &other) {
 			return *this;
 		}
+		invalidateContentsOfOldBuffersAvailableForReuse();
 		renderTargets = other.renderTargets;
 		statistics = other.statistics;
 		commands.reset();
@@ -544,6 +547,8 @@ struct RenderPassImplementation {
 			[&](const auto& command) -> void { commands->push_back(command); },
 		});
 		usedResources = other.usedResources;
+		usedUniformBuffers = other.usedUniformBuffers;
+		usedBufferSets = other.usedBufferSets;
 		currentBufferHandles = other.currentBufferHandles;
 		currentShaderMeshTypeIndex = other.currentShaderMeshTypeIndex;
 		currentMeshHandle = other.currentMeshHandle;
@@ -558,13 +563,18 @@ struct RenderPassImplementation {
 
 	RenderPassImplementation& operator=(RenderPassImplementation&&) = delete;
 
+	void invalidateContentsOfOldBuffersAvailableForReuse() noexcept;
+
 	void reset() noexcept {
+		invalidateContentsOfOldBuffersAvailableForReuse();
 		renderTargets = {};
 		statistics = {};
 		commands.reset();
 		commandArena.release();
 		commands.emplace(&commandArena, decltype(commandArena)::INPLACE_SIZE);
 		usedResources.clear();
+		usedUniformBuffers.clear();
+		usedBufferSets.clear();
 		currentBufferHandles.clear();
 		currentShaderMeshTypeIndex = typeid(void);
 		currentMeshHandle = nullptr;

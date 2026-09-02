@@ -540,6 +540,29 @@ struct BufferSetImplementation : detail::ReusableCopyOnWriteResourceBase<BufferS
 	BufferSetImplementation(const BufferSetImplementation& other)
 		: BufferSetImplementation(other.device, other.bufferSetLayout, other.buffers) {}
 
+	void invalidateContents() noexcept {
+		const Span<const BufferLayoutReference> bufferLayouts = bufferSetLayout.as<BufferSetLayoutReference>().bufferLayouts;
+		GREM_ASSERT(buffers.size() == bufferLayouts.size());
+
+		for (size_t i = 0; i < bufferLayouts.size(); ++i) {
+			GREM_ASSERT(buffers[i]);
+			GREM_MATCH(bufferLayouts[i]) {
+				GREM_CASE(const UniformBufferLayoutReference& uniformBufferLayout) {
+					if (buffers[i].use_count() == 1) {
+						static_cast<UniformBufferImplementation*>(buffers[i].get())->invalidateContentsInBufferSet(descriptorSetBindingsUpToDate[i]);
+					}
+					break;
+				}
+				GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) {
+					break;
+				}
+				GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
+					unreachable();
+				}
+			}
+		}
+	}
+
 	void assign(const BufferSetImplementation& other) {
 		GREM_ASSERT(bufferSetLayout == other.bufferSetLayout);
 		GREM_ASSERT(other.buffers.size() == bufferSetLayout.as<BufferSetLayoutReference>().bufferLayouts.size());

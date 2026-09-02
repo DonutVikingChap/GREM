@@ -24,6 +24,14 @@
 
 namespace grem::graphics {
 
+void DeviceImplementation::cleanupRenderPassesAvailableForReuse() {
+	for (const SharedPointer<RenderPassImplementation>& renderPass : renderPassesForReuse) {
+		if (renderPass.use_count() == 1) {
+			renderPass->reset();
+		}
+	}
+}
+
 Device::Device(Window& window, const DeviceOptions& options)
 	: implementation(UniquePointer<DeviceImplementation>::create(window, options)) {
 	constexpr uint32_t INITIAL_STORAGE_BUFFER_RESOLUTION = 64;
@@ -63,6 +71,8 @@ void Device::render(const RenderPass& renderPass) {
 	GREM_ASSERT(&renderPass.get()->device == this);
 	implementation->currentPresentationSubmission.totalRenderPassStatistics += renderPass.getStatistics();
 	++implementation->currentPresentationSubmission.totalRenderPassCount;
+	implementation->cleanupRenderPassesAvailableForReuse();
+	implementation->cleanupExpiredFramebufferContexts();
 	renderPass.get()->render();
 }
 

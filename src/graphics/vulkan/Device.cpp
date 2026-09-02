@@ -2532,7 +2532,10 @@ void DeviceImplementation::submitAndAwaitGraphicsCommands() {
 	const TimePoint waitEndTime = Clock::now();
 	currentPresentationSubmission.totalWaitTime += waitEndTime - waitStartTime;
 	beginGraphicsQueueSubmission();
+	cleanupRenderPassesAvailableForReuse();
+}
 
+void DeviceImplementation::cleanupRenderPassesAvailableForReuse() {
 	for (const SharedPointer<RenderPassImplementation>& renderPass : renderPassesForReuse) {
 		if (renderPass.use_count() == 1) {
 			renderPass->reset();
@@ -3241,6 +3244,7 @@ void Device::await() noexcept {
 	GREM_PROFILE_FUNCTION();
 
 	implementation->awaitAllCommands();
+	implementation->cleanupRenderPassesAvailableForReuse();
 	implementation->cleanupExpiredFramebufferContexts();
 }
 

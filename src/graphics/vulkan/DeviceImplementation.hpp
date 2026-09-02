@@ -304,6 +304,7 @@ struct DeviceImplementation {
 	VkResult awaitAllCommandsNoexcept() noexcept;
 	void submitGraphicsCommands(VkSemaphore signalSemaphore);
 	void submitAndAwaitGraphicsCommands();
+	void cleanupRenderPassesAvailableForReuse();
 	void cleanupExpiredFramebufferContexts();
 
 	void adoptTextureResources(GraphicsQueueSubmissionGenerationIndex latestGraphicsQueueSubmissionUsingThisResource, detail::TextureResources&& resources);

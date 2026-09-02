@@ -286,14 +286,15 @@ struct RenderPassImplementation {
 	RenderPass::Statistics statistics{};
 	Optional<Commands> commands{};
 	ArrayList<SharedPointer<void>> usedResources{};
-	ArrayList<SharedPointer<UniformBufferImplementation>> usedUniformBuffers{};
+	ArrayList<UniformBufferImplementation*> usedUniformBuffers{};
+	ArrayList<BufferSetImplementation*> usedBufferSets{};
 	std::type_index currentMeshTypeIndex = typeid(void);
 	VertexAttributeMask currentActiveVertexAttributes{};
 	const ShaderPipelineImplementation* currentShaderPipeline = nullptr;
 	VkDescriptorSet currentDrawCommandBufferDescriptorSet = VK_NULL_HANDLE;
 	VkDescriptorSet currentInstanceBufferDescriptorSet = VK_NULL_HANDLE;
 	Optional<Viewport> currentViewport{};
-	Arena<3072> commandArena{};
+	Arena<3056> commandArena{};
 
 	explicit RenderPassImplementation(Device& device)
 		: device(device) {
@@ -316,6 +317,7 @@ struct RenderPassImplementation {
 		if (this == &other) {
 			return *this;
 		}
+		invalidateContentsOfOldBuffersAvailableForReuse();
 		renderTargets = other.renderTargets;
 		statistics = other.statistics;
 		commands.reset();
@@ -328,6 +330,7 @@ struct RenderPassImplementation {
 
 		usedResources = other.usedResources;
 		usedUniformBuffers = other.usedUniformBuffers;
+		usedBufferSets = other.usedBufferSets;
 		currentMeshTypeIndex = other.currentMeshTypeIndex;
 		currentActiveVertexAttributes = other.currentActiveVertexAttributes;
 		currentShaderPipeline = other.currentShaderPipeline;
@@ -339,10 +342,10 @@ struct RenderPassImplementation {
 
 	RenderPassImplementation& operator=(RenderPassImplementation&&) = delete;
 
-	void invalidateContentsOfOldUniformBuffersAvailableForReuse() noexcept;
+	void invalidateContentsOfOldBuffersAvailableForReuse() noexcept;
 
 	void reset() noexcept {
-		invalidateContentsOfOldUniformBuffersAvailableForReuse();
+		invalidateContentsOfOldBuffersAvailableForReuse();
 		renderTargets = {};
 		statistics = {};
 		commands.reset();
@@ -350,6 +353,7 @@ struct RenderPassImplementation {
 		commands.emplace(&commandArena, decltype(commandArena)::INPLACE_SIZE);
 		usedResources.clear();
 		usedUniformBuffers.clear();
+		usedBufferSets.clear();
 		currentMeshTypeIndex = typeid(void);
 		currentActiveVertexAttributes = {};
 		currentShaderPipeline = nullptr;

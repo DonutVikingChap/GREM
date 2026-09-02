@@ -325,6 +325,7 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::UndefinedClearValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(downscaleShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
@@ -332,6 +333,7 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::UndefinedClearValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(upscaleShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
@@ -339,6 +341,7 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::UndefinedClearValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(blurVerticalShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
@@ -346,6 +349,7 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::UndefinedClearValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(blurHorizontalShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
@@ -353,6 +357,7 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::UndefinedClearValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(bloomDownsampleFirstLevelShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
@@ -360,6 +365,7 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::UndefinedClearValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(bloomDownsampleShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
@@ -367,17 +373,20 @@ struct Graphics {
 		gfx::RenderPass renderPass{device, output, gfx::RetainValues{}};
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(bloomUpsampleShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 		device.render(renderPass);
 	}
 
 	void drawBloomComposeTonemapped(gfx::RenderPass& renderPass, const gfx::Texture& mainTexture, const gfx::Texture& bloomTexture) {
 		bloomComposeParameterBuffer.upload({.mainTexture = mainTexture, .bloomTexture = bloomTexture});
 		renderPass.drawShaded(bloomComposeShaderPipeline, fullscreenDrawCommandBuffer, bloomComposeParameterBuffer);
+		bloomComposeParameterBuffer.upload({.mainTexture{}, .bloomTexture{}});
 	}
 
 	void drawTonemapped(gfx::RenderPass& renderPass, const gfx::Texture& input) {
 		fullscreenTextureBuffer.upload({.mainTexture = input});
 		renderPass.drawShaded(tonemapShaderPipeline, fullscreenDrawCommandBuffer, fullscreenTextureBuffer);
+		fullscreenTextureBuffer.upload({.mainTexture{}});
 	}
 };
 

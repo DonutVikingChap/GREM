@@ -55,6 +55,12 @@ struct UniformBufferImplementation : detail::ReusableCopyOnWriteResourceBase<Uni
 		glBufferData(GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>(bufferSize), nullptr, GL_STREAM_DRAW);
 	}
 
+	void invalidateContents() noexcept {
+		for (SharedPointer<TextureImplementation>& texture : textures) {
+			texture = {};
+		}
+	}
+
 	void upload(Span<const byte> newParameterValuesBytes, Span<SharedPointer<TextureImplementation>> newTextures) {
 		const detail::UniformBufferBindingPreserver uniformBufferBindingPreserver{};
 		glBindBuffer(GL_UNIFORM_BUFFER, uniformBufferObject.get());
@@ -182,6 +188,29 @@ struct BufferSetImplementation : detail::ReusableCopyOnWriteResourceBase<BufferS
 		: device(device)
 		, bufferSetLayout(bufferSetLayout)
 		, buffers(std::move(buffers)) {}
+
+	void invalidateContents() noexcept {
+		const Span<const BufferLayoutReference> bufferLayouts = bufferSetLayout.as<BufferSetLayoutReference>().bufferLayouts;
+		GREM_ASSERT(buffers.size() == bufferLayouts.size());
+
+		for (size_t i = 0; i < bufferLayouts.size(); ++i) {
+			GREM_ASSERT(buffers[i]);
+			GREM_MATCH(bufferLayouts[i]) {
+				GREM_CASE(const UniformBufferLayoutReference& uniformBufferLayout) {
+					if (buffers[i].use_count() == 1) {
+						static_cast<UniformBufferImplementation*>(buffers[i].get())->invalidateContents();
+					}
+					break;
+				}
+				GREM_CASE(const StorageBufferLayoutReference& storageBufferLayout) {
+					break;
+				}
+				GREM_CASE(const BufferSetLayoutReference& bufferSetLayout) {
+					unreachable();
+				}
+			}
+		}
+	}
 };
 
 struct InstanceBufferImplementation : detail::ReusableCopyOnWriteResourceBase<InstanceBufferImplementation> {
