@@ -481,7 +481,7 @@ struct RenderPassImplementation {
 	uint32_t currentInstanceCount = 0;
 	uint32_t currentInstanceStride = 0;
 	Optional<Viewport> currentViewport{};
-	Arena<3040> commandArena{};
+	Arena<3008> commandArena{};
 
 	explicit RenderPassImplementation(Device& device)
 		: device(device) {
