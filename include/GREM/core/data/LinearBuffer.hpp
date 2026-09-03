@@ -10,7 +10,7 @@
 #include <GREM/core/data/Span.hpp>
 
 #include <algorithm>       // std::max
-#include <cstddef>         // std::size_t, std::byte
+#include <cstddef>         // std::size_t, std::ptrdiff_t, std::byte
 #include <cstdint>         // std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
 #include <cstring>         // std::memcpy
 #include <functional>      // std::invoke
@@ -139,27 +139,29 @@ public:
 
 	template <typename T>
 	void push_back(const T& value) requires(!std::is_unbounded_array_v<T> && linear_buffer_has_alternative_v<T, LinearBuffer>) {
-		constexpr std::size_t HEADER_SIZE = sizeof(index_type);
-		constexpr std::size_t requiredSize = HEADER_SIZE + sizeof(T) + sizeof(index_type) + sizeof(std::byte*);
+		constexpr std::size_t REQUIRED_SIZE = sizeof(TypeHeader) + sizeof(T) + sizeof(TypeHeader) + sizeof(ChunkTrailer);
 		const std::size_t remainingMemorySize = static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin);
-		if (remainingMemorySize < requiredSize) {
+		if (remainingMemorySize < REQUIRED_SIZE) {
 			[[unlikely]];
-			const std::size_t newChunkSize = std::max(requiredSize, nextChunkSize);
-			if (head) {
-				GREM_ASSERT(remainingMemorySize >= sizeof(index_type) + sizeof(std::byte*));
-				std::byte* const oldChunkTail = remainingMemoryBegin;
-				std::byte* const newChunk = allocateChunk(newChunkSize);
-				static_assert(sizeof(npos) == sizeof(index_type));
-				std::memcpy(oldChunkTail, &npos, sizeof(index_type));
-				std::memcpy(oldChunkTail + sizeof(index_type), &newChunk, sizeof(std::byte*));
+			const std::size_t newChunkSize = std::max(REQUIRED_SIZE, nextChunkSize);
+			if (firstChunkBegin) {
+				GREM_ASSERT(remainingMemorySize >= sizeof(TypeHeader) + sizeof(ChunkTrailer));
+				std::byte* const oldChunkTrailer = remainingMemoryBegin;
+				std::byte* const newChunkBegin = allocateChunk(newChunkSize);
+				std::byte* const newChunkEnd = newChunkBegin + newChunkSize;
+				const TypeHeader typeHeader{.typeIndex = npos};
+				std::memcpy(oldChunkTrailer, &typeHeader, sizeof(TypeHeader));
+				const ChunkTrailer chunkTrailer{.nextChunkBegin = newChunkBegin, .nextChunkEnd = newChunkEnd};
+				std::memcpy(oldChunkTrailer + sizeof(TypeHeader), &chunkTrailer, sizeof(ChunkTrailer));
 			} else {
-				head = allocateChunk(newChunkSize);
+				firstChunkBegin = allocateChunk(newChunkSize);
+				firstChunkEnd = firstChunkBegin + newChunkSize;
 			}
 		}
-		constexpr index_type index = linear_buffer_index_v<T, LinearBuffer>;
-		std::memcpy(remainingMemoryBegin, &index, sizeof(index_type));
-		std::memcpy(remainingMemoryBegin + HEADER_SIZE, &value, sizeof(T));
-		remainingMemoryBegin += HEADER_SIZE + sizeof(T);
+		const TypeHeader typeHeader{.typeIndex = linear_buffer_index_v<T, LinearBuffer>};
+		std::memcpy(remainingMemoryBegin, &typeHeader, sizeof(TypeHeader));
+		std::memcpy(remainingMemoryBegin + sizeof(TypeHeader), &value, sizeof(T));
+		remainingMemoryBegin += sizeof(TypeHeader) + sizeof(T);
 	}
 
 	template <typename T, typename... Args>
@@ -169,39 +171,44 @@ public:
 
 	template <typename T>
 	Span<const T> append(Span<const T> values) requires(linear_buffer_has_alternative_v<T[], LinearBuffer>) {
-		constexpr std::size_t HEADER_SIZE = sizeof(index_type) + sizeof(std::size_t);
+		constexpr std::size_t MIN_REQUIRED_SIZE = sizeof(TypeHeader) + sizeof(ArrayHeader) + sizeof(TypeHeader) + sizeof(ChunkTrailer);
 		const std::size_t remainingMemorySize = static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin);
-		void* alignedPointer = remainingMemoryBegin + HEADER_SIZE;
-		const std::size_t minRequiredSize = HEADER_SIZE + sizeof(index_type) + sizeof(std::byte*);
-		std::size_t space = remainingMemorySize - minRequiredSize;
-		if (remainingMemorySize < minRequiredSize || (!values.empty() && !std::align(alignof(T), values.size_bytes(), alignedPointer, space))) {
+		if (remainingMemorySize < MIN_REQUIRED_SIZE ||
+			(!values.empty() &&
+				!getAligned(alignof(T), values.size_bytes(), remainingMemoryBegin + sizeof(TypeHeader) + sizeof(ArrayHeader), remainingMemorySize - MIN_REQUIRED_SIZE))) {
 			[[unlikely]];
-			const std::size_t requiredSize = HEADER_SIZE + alignof(T) - 1 + values.size_bytes() + sizeof(index_type) + sizeof(std::byte*);
+			const std::size_t requiredSize = sizeof(TypeHeader) + sizeof(ArrayHeader) + alignof(T) - 1 + values.size_bytes() + sizeof(TypeHeader) + sizeof(ChunkTrailer);
 			const std::size_t newChunkSize = std::max(requiredSize, nextChunkSize);
-			if (head) {
-				GREM_ASSERT(remainingMemorySize >= sizeof(index_type) + sizeof(std::byte*));
-				std::byte* const oldChunkTail = remainingMemoryBegin;
-				std::byte* const newChunk = allocateChunk(newChunkSize);
-				static_assert(sizeof(npos) == sizeof(index_type));
-				std::memcpy(oldChunkTail, &npos, sizeof(index_type));
-				std::memcpy(oldChunkTail + sizeof(index_type), &newChunk, sizeof(std::byte*));
+			if (firstChunkBegin) {
+				GREM_ASSERT(remainingMemorySize >= sizeof(TypeHeader) + sizeof(ChunkTrailer));
+				std::byte* const oldChunkTrailer = remainingMemoryBegin;
+				std::byte* const newChunkBegin = allocateChunk(newChunkSize);
+				std::byte* const newChunkEnd = newChunkBegin + newChunkSize;
+				const TypeHeader typeHeader{.typeIndex = npos};
+				std::memcpy(oldChunkTrailer, &typeHeader, sizeof(TypeHeader));
+				const ChunkTrailer chunkTrailer{.nextChunkBegin = newChunkBegin, .nextChunkEnd = newChunkEnd};
+				std::memcpy(oldChunkTrailer + sizeof(TypeHeader), &chunkTrailer, sizeof(ChunkTrailer));
 			} else {
-				head = allocateChunk(newChunkSize);
+				firstChunkBegin = allocateChunk(newChunkSize);
+				firstChunkEnd = firstChunkBegin + newChunkSize;
 			}
-			alignedPointer = remainingMemoryBegin + HEADER_SIZE;
-			space = static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin) - minRequiredSize;
-			[[maybe_unused]] void* const aligned = std::align(alignof(T), values.size_bytes(), alignedPointer, space);
-			GREM_ASSERT(aligned);
 		}
-		constexpr index_type index = linear_buffer_index_v<T[], LinearBuffer>;
-		const std::size_t count = values.size();
-		std::memcpy(remainingMemoryBegin, &index, sizeof(index_type));
-		std::memcpy(remainingMemoryBegin + sizeof(index_type), &count, sizeof(std::size_t));
-		if (count > 0) {
+		const TypeHeader typeHeader{.typeIndex = linear_buffer_index_v<T[], LinearBuffer>};
+		std::memcpy(remainingMemoryBegin, &typeHeader, sizeof(TypeHeader));
+		const ArrayHeader arrayHeader{.elementCount = values.size()};
+		std::memcpy(remainingMemoryBegin + sizeof(TypeHeader), &arrayHeader, sizeof(ArrayHeader));
+		Span<const T> result{};
+		if (values.empty()) {
+			remainingMemoryBegin = remainingMemoryBegin + sizeof(TypeHeader) + sizeof(ArrayHeader);
+		} else {
+			void* const alignedPointer = getAligned(alignof(T), values.size_bytes(), remainingMemoryBegin + sizeof(TypeHeader) + sizeof(ArrayHeader),
+				static_cast<std::size_t>(remainingMemoryEnd - remainingMemoryBegin) - MIN_REQUIRED_SIZE);
+			GREM_ASSERT(alignedPointer);
 			std::memcpy(alignedPointer, values.data(), values.size_bytes());
+			result = Span<const T>{std::launder(reinterpret_cast<const T*>(static_cast<std::byte*>(alignedPointer))), values.size()};
+			remainingMemoryBegin = static_cast<std::byte*>(alignedPointer) + values.size_bytes();
 		}
-		remainingMemoryBegin = static_cast<std::byte*>(alignedPointer) + values.size_bytes();
-		return Span<const T>{reinterpret_cast<const T*>(alignedPointer), count};
+		return result;
 	}
 
 	template <typename T>
@@ -213,39 +220,44 @@ public:
 	auto visit(Visitor&& visitor) const { // NOLINT(cppcoreguidelines-missing-std-forward)
 		using R = std::common_type_t<decltype(std::invoke(std::forward<Visitor>(visitor), std::declval<typename detail::LinearBufferVisitorParameterType<Ts>::type>()))...>;
 		const std::byte* const end = remainingMemoryBegin;
-		for (const std::byte* pointer = head; pointer != end;) {
-			index_type index{};
-			std::memcpy(&index, pointer, sizeof(index_type));
-			pointer += sizeof(index_type);
+		const std::byte* chunkEnd = firstChunkEnd;
+		for (const std::byte* pointer = firstChunkBegin; pointer != end;) {
+			GREM_ASSERT(static_cast<std::size_t>(chunkEnd - pointer) >= sizeof(TypeHeader));
+			TypeHeader typeHeader{};
+			std::memcpy(&typeHeader, pointer, sizeof(TypeHeader));
+			pointer += sizeof(TypeHeader);
 			const auto apply = [&]<std::size_t Index>(std::in_place_index_t<Index>) -> void {
 				using MaybeArrayT = linear_buffer_alternative_t<Index, LinearBuffer>;
 				if constexpr (std::is_unbounded_array_v<MaybeArrayT>) {
 					using T = std::remove_extent_t<MaybeArrayT>;
-					std::size_t count{};
-					std::memcpy(&count, pointer, sizeof(std::size_t));
-					pointer += sizeof(std::size_t);
-					if constexpr (alignof(T) > 1) {
-						if (count > 0) {
-							void* alignedPointer = const_cast<void*>(static_cast<const void*>(pointer));
-							std::size_t remainingMemorySize = static_cast<std::size_t>(end - pointer);
-							[[maybe_unused]] void* const aligned = std::align(alignof(T), count * sizeof(T), alignedPointer, remainingMemorySize);
+					GREM_ASSERT(static_cast<std::size_t>(chunkEnd - pointer) >= sizeof(ArrayHeader));
+					ArrayHeader arrayHeader{};
+					std::memcpy(&arrayHeader, pointer, sizeof(ArrayHeader));
+					pointer += sizeof(ArrayHeader);
+					GREM_ASSERT(static_cast<std::size_t>(chunkEnd - pointer) >= arrayHeader.elementCount * sizeof(T));
+					Span<const T> values{};
+					if (arrayHeader.elementCount > 0) {
+						if constexpr (alignof(T) > 1) {
+							void* const aligned = getAligned(alignof(T), arrayHeader.elementCount * sizeof(T), const_cast<void*>(static_cast<const void*>(pointer)),
+								static_cast<std::size_t>(chunkEnd - pointer) - (sizeof(TypeHeader) + sizeof(ChunkTrailer)));
 							GREM_ASSERT(aligned);
-							pointer = static_cast<const std::byte*>(alignedPointer);
+							pointer = static_cast<const std::byte*>(aligned);
 						}
+						values = Span{std::launder(reinterpret_cast<const T*>(pointer)), arrayHeader.elementCount};
 					}
-					const Span<const T> values{reinterpret_cast<const T*>(pointer), count};
 					if constexpr (std::is_void_v<R>) {
 						std::invoke(std::forward<Visitor>(visitor), values);
-						pointer += count * sizeof(T);
+						pointer += arrayHeader.elementCount * sizeof(T);
 					} else {
 						if (std::invoke(std::forward<Visitor>(visitor), values)) {
-							pointer += count * sizeof(T);
+							pointer += arrayHeader.elementCount * sizeof(T);
 						} else {
 							pointer = end;
 						}
 					}
 				} else {
 					using T = MaybeArrayT;
+					GREM_ASSERT(static_cast<std::size_t>(chunkEnd - pointer) >= sizeof(T));
 					alignas(T) std::byte storage[sizeof(T)];
 					std::memcpy(storage, pointer, sizeof(T));
 					const T& value = *std::launder(reinterpret_cast<const T*>(storage));
@@ -262,9 +274,17 @@ public:
 				}
 			};
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
-				if (!(((index == Indices) ? (apply(std::in_place_index<Indices>), true) : false) || ...)) {
+				if (!(((typeHeader.typeIndex == Indices) ? (apply(std::in_place_index<Indices>), true) : false) || ...)) {
 					[[unlikely]];
-					std::memcpy(&pointer, pointer, sizeof(std::byte*));
+					GREM_ASSERT(typeHeader.typeIndex == npos);
+					GREM_ASSERT(static_cast<std::size_t>(chunkEnd - pointer) >= sizeof(ChunkTrailer));
+					ChunkTrailer chunkTrailer{};
+					std::memcpy(&chunkTrailer, pointer, sizeof(ChunkTrailer));
+					GREM_ASSERT(chunkTrailer.nextChunkBegin);
+					GREM_ASSERT(chunkTrailer.nextChunkEnd);
+					GREM_ASSERT(chunkTrailer.nextChunkEnd - chunkTrailer.nextChunkBegin >= std::ptrdiff_t{MIN_CHUNK_SIZE});
+					pointer = chunkTrailer.nextChunkBegin;
+					chunkEnd = chunkTrailer.nextChunkEnd;
 				}
 			}(std::make_index_sequence<sizeof...(Ts)>{});
 		}
@@ -274,7 +294,24 @@ public:
 	}
 
 private:
-	static constexpr std::size_t MIN_CHUNK_SIZE = std::max({(sizeof(index_type) + detail::LinearBufferMinElementSize<Ts>::value + sizeof(index_type) + sizeof(std::byte*))...});
+	struct TypeHeader {
+		index_type typeIndex;
+	};
+
+	struct ArrayHeader {
+		std::size_t elementCount;
+	};
+
+	struct ChunkTrailer {
+		std::byte* nextChunkBegin;
+		std::byte* nextChunkEnd;
+	};
+
+	static constexpr std::size_t MIN_CHUNK_SIZE = std::max({(sizeof(TypeHeader) + detail::LinearBufferMinElementSize<Ts>::value + sizeof(TypeHeader) + sizeof(ChunkTrailer))...});
+
+	[[nodiscard]] static void* getAligned(std::size_t alignment, std::size_t size, void* pointer, std::size_t space) {
+		return std::align(alignment, size, pointer, space);
+	}
 
 	[[nodiscard]] std::byte* allocateChunk(std::size_t newChunkSize) {
 		GREM_ASSERT(memoryResource);
@@ -286,7 +323,8 @@ private:
 	}
 
 	std::pmr::memory_resource* memoryResource;
-	std::byte* head = nullptr;
+	std::byte* firstChunkBegin = nullptr;
+	std::byte* firstChunkEnd = nullptr;
 	std::byte* remainingMemoryBegin = nullptr;
 	std::byte* remainingMemoryEnd = nullptr;
 	std::size_t nextChunkSize;
