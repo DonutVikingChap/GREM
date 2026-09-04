@@ -103,10 +103,8 @@ struct LocalPlayer {
 	phys::PitchYawRates turnSensitivity{200_degrees_per_second};
 	evt::InputManager inputManager{{.emitOutputEvents = true}};
 	Optional<uint32_t> controllerID;
-	phys::PitchYaw visualAimAngles{};
 	phys::PitchYawRotations aimRotationsSinceLastTick{};
-	phys::PitchYawRotations uncommittedAimRotations{};
-	Duration latestUncommittedAimRotationsTimeOffset{};
+	phys::PitchYaw visualAimAngles{};
 	phys::Distance aimDistance{};
 	Duration stepSpamTimer{};
 	Duration crateSpamTimer{};
@@ -266,12 +264,16 @@ private:
 struct Prediction {
 	PredictedEventBuffer eventBuffer{};
 	SnapshotBuffer snapshots{};
+	TimePoint tickBeginTimestamp = Clock::now();
+	Duration undilatedTimeSinceLastTick{};
 	Duration subtickBeginTimeOffset{};
 	Duration fallbackTickTimer{};
 
 	void reset(Audio& audio, Graphics& graphics, GameState& gameState) noexcept {
 		eventBuffer.reset([&](TickIndex tickIndex, const Event& event) -> void { gameState.cancelEvent(audio, graphics, tickIndex, event); });
 		snapshots.clear();
+		tickBeginTimestamp = Clock::now();
+		undilatedTimeSinceLastTick = {};
 		subtickBeginTimeOffset = {};
 		fallbackTickTimer = {};
 	}
@@ -404,9 +406,20 @@ void advanceCommandBufferUntil(LatestCommandsMessageForGameServer& latestCommand
 			localPlayerCommand.aimRotationRates = nextTickLocalPlayerCommand.aimRotationRates;
 
 			// Take one tick's worth of upcoming sub-tick commands and move them into the new command.
-			const auto subtickCommandsEnd = lowerBound(nextTickLocalPlayerCommand.subtickCommands, tickInterval);
-			localPlayerCommand.subtickCommands.assign(nextTickLocalPlayerCommand.subtickCommands.begin(), subtickCommandsEnd);
-			nextTickLocalPlayerCommand.subtickCommands.erase(nextTickLocalPlayerCommand.subtickCommands.begin(), subtickCommandsEnd);
+			const auto nextSubtickCommandsBegin = nextTickLocalPlayerCommand.subtickCommands.begin();
+			const auto nextSubtickCommandsEnd = lowerBound(nextTickLocalPlayerCommand.subtickCommands, tickInterval);
+			localPlayerCommand.subtickCommands.clear();
+			for (const SubtickCommand& nextSubtickCommand : Subrange{nextSubtickCommandsBegin, nextSubtickCommandsEnd}) {
+				if (const RotateAimCommand* const nextRotateAimCommand = nextSubtickCommand.get_if<RotateAimCommand>();
+					nextRotateAimCommand && !localPlayerCommand.subtickCommands.empty() && localPlayerCommand.subtickCommands.back().is<RotateAimCommand>()) {
+					SubtickCommand& subtickCommand = localPlayerCommand.subtickCommands.back();
+					subtickCommand.as<RotateAimCommand>().aimRotations += nextRotateAimCommand->aimRotations;
+					subtickCommand.timeOffset = nextSubtickCommand.timeOffset;
+				} else {
+					localPlayerCommand.subtickCommands.push_back(nextSubtickCommand);
+				}
+			}
+			nextTickLocalPlayerCommand.subtickCommands.erase(nextSubtickCommandsBegin, nextSubtickCommandsEnd);
 			// Subtract one tick of time from the remaining subtick commands.
 			for (SubtickCommand& subtickCommand : nextTickLocalPlayerCommand.subtickCommands) {
 				subtickCommand.timeOffset -= tickInterval;
@@ -974,6 +987,8 @@ public:
 				}
 				break;
 			case ClientState::PLAYING_GAME: {
+				prediction.undilatedTimeSinceLastTick += frameInfo.deltaTime;
+
 				const TickIndex oldTickIndex = gameState.getResources().getResource<TickIndex>();
 				const Duration tickInterval = resources.getResource<Duration>();
 				Timestamp oldPredictionTimestamp{oldTickIndex, prediction.subtickBeginTimeOffset, tickInterval};
@@ -991,10 +1006,9 @@ public:
 				connectionStats.receiveInterpolationOffsetAdjustmentTimeRemaining =
 					max(connectionStats.receiveInterpolationOffsetAdjustmentTimeRemaining - frameInfo.deltaTime, Duration{});
 
-				const Duration timeSinceOldTick = prediction.subtickBeginTimeOffset + dilatedDeltaTime;
-				const Timestamp newPredictionTimestamp{oldTickIndex, timeSinceOldTick, tickInterval};
+				const Timestamp newPredictionTimestamp{oldTickIndex, prediction.subtickBeginTimeOffset + dilatedDeltaTime, tickInterval};
 
-				handleLocalPlayerInput(dilatedDeltaTime);
+				handleLocalPlayerInput(frameInfo.deltaTime, dilatedDeltaTime);
 
 				if (getTimeBetween(Timestamp{receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex()}, newPredictionTimestamp, tickInterval) >
 					PREDICTION_DURATION_PROBLEM_THRESHOLD) {
@@ -1013,15 +1027,8 @@ public:
 							LocalPlayer& localPlayer = localPlayers[i];
 							GREM_ASSERT(nextTickLocalPlayerCommand.localPlayerID == localPlayer.localPlayerID);
 
-							if (localPlayer.uncommittedAimRotations != 0) {
-								nextTickLocalPlayerCommand.insertSubtickCommand(min(localPlayer.latestUncommittedAimRotationsTimeOffset, tickInterval - Duration{1}),
-									RotateAimCommand{.aimRotations = localPlayer.uncommittedAimRotations});
-								localPlayer.uncommittedAimRotations = {};
-							}
-
-							nextTickLocalPlayerCommand.aimRotationRates = localPlayer.aimRotationsSinceLastTick / timeSinceOldTick;
+							nextTickLocalPlayerCommand.aimRotationRates = localPlayer.aimRotationsSinceLastTick / prediction.undilatedTimeSinceLastTick;
 							localPlayer.aimRotationsSinceLastTick = {};
-							localPlayer.latestUncommittedAimRotationsTimeOffset = {};
 						}
 
 						// Rewind prediction to received snapshot.
@@ -1042,6 +1049,7 @@ public:
 						}
 
 						oldPredictionTimestamp = Timestamp{newPredictionTimestamp.getTickIndex()};
+						prediction.undilatedTimeSinceLastTick = {};
 						prediction.subtickBeginTimeOffset = {};
 
 						// Save a snapshot of the prediction state at the start of the new tick.
@@ -1053,7 +1061,7 @@ public:
 						writeOutgoingMessages();
 
 						// Start the new tick.
-						lastPredictionTickEventTimestamp = Clock::now();
+						prediction.tickBeginTimestamp = Clock::now();
 						nextTickCommand.receivedInterpolationTimestampAtTickBegin =
 							min(Timestamp{newPredictionTimestamp.getTickIndex(), -connectionStats.receiveInterpolationOffset, tickInterval},
 								Timestamp{receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex(), MAX_EXTRAPOLATION_TIME, tickInterval});
@@ -1073,7 +1081,8 @@ public:
 			if (countdownLoop(prediction.fallbackTickTimer, frameInfo.deltaTime, FALLBACK_TICK_INTERVAL) > 0) {
 				writeOutgoingMessages();
 			}
-			lastPredictionTickEventTimestamp = Clock::now();
+			prediction.tickBeginTimestamp = Clock::now();
+			prediction.undilatedTimeSinceLastTick = {};
 		}
 
 		sendOutgoingPackets(socket, endpoint, connection, connectionStats);
@@ -1096,7 +1105,7 @@ public:
 		}
 
 		if (state == ClientState::PLAYING_GAME) {
-			handleLocalPlayerInput(Duration{});
+			handleLocalPlayerInput(Duration{}, Duration{});
 		}
 
 		const WorldView worldView = [&]() -> WorldView {
@@ -1140,9 +1149,6 @@ public:
 		for (LocalPlayer& localPlayer : localPlayers) {
 			LocalPlayerPerspective localPlayerPerspective{};
 			resources.getResource<PlayerEntityMap>().forEachPlayerEntity(receivedPlayerID, localPlayer.localPlayerID, [&](EntityID entityID) -> void {
-				if (const Aim* const playerAim = registry.findComponent<Aim>(entityID)) {
-					localPlayer.visualAimAngles = playerAim->angles + localPlayer.uncommittedAimRotations;
-				}
 				localPlayerPerspective = worldView.getLocalPlayerPerspective(localPlayer.localPlayerID, localPlayer.visualAimAngles, localPlayer.aimDistance);
 				if (LocalPlayerPerspective* const perspective = registry.findComponent<LocalPlayerPerspective>(entityID)) {
 					*perspective = localPlayerPerspective;
@@ -1572,7 +1578,6 @@ private:
 		latestCommands.firstCommandTickIndex = {};
 		nextTickCommand = {};
 		localPlayers.clear();
-		lastPredictionTickEventTimestamp = Clock::now();
 
 		receivedSnapshotBuffer.reset({});
 		state = ClientState::LOADING_MAP;
@@ -1695,7 +1700,8 @@ private:
 				nextTickLocalPlayerCommand.aimRotationRates = {};
 				nextTickLocalPlayerCommand.subtickCommands.clear();
 			}
-			lastPredictionTickEventTimestamp = Clock::now();
+			prediction.tickBeginTimestamp = Clock::now();
+			prediction.undilatedTimeSinceLastTick = {};
 			prediction.subtickBeginTimeOffset = {};
 			prediction.fallbackTickTimer = {};
 			connectionStats.connectionProblem = false;
@@ -2143,7 +2149,10 @@ private:
 		connection.writeReliableMessage(JoinGameRequestMessageForGameServer{.localPlayerID = localPlayerID});
 	}
 
-	void handleLocalPlayerInput(Duration deltaTime) {
+	void handleLocalPlayerInput(Duration deltaTime, Duration dilatedDeltaTime) {
+		const EntityRegistry& registry = gameState.getRegistry();
+		const ResourceRegistry& resources = gameState.getResources();
+
 		GREM_ASSERT(localPlayers.size() == nextTickCommand.localPlayerCommands.size());
 		for (size_t i = 0; i < localPlayers.size(); ++i) {
 			LocalPlayer& localPlayer = localPlayers[i];
@@ -2155,31 +2164,33 @@ private:
 
 			const phys::Scale2D turnScale = localPlayer.inputManager.getCurrentState2D(Action::TURN_DOWN, Action::TURN_UP, Action::TURN_RIGHT, Action::TURN_LEFT).value;
 			const phys::PitchYawRotations turnRotations = turnScale * localPlayer.turnSensitivity * deltaTime;
-			localPlayer.aimRotationsSinceLastTick += turnRotations;
-			localPlayer.uncommittedAimRotations += turnRotations;
+			if (turnRotations != 0) {
+				localPlayer.aimRotationsSinceLastTick += turnRotations;
+				nextTickLocalPlayerCommand.insertSubtickCommand(prediction.subtickBeginTimeOffset, RotateAimCommand{.aimRotations = turnRotations});
+			}
 
 			const phys::Scale2D movementInputScale =
 				clampLength(localPlayer.inputManager.getCurrentState2D(Action::MOVE_LEFT, Action::MOVE_RIGHT, Action::MOVE_BACKWARD, Action::MOVE_FORWARD).value, 1.0f);
-			for (size_t steps = countdownLoop(localPlayer.stepSpamTimer, deltaTime, 0.02_seconds, localPlayer.inputManager.isPressed(Action::SLOWLY_ADVANCE_PAUSED_SIMULATION));
+			for (size_t steps =
+					 countdownLoop(localPlayer.stepSpamTimer, dilatedDeltaTime, 0.02_seconds, localPlayer.inputManager.isPressed(Action::SLOWLY_ADVANCE_PAUSED_SIMULATION));
 				steps-- > 0;) {
 				nextTickLocalPlayerCommand.insertSubtickCommand(prediction.subtickBeginTimeOffset, SingleStepPausedSimulationCommand{});
 			}
-			if (countdownLoop(localPlayer.crateSpamTimer, deltaTime, 0.1_seconds, localPlayer.inputManager.isPressed(Action::SPAM_CRATES)) > 0) {
+			if (countdownLoop(localPlayer.crateSpamTimer, dilatedDeltaTime, 0.1_seconds, localPlayer.inputManager.isPressed(Action::SPAM_CRATES)) > 0) {
 				nextTickLocalPlayerCommand.insertSubtickCommand(prediction.subtickBeginTimeOffset, SpawnModelObjectCommand{.modelType{"CRATE"}});
 			}
 
 			for (const evt::InputManager::OutputEvent& event : localPlayer.inputManager.getLatestPolledOutputEvents()) {
 				GREM_MATCH(event) {
 					GREM_CASE(const evt::InputManager::OutputMoved& moved) {
-						const Duration timeOffset = max(moved.getTimestamp() - lastPredictionTickEventTimestamp, prediction.subtickBeginTimeOffset);
+						const Duration timeOffset = max(moved.getTimestamp() - prediction.tickBeginTimestamp, prediction.subtickBeginTimeOffset);
 						const float motion = moved.getDelta().motion;
 						switch (static_cast<Action>(moved.getOutputIndex())) {
 							case Action::AIM_DOWN: {
 								if (motion > 0.0f) {
 									const phys::PitchYawRotations aimRotations = phys::Scale2D{-motion, 0} * localPlayer.aimSensitivity;
 									localPlayer.aimRotationsSinceLastTick += aimRotations;
-									localPlayer.uncommittedAimRotations += aimRotations;
-									localPlayer.latestUncommittedAimRotationsTimeOffset = timeOffset;
+									nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, RotateAimCommand{.aimRotations = aimRotations});
 								}
 								break;
 							}
@@ -2187,8 +2198,7 @@ private:
 								if (motion > 0.0f) {
 									const phys::PitchYawRotations aimRotations = phys::Scale2D{motion, 0} * localPlayer.aimSensitivity;
 									localPlayer.aimRotationsSinceLastTick += aimRotations;
-									localPlayer.uncommittedAimRotations += aimRotations;
-									localPlayer.latestUncommittedAimRotationsTimeOffset = timeOffset;
+									nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, RotateAimCommand{.aimRotations = aimRotations});
 								}
 								break;
 							}
@@ -2196,8 +2206,7 @@ private:
 								if (motion > 0.0f) {
 									const phys::PitchYawRotations aimRotations = phys::Scale2D{0, motion} * localPlayer.aimSensitivity;
 									localPlayer.aimRotationsSinceLastTick += aimRotations;
-									localPlayer.uncommittedAimRotations += aimRotations;
-									localPlayer.latestUncommittedAimRotationsTimeOffset = timeOffset;
+									nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, RotateAimCommand{.aimRotations = aimRotations});
 								}
 								break;
 							}
@@ -2205,8 +2214,7 @@ private:
 								if (motion > 0.0f) {
 									const phys::PitchYawRotations aimRotations = phys::Scale2D{0, -motion} * localPlayer.aimSensitivity;
 									localPlayer.aimRotationsSinceLastTick += aimRotations;
-									localPlayer.uncommittedAimRotations += aimRotations;
-									localPlayer.latestUncommittedAimRotationsTimeOffset = timeOffset;
+									nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, RotateAimCommand{.aimRotations = aimRotations});
 								}
 								break;
 							}
@@ -2215,20 +2223,12 @@ private:
 						break;
 					}
 					GREM_CASE(const evt::InputManager::OutputPressed& pressed) {
-						const Duration timeOffset = max(pressed.getTimestamp() - lastPredictionTickEventTimestamp, prediction.subtickBeginTimeOffset);
+						const Duration timeOffset = max(pressed.getTimestamp() - prediction.tickBeginTimestamp, prediction.subtickBeginTimeOffset);
 						switch (static_cast<Action>(pressed.getOutputIndex())) {
 							case Action::SPRINT: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StartSprintingCommand{}); break;
 							case Action::CROUCH: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StartCrouchingCommand{}); break;
 							case Action::JUMP: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StartJumpingCommand{}); break;
-							case Action::ATTACK:
-								if (localPlayer.uncommittedAimRotations != 0) {
-									nextTickLocalPlayerCommand.insertSubtickCommand(
-										min(localPlayer.latestUncommittedAimRotationsTimeOffset, gameState.getResources().getResource<Duration>() - Duration{1}),
-										RotateAimCommand{.aimRotations = localPlayer.uncommittedAimRotations});
-									localPlayer.uncommittedAimRotations = {};
-								}
-								nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StartPrimaryFireCommand{});
-								break;
+							case Action::ATTACK: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StartPrimaryFireCommand{}); break;
 							case Action::RELOAD: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, ReloadWeaponCommand{}); break;
 							case Action::CHANGE_FIRE_MODE_LEFT: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, ChangeFireModeLeftCommand{}); break;
 							case Action::CHANGE_FIRE_MODE_RIGHT: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, ChangeFireModeRightCommand{}); break;
@@ -2255,7 +2255,7 @@ private:
 						break;
 					}
 					GREM_CASE(const evt::InputManager::OutputReleased& released) {
-						const Duration timeOffset = max(released.getTimestamp() - lastPredictionTickEventTimestamp, prediction.subtickBeginTimeOffset);
+						const Duration timeOffset = max(released.getTimestamp() - prediction.tickBeginTimestamp, prediction.subtickBeginTimeOffset);
 						switch (static_cast<Action>(released.getOutputIndex())) {
 							case Action::SPRINT: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StopSprintingCommand{}); break;
 							case Action::CROUCH: nextTickLocalPlayerCommand.insertSubtickCommand(timeOffset, StopCrouchingCommand{}); break;
@@ -2269,6 +2269,19 @@ private:
 					GREM_CASE_DEFAULT(const auto& other) break;
 				}
 			}
+
+			resources.getResource<PlayerEntityMap>().forEachPlayerEntity(receivedPlayerID, localPlayer.localPlayerID, [&](EntityID entityID) -> void {
+				if (const Aim* const playerAim = registry.findComponent<Aim>(entityID)) {
+					localPlayer.visualAimAngles = playerAim->angles;
+					const auto nextSubtickCommandsBegin = lowerBound(nextTickLocalPlayerCommand.subtickCommands, prediction.subtickBeginTimeOffset);
+					const auto nextSubtickCommandsEnd = nextTickLocalPlayerCommand.subtickCommands.end();
+					for (const SubtickCommand& subtickCommand : Subrange{nextSubtickCommandsBegin, nextSubtickCommandsEnd}) {
+						if (const RotateAimCommand* const rotateAimCommand = subtickCommand.get_if<RotateAimCommand>()) {
+							localPlayer.visualAimAngles += rotateAimCommand->aimRotations;
+						}
+					}
+				}
+			});
 
 			nextTickLocalPlayerCommand.desiredDirectionScale =
 				phys::Orientation2D{0 - localPlayer.visualAimAngles.getY()}(phys::Scale2D{movementInputScale.getX(), -movementInputScale.getY()});
@@ -2299,7 +2312,6 @@ private:
 	ArrayList<LocalPlayer> localPlayers{};
 	LatestCommandsMessageForGameServer latestCommands{};
 	TickCommand nextTickCommand{};
-	TimePoint lastPredictionTickEventTimestamp{};
 	Prediction prediction{};
 	Schedule broadphaseUpdateSchedule{};
 #ifdef GREM_USE_PROFILING
