@@ -712,10 +712,10 @@ private:
 
 			if (ImGui::BeginTabItem("Display")) {
 				{
-					bool fullscreen = window.isFullscreen();
-					if (ImGui::Checkbox("Fullscreen", &fullscreen)) {
-						settings.fullscreen = fullscreen;
-						settingsNeedSaving = true;
+					const bool oldFullscreen = settings.fullscreen;
+					settings.fullscreen = window.isFullscreen();
+					if (ImGui::Checkbox("Fullscreen", &settings.fullscreen)) {
+						settingsNeedSaving |= settings.fullscreen != oldFullscreen;
 					}
 				}
 				ImGui::Separator();
