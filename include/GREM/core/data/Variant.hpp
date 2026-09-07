@@ -267,9 +267,6 @@ struct Monostate {};
 
 } // namespace grem
 
-/**
- * Specialization of std::hash for grem::Monostate.
- */
 template <>
 struct std::hash<grem::Monostate> {
 	[[nodiscard]] std::size_t operator()(const grem::Monostate&) const {
@@ -1927,9 +1924,6 @@ template <typename V>
 
 } // namespace grem
 
-/**
- * Specialization of std::hash for grem::Variant.
- */
 template <typename... Ts>
 struct std::hash<grem::Variant<Ts...>> {
 	[[nodiscard]] std::size_t operator()(const grem::Variant<Ts...>& variant) const {

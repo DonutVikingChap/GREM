@@ -914,9 +914,6 @@ template <typename T, typename U>
 
 } // namespace grem
 
-/**
- * Specialization of std::hash for grem::Optional.
- */
 template <typename T>
 struct std::hash<grem::Optional<T>> {
 	[[nodiscard]] std::size_t operator()(const grem::Optional<T>& opt) const {

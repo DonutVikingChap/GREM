@@ -1087,9 +1087,6 @@ private:
 
 } // namespace grem::graphics
 
-/**
- * Specialization of std::hash for grem::graphics::Model3D::ShaderConfiguration.
- */
 template <>
 struct std::hash<grem::graphics::Model3D::ShaderConfiguration> {
 	[[nodiscard]] std::size_t operator()(const grem::graphics::Model3D::ShaderConfiguration& configuration) const {
