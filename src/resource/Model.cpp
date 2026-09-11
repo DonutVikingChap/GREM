@@ -3582,7 +3582,7 @@ void OBJModelLoader::loadMeshes() {
 			const size_t textureCoordinatesByteOffset = tangentsByteOffset + tangentsByteSize;
 			const size_t textureCoordinatesByteSize = vertexCount * sizeof(vec2);
 			const size_t meshDataByteSize = textureCoordinatesByteOffset + textureCoordinatesByteSize;
-			meshData.resize(meshData.size() + meshDataByteSize);
+			meshData.resize(meshDataByteSize);
 			if (indicesByteSize > 0) {
 				memcpy(meshData.data() + indicesByteOffset, indices.data(), indicesByteSize);
 			}
