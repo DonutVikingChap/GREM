@@ -522,8 +522,7 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 					const phys::Direction3D direction = phys::Direction3D::reinterpret(*playerLinearVelocity / speed);
 					const phys::Distance maxDistance = speed * (static_cast<Duration::rep>(newTickIndex - tickIndex) * tickInterval);
 					broadphase.shapecast(
-						phys::ConvexShapeView{playerCollider->shape}, playerCollider->filter, transformation, direction, maxDistance,
-						registry.getEntities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D>(),
+						phys::ConvexShapeView{playerCollider->shape}, playerCollider->filter, transformation, direction, maxDistance, registry,
 						resources.getResource<phys::SimulationOptions3D>().collisionAlgorithmOptions, phys::CollisionFilterTest::RESPONSE,
 						[&](const phys::Broadphase3D::ShapecastResult& hit) -> bool {
 							if (phys::Collider3D* const hitObjectCollider = registry.findComponent<phys::Collider3D>(hit.objectID)) {
@@ -534,8 +533,7 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 						[&](EntityID otherObjectID) -> bool { return otherObjectID != entityID; });
 				} else {
 					broadphase.testShape(
-						phys::Length1D{}, playerCollider->shape, playerCollider->filter, transformation,
-						registry.getEntities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D>(),
+						phys::Length1D{}, playerCollider->shape, playerCollider->filter, transformation, registry,
 						resources.getResource<phys::SimulationOptions3D>().collisionAlgorithmOptions, phys::CollisionFilterTest::RESPONSE,
 						[&](EntityID hitObjectID, phys::CollisionFilterTestResult) -> bool {
 							if (phys::Collider3D* const hitObjectCollider = registry.findComponent<phys::Collider3D>(hitObjectID)) {

@@ -286,6 +286,16 @@ public:
 	}
 
 	template <typename... Cs>
+	[[nodiscard]] operator Columns<Cs...>() noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
+		return getEntities<Cs...>();
+	}
+
+	template <typename... Cs>
+	[[nodiscard]] operator Columns<Cs...>() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
+		return getEntities<Cs...>();
+	}
+
+	template <typename... Cs>
 	[[nodiscard]] Columns<Cs...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		using EntityRange = Columns<Cs...>;
 		return getEntitiesChunkImplementation<EntityRange>(chunkIndex, chunkCount, typename EntityRange::IncludedComponents{});
@@ -406,6 +416,16 @@ public:
 	[[nodiscard]] Columns<Cs...> getEntities() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		using EntityRange = Columns<Cs...>;
 		return const_cast<EntityTableReference*>(this)->getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{});
+	}
+
+	template <typename... Cs>
+	[[nodiscard]] operator Columns<Cs...>() noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
+		return getEntities<Cs...>();
+	}
+
+	template <typename... Cs>
+	[[nodiscard]] operator Columns<Cs...>() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
+		return getEntities<Cs...>();
 	}
 
 	template <typename... Cs>

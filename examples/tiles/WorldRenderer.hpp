@@ -43,7 +43,7 @@ public:
 		float interpolationAlpha) {
 		GREM_PROFILE_FUNCTION();
 
-		const auto entities = world.registry.getEntities<const World::Position, const World::PreviousPosition, const World::Sprite>();
+		const exec::Entities<const World::Position, const World::PreviousPosition, const World::Sprite> entities = world.registry;
 		const Schema& schema = world.resources.getResource<Schema>();
 		Map& map = world.resources.getResource<Map>();
 

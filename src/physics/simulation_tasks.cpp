@@ -2469,13 +2469,11 @@ void scheduleCollisionDetection(Scheduler<N>& scheduler, const SimulationOptions
 } // namespace
 
 void updateBroadphase2D(EntityRegistry2D& registry, ResourceRegistry2D& resources) {
-	updateBroadphase<2>(registry.template getEntities<BroadphaseID, const Collider2D, const ObjectBounds2D>(), resources.template getResource<Broadphase2D>(),
-		resources.template getResource<SimulationOptions2D>());
+	updateBroadphase<2>(registry, resources.template getResource<Broadphase2D>(), resources.template getResource<SimulationOptions2D>());
 }
 
 void updateBroadphase3D(EntityRegistry3D& registry, ResourceRegistry3D& resources) {
-	updateBroadphase<3>(registry.template getEntities<BroadphaseID, const Collider3D, const ObjectBounds3D>(), resources.template getResource<Broadphase3D>(),
-		resources.template getResource<SimulationOptions3D>());
+	updateBroadphase<3>(registry, resources.template getResource<Broadphase3D>(), resources.template getResource<SimulationOptions3D>());
 }
 
 void scheduleStep2D(Scheduler2D& scheduler, const SimulationOptions2D& simulationOptions, const ScheduleStepOptions2D& scheduleStepOptions) {

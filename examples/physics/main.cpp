@@ -80,12 +80,9 @@ protected:
 							vec2{pressed.mousePosition.x, static_cast<float>(window.getSize().height) - pressed.mousePosition.y} * PIXEL_LENGTH_UNIT;
 
 						const phys::Broadphase2D& broadphase = simulation.resources.getResource<phys::Broadphase2D>();
-						const auto entities =
-							simulation.registry
-								.getEntities<const phys::Position2D, const phys::Orientation2D, const phys::Scale2D, const phys::Collider2D, const phys::ObjectBounds2D>();
 
 						phys::EntityID clickedObjectID{};
-						broadphase.testPoint(clickPosition, phys::CollisionFilter{}, entities, phys::CollisionFilterTest{},
+						broadphase.testPoint(clickPosition, phys::CollisionFilter{}, simulation.registry, phys::CollisionFilterTest{},
 							[&](phys::EntityID objectID, phys::CollisionFilterTestResult) -> bool {
 								if (simulation.registry.getComponent<phys::ObjectActivity>(objectID).isCorrectable != 0) {
 									clickedObjectID = objectID;
@@ -99,8 +96,8 @@ protected:
 							cursorJointID = {};
 
 							if (clickedObjectID) {
-								const phys::Position2D position = entities.getComponent<phys::Position2D>(clickedObjectID);
-								const phys::Orientation2D orientation = entities.getComponent<phys::Orientation2D>(clickedObjectID);
+								const phys::Position2D position = simulation.registry.getComponent<phys::Position2D>(clickedObjectID);
+								const phys::Orientation2D orientation = simulation.registry.getComponent<phys::Orientation2D>(clickedObjectID);
 								cursorJointID =
 									simulation
 										.createWeld({cursorObjectID, clickedObjectID},

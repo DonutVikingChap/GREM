@@ -2293,6 +2293,18 @@ public:
 	}
 
 	template <typename... ComponentsAndExclusions>
+	[[nodiscard]] GREM_ALWAYS_INLINE operator Entities<ComponentsAndExclusions...>() noexcept
+		requires(!meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
+		return getEntities<ComponentsAndExclusions...>();
+	}
+
+	template <typename... ComponentsAndExclusions>
+	[[nodiscard]] GREM_ALWAYS_INLINE operator Entities<ComponentsAndExclusions...>() const noexcept
+		requires(meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
+		return getEntities<ComponentsAndExclusions...>();
+	}
+
+	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE Entities<ComponentsAndExclusions...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) noexcept
 		requires(!meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
 		using EntityRange = Entities<ComponentsAndExclusions...>;

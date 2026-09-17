@@ -335,8 +335,7 @@ void PlaceDecalCommand::execute(GameState& gameState, PlayerID playerID, LocalPl
 				const phys::Direction3D playerAimDirection = convertAnglesToForwardDirection(playerAim->angles);
 
 				const Optional<phys::Broadphase3D::RaycastResult> hit = resources.getResource<phys::Broadphase3D>().raycastClosestHit(
-					phys::Ray3D{.origin = playerAimPosition, .direction = playerAimDirection, .maxDistance = 2_meters}, phys::CollisionFilter{},
-					registry.getEntities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D>(),
+					phys::Ray3D{.origin = playerAimPosition, .direction = playerAimDirection, .maxDistance = 2_meters}, phys::CollisionFilter{}, registry,
 					phys::CollisionFilterTest::RESPONSE, [&](EntityID otherObjectID) -> bool { return otherObjectID != entityID; });
 				if (hit) {
 					const TickIndex tickIndex = resources.getResource<TickIndex>();
