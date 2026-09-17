@@ -71,7 +71,7 @@ const char* EndpointErrorCategory::name() const noexcept {
 
 std::string EndpointErrorCategory::message(int condition) const {
 #ifdef _WIN32
-	return WSAErrorCategory::instance().message(condition);
+	return WSAErrorCategory::getInstance().message(condition);
 #else
 	return gai_strerror(condition);
 #endif
@@ -97,7 +97,7 @@ bool SocketErrorCategory::equivalent(const std::error_code& code, int condition)
 	}
 
 #ifdef _WIN32
-	if (code.category() == WSAErrorCategory::instance()) {
+	if (code.category() == WSAErrorCategory::getInstance()) {
 		switch (code.value()) {
 			case WSAEWOULDBLOCK: return condition == static_cast<int>(SocketError::WAIT);
 			case WSAEALREADY: return condition == static_cast<int>(SocketError::WAIT);

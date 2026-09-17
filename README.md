@@ -554,7 +554,7 @@ A large overhaul of the API was made in 2023-2026 for version 3.0.0, adding a Vu
 
 ### Current state (as of 2026)
 
-The library is currently in a relatively stable state, and should work great for prototypes, game jams and personal hobby projects, but it may still be a risky choice for commercial projects until it has seen more real-world use. The main features are fully implemented to the extent demonstrated by the example projects, and the API is fully documented in all main modules except `execution` and `networking`. However, both the API and ABI may still be extended or patched if/when design holes are discovered in real use cases. Some additional work may also be needed to properly support specific ecosystems like consoles and mobile platforms. For now, this is left as an exercise for the user, since those who intend to release on such platforms are probably more familiar with them than I am.
+The library is currently in a relatively stable state, and should work great for prototypes, game jams and personal hobby projects, but it may still be a risky choice for commercial projects until it has seen more real-world use. The main features are fully implemented to the extent demonstrated by the example projects, and the API is fully documented in all main modules except `execution`. However, both the API and ABI may still be extended or patched if/when design holes are discovered in real use cases. Some additional work may also be needed to properly support specific ecosystems like consoles and mobile platforms. For now, this is left as an exercise for the user, since those who intend to release on such platforms are probably more familiar with them than I am.
 
 ### Future plans
 

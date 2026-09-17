@@ -34,8 +34,11 @@ struct Error : grem::Error {
 
 namespace grem::networking {
 
+/**
+ * Error code value type for error codes originating from the Winsock API.
+ */
 struct WSAError {
-	int value{};
+	int value{}; ///< Underlying WSA error code.
 };
 
 } // namespace grem::networking
@@ -45,18 +48,37 @@ struct std::is_error_code_enum<grem::networking::WSAError> : std::true_type {};
 
 namespace grem::networking {
 
+/**
+ * Error category type for error codes originating from the Winsock API.
+ */
 struct WSAErrorCategory : std::error_category {
 	[[nodiscard]] GREM_API(networking) const char* name() const noexcept override;
 	[[nodiscard]] GREM_API(networking) std::string message(int condition) const override;
 
-	[[nodiscard]] static const WSAErrorCategory& instance() noexcept {
+	/**
+	 * Get the canonical global instance of this error category.
+	 *
+	 * \return a reference to the static WSAErrorCategory object.
+	 */
+	[[nodiscard]] static const WSAErrorCategory& getInstance() noexcept {
 		static const WSAErrorCategory category{};
 		return category;
 	}
+
+private:
+	WSAErrorCategory() noexcept = default;
 };
 
-[[nodiscard]] inline std::error_code make_error_code(WSAError err) {
-	return std::error_code{static_cast<int>(err.value), WSAErrorCategory::instance()};
+/**
+ * Create a std::error_code from a WSAError value.
+ *
+ * \param error error code value to create the error code from.
+ *
+ * \return the newly created std::error_code, with WSAErrorCategory as its
+ *         category.
+ */
+[[nodiscard]] inline std::error_code make_error_code(WSAError error) {
+	return std::error_code{static_cast<int>(error.value), WSAErrorCategory::getInstance()};
 }
 
 } // namespace grem::networking
@@ -65,25 +87,29 @@ struct WSAErrorCategory : std::error_category {
 
 namespace grem::networking {
 
+/**
+ * Error code value type for error codes originating from the `getaddrinfo()`
+ * API.
+ */
 enum class EndpointError : int { // NOLINT(performance-enum-size)
-	AGAIN = EAI_AGAIN,
-	BADFLAGS = EAI_BADFLAGS,
-	FAIL = EAI_FAIL,
-	FAMILY = EAI_FAMILY,
-	MEMORY = EAI_MEMORY,
-	NODATA = EAI_NODATA,
-	NONAME = EAI_NONAME,
-	SERVICE = EAI_SERVICE,
-	SOCKTYPE = EAI_SOCKTYPE,
-#ifndef _WIN32
-	ADDRFAMILY = EAI_ADDRFAMILY,
-	SYSTEM = EAI_SYSTEM,
-	INPROGRESS = EAI_INPROGRESS,
-	CANCELED = EAI_CANCELED,
-	NOTCANCELED = EAI_NOTCANCELED,
-	ALLDONE = EAI_ALLDONE,
-	INTR = EAI_INTR,
-	IDN_ENCODE = EAI_IDN_ENCODE,
+	AGAIN = EAI_AGAIN,           ///< EAI_AGAIN.
+	BADFLAGS = EAI_BADFLAGS,     ///< EAI_BADFLAGS.
+	FAIL = EAI_FAIL,             ///< EAI_FAIL.
+	FAMILY = EAI_FAMILY,         ///< EAI_FAMILY.
+	MEMORY = EAI_MEMORY,         ///< EAI_MEMORY.
+	NODATA = EAI_NODATA,         ///< EAI_NODATA.
+	NONAME = EAI_NONAME,         ///< EAI_NONAME.
+	SERVICE = EAI_SERVICE,       ///< EAI_SERVICE.
+	SOCKTYPE = EAI_SOCKTYPE,     ///< EAI_SOCKTYPE.
+#ifdef __linux__
+	ADDRFAMILY = EAI_ADDRFAMILY,   ///< EAI_ADDRFAMILY.
+	SYSTEM = EAI_SYSTEM,           ///< EAI_SYSTEM.
+	INPROGRESS = EAI_INPROGRESS,   ///< EAI_INPROGRESS.
+	CANCELED = EAI_CANCELED,       ///< EAI_CANCELED.
+	NOTCANCELED = EAI_NOTCANCELED, ///< EAI_NOTCANCELED.
+	ALLDONE = EAI_ALLDONE,         ///< EAI_ALLDONE.
+	INTR = EAI_INTR,               ///< EAI_INTR.
+	IDN_ENCODE = EAI_IDN_ENCODE,   ///< EAI_IDN_ENCODE.
 #endif
 };
 
@@ -94,20 +120,42 @@ struct std::is_error_code_enum<grem::networking::EndpointError> : std::true_type
 
 namespace grem::networking {
 
+/**
+ * Error category type for error codes originating from the `getaddrinfo()` API.
+ */
 struct EndpointErrorCategory : std::error_category {
 	[[nodiscard]] GREM_API(networking) const char* name() const noexcept override;
 	[[nodiscard]] GREM_API(networking) std::string message(int condition) const override;
 
-	[[nodiscard]] static const EndpointErrorCategory& instance() noexcept {
+	/**
+	 * Get the canonical global instance of this error category.
+	 *
+	 * \return a reference to the static EndpointErrorCategory object.
+	 */
+	[[nodiscard]] static const EndpointErrorCategory& getInstance() noexcept {
 		static const EndpointErrorCategory category{};
 		return category;
 	}
+
+private:
+	EndpointErrorCategory() noexcept = default;
 };
 
+/**
+ * Create a std::error_code from an EndpointError value.
+ *
+ * \param error error code value to create the error code from.
+ *
+ * \return the newly created std::error_code, with EndpointErrorCategory as its
+ *         category.
+ */
 [[nodiscard]] inline std::error_code make_error_code(EndpointError error) {
-	return std::error_code{static_cast<int>(error), EndpointErrorCategory::instance()};
+	return std::error_code{static_cast<int>(error), EndpointErrorCategory::getInstance()};
 }
 
+/**
+ * Error condition type for error codes originating from the Socket API.
+ */
 enum class SocketError : int { // NOLINT(performance-enum-size)
 	// The value 0 is reserved for success.
 	WAIT = 1,     ///< Try again later.
@@ -123,23 +171,50 @@ struct std::is_error_condition_enum<grem::networking::SocketError> : std::true_t
 
 namespace grem::networking {
 
+/**
+ * Error category type for error codes originating from the Socket API.
+ */
 struct SocketErrorCategory : std::error_category {
 	[[nodiscard]] GREM_API(networking) const char* name() const noexcept override;
 	[[nodiscard]] GREM_API(networking) std::string message(int condition) const override;
 	[[nodiscard]] GREM_API(networking) bool equivalent(const std::error_code& code, int condition) const noexcept override;
 
-	[[nodiscard]] static const SocketErrorCategory& instance() noexcept {
+	/**
+	 * Get the canonical global instance of this error category.
+	 *
+	 * \return a reference to the static SocketErrorCategory object.
+	 */
+	[[nodiscard]] static const SocketErrorCategory& getInstance() noexcept {
 		static const SocketErrorCategory category{};
 		return category;
 	}
+
+private:
+	SocketErrorCategory() noexcept = default;
 };
 
+/**
+ * Create a std::error_code from an SocketError value.
+ *
+ * \param error error code value to create the error code from.
+ *
+ * \return the newly created std::error_code, with SocketErrorCategory as its
+ *         category.
+ */
 [[nodiscard]] inline std::error_code make_error_code(SocketError error) {
-	return std::error_code{static_cast<int>(error), SocketErrorCategory::instance()};
+	return std::error_code{static_cast<int>(error), SocketErrorCategory::getInstance()};
 }
 
+/**
+ * Create a std::error_condition from an SocketError value.
+ *
+ * \param error error condition value to create the error code from.
+ *
+ * \return the newly created std::error_condition, with SocketErrorCategory as
+ *         its category.
+ */
 [[nodiscard]] inline std::error_condition make_error_condition(SocketError error) {
-	return std::error_condition{static_cast<int>(error), SocketErrorCategory::instance()};
+	return std::error_condition{static_cast<int>(error), SocketErrorCategory::getInstance()};
 }
 
 } // namespace grem::networking

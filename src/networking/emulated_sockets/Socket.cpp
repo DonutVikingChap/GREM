@@ -78,7 +78,7 @@ public:
 		errorCode.clear();
 	}
 
-	[[nodiscard]] SOCKET open(EndpointFamily domain, ProtocolType type, std::error_code& errorCode) {
+	[[nodiscard]] SOCKET open(AddressFamily domain, ProtocolType type, std::error_code& errorCode) {
 		ScopedLock lock{socketsMutex};
 		SOCKET newHandle = bit_cast<SOCKET>(nextSocketHandleValue++);
 		if (newHandle == INVALID_SOCKET) {
@@ -98,24 +98,24 @@ public:
 		return newHandle;
 	}
 
-	void setBlockingMode(SOCKET handle, BlockingMode mode, std::error_code& errorCode) {
+	void setBlockingMode(SOCKET handle, BlockingMode newMode, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			ScopedLock lock{socket->mutex};
-			socket->blockingMode = mode;
+			socket->blockingMode = newMode;
 		}
 	}
 
-	void setReceiveTimeout(SOCKET handle, Duration timeout, std::error_code& errorCode) {
+	void setReceiveTimeout(SOCKET handle, Duration newTimeout, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			ScopedLock lock{socket->mutex};
-			socket->receiveTimeout = timeout;
+			socket->receiveTimeout = newTimeout;
 		}
 	}
 
-	void setSendTimeout(SOCKET handle, Duration timeout, std::error_code& errorCode) {
+	void setSendTimeout(SOCKET handle, Duration newTimeout, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			ScopedLock lock{socket->mutex};
-			socket->sendTimeout = timeout;
+			socket->sendTimeout = newTimeout;
 		}
 	}
 
@@ -169,15 +169,15 @@ public:
 		}
 	}
 
-	[[nodiscard]] SOCKET accept(SOCKET handle, BlockingMode mode, std::error_code& errorCode) {
+	[[nodiscard]] SOCKET accept(SOCKET handle, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			UniqueLock lock{socket->mutex};
-			return socket->accept(lock, handle, mode, errorCode);
+			return socket->accept(lock, handle, errorCode);
 		}
 		return INVALID_SOCKET;
 	}
 
-	Optional<Span<byte>> receive(SOCKET handle, Span<byte> buffer, int flags, std::error_code& errorCode) {
+	Optional<Span<byte>> receive(SOCKET handle, Span<byte> buffer, MessageFlags flags, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			UniqueLock lock{socket->mutex};
 			return socket->receive(lock, buffer, flags, errorCode);
@@ -185,7 +185,7 @@ public:
 		return {};
 	}
 
-	Optional<Pair<Span<byte>, Endpoint>> receiveFrom(SOCKET handle, Span<byte> buffer, int flags, std::error_code& errorCode) {
+	Optional<Pair<Span<byte>, Endpoint>> receiveFrom(SOCKET handle, Span<byte> buffer, MessageFlags flags, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			UniqueLock lock{socket->mutex};
 			return socket->receiveFrom(lock, buffer, flags, errorCode);
@@ -193,7 +193,7 @@ public:
 		return {};
 	}
 
-	[[nodiscard]] Optional<size_t> send(SOCKET handle, Span<const byte> bytes, int flags, std::error_code& errorCode) {
+	[[nodiscard]] Optional<size_t> send(SOCKET handle, Span<const byte> bytes, MessageFlags flags, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			UniqueLock lock{socket->mutex};
 			return socket->send(lock, handle, bytes, flags, errorCode);
@@ -201,7 +201,7 @@ public:
 		return {};
 	}
 
-	[[nodiscard]] Optional<size_t> sendTo(SOCKET handle, const Endpoint& endpoint, Span<const byte> bytes, int flags, std::error_code& errorCode) {
+	[[nodiscard]] Optional<size_t> sendTo(SOCKET handle, const Endpoint& endpoint, Span<const byte> bytes, MessageFlags flags, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
 			UniqueLock lock{socket->mutex};
 			return socket->sendTo(lock, handle, endpoint, bytes, flags, errorCode);
@@ -268,7 +268,7 @@ private:
 	};
 
 	struct EmulatedSocket {
-		const EndpointFamily domain;
+		const AddressFamily domain;
 		const ProtocolType type;
 		BlockingMode blockingMode = BlockingMode::BLOCKING;
 		Duration receiveTimeout{};
@@ -284,12 +284,12 @@ private:
 		bool shutdownTransmissions = false;
 		Mutex mutex{};
 
-		EmulatedSocket(EndpointFamily domain, ProtocolType type)
+		EmulatedSocket(AddressFamily domain, ProtocolType type)
 			: domain(domain)
 			, type(type) {}
 
 		void connect(UniqueLock<Mutex>& lock, SOCKET handle, const Endpoint& endpoint, std::error_code& errorCode) {
-			if (endpoint.getFamily() != domain) {
+			if (endpoint.getAddressFamily() != domain) {
 				errorCode = make_error_code(std::errc::invalid_argument);
 				return;
 			}
@@ -361,7 +361,7 @@ private:
 		}
 
 		void bind(UniqueLock<Mutex>& lock, SOCKET handle, const Endpoint& endpoint, std::error_code& errorCode) {
-			if (endpoint.getFamily() != domain || localEndpoint) {
+			if (endpoint.getAddressFamily() != domain || localEndpoint) {
 				errorCode = make_error_code(std::errc::invalid_argument);
 				return;
 			}
@@ -465,7 +465,7 @@ private:
 			errorCode.clear();
 		}
 
-		[[nodiscard]] SOCKET accept(UniqueLock<Mutex>& lock, SOCKET handle, BlockingMode mode, std::error_code& errorCode) {
+		[[nodiscard]] SOCKET accept(UniqueLock<Mutex>& lock, SOCKET handle, std::error_code& errorCode) {
 			if (type != ProtocolType::TCP) {
 				errorCode = make_error_code(std::errc::operation_not_supported);
 				return INVALID_SOCKET;
@@ -516,8 +516,6 @@ private:
 			const SOCKET remoteSocketHandle = listenQueue.front();
 			listenQueue.pop_front();
 
-			const Duration newReceiveTimeout = receiveTimeout;
-			const Duration newSendTimeout = sendTimeout;
 			lock.unlock();
 
 			const SharedPointer<EmulatedSocket> remoteSocket = EmulatedSockets::getInstance().getSocket(remoteSocketHandle, errorCode);
@@ -549,30 +547,27 @@ private:
 					newHandle = bit_cast<SOCKET>(emulatedSockets.nextSocketHandleValue++);
 				}
 				try {
-					switch (newLocalEndpoint->getFamily()) {
-						case EndpointFamily::IPv4:
-							itPort->second.ipv4Bindings.push_back(EmulatedPortIPv4Binding{.address = newLocalEndpoint->getIPv4Endpoint()->getAddress(), .socketHandle = newHandle});
+					switch (newLocalEndpoint->getAddressFamily()) {
+						case AddressFamily::IPv4:
+							itPort->second.ipv4Bindings.push_back(EmulatedPortIPv4Binding{.address = *newLocalEndpoint->getIPv4Address(), .socketHandle = newHandle});
 							break;
-						case EndpointFamily::IPv6:
-							itPort->second.ipv6Bindings.push_back(EmulatedPortIPv6Binding{.address = newLocalEndpoint->getIPv6Endpoint()->getAddress(), .socketHandle = newHandle});
+						case AddressFamily::IPv6:
+							itPort->second.ipv6Bindings.push_back(EmulatedPortIPv6Binding{.address = *newLocalEndpoint->getIPv6Address(), .socketHandle = newHandle});
 							break;
 					}
 					try {
 						SharedPointer<EmulatedSocket> newSocket = SharedPointer<EmulatedSocket>::create(domain, type);
-						newSocket->blockingMode = mode;
-						newSocket->receiveTimeout = newReceiveTimeout;
-						newSocket->sendTimeout = newSendTimeout;
 						newSocket->localEndpoint = *newLocalEndpoint;
 						switch (domain) {
-							case EndpointFamily::IPv4: newSocket->remoteEndpoint = Endpoint{IPv4Address::LOOPBACK, remotePortNumber}; break;
-							case EndpointFamily::IPv6: newSocket->remoteEndpoint = Endpoint{IPv6Address::LOOPBACK, remotePortNumber}; break;
+							case AddressFamily::IPv4: newSocket->remoteEndpoint = Endpoint{IPv4Address::LOOPBACK, remotePortNumber}; break;
+							case AddressFamily::IPv6: newSocket->remoteEndpoint = Endpoint{IPv6Address::LOOPBACK, remotePortNumber}; break;
 						}
 						newSocket->remoteSocketHandle = handle;
 						newSocket->tcpState = EmulatedTCPState::ESTABLISHED;
 						if (!emulatedSockets.sockets.try_emplace(newHandle, std::move(newSocket)).second) {
-							switch (newLocalEndpoint->getFamily()) {
-								case EndpointFamily::IPv4: itPort->second.ipv4Bindings.pop_back(); break;
-								case EndpointFamily::IPv6: itPort->second.ipv6Bindings.pop_back(); break;
+							switch (newLocalEndpoint->getAddressFamily()) {
+								case AddressFamily::IPv4: itPort->second.ipv4Bindings.pop_back(); break;
+								case AddressFamily::IPv6: itPort->second.ipv6Bindings.pop_back(); break;
 							}
 							if (itPort->second.ipv4Bindings.empty() && itPort->second.ipv6Bindings.empty()) {
 								emulatedSockets.ports.erase(itPort);
@@ -581,9 +576,9 @@ private:
 							return INVALID_SOCKET;
 						}
 					} catch (...) {
-						switch (newLocalEndpoint->getFamily()) {
-							case EndpointFamily::IPv4: itPort->second.ipv4Bindings.pop_back(); break;
-							case EndpointFamily::IPv6: itPort->second.ipv6Bindings.pop_back(); break;
+						switch (newLocalEndpoint->getAddressFamily()) {
+							case AddressFamily::IPv4: itPort->second.ipv4Bindings.pop_back(); break;
+							case AddressFamily::IPv6: itPort->second.ipv6Bindings.pop_back(); break;
 						}
 						if (itPort->second.ipv4Bindings.empty() && itPort->second.ipv6Bindings.empty()) {
 							emulatedSockets.ports.erase(itPort);
@@ -607,15 +602,16 @@ private:
 			return newHandle;
 		}
 
-		[[nodiscard]] Optional<Span<byte>> receive(UniqueLock<Mutex>& lock, Span<byte> buffer, int flags, std::error_code& errorCode) {
+		[[nodiscard]] Optional<Span<byte>> receive(UniqueLock<Mutex>& lock, Span<byte> buffer, MessageFlags flags, std::error_code& errorCode) {
 			if (const Optional<Pair<Span<byte>, Endpoint>> received = receiveFrom(lock, buffer, flags, errorCode)) {
 				return received->first;
 			}
 			return {};
 		}
 
-		[[nodiscard]] Optional<Pair<Span<byte>, Endpoint>> receiveFrom([[maybe_unused]] UniqueLock<Mutex>& lock, Span<byte> buffer, int flags, std::error_code& errorCode) {
-			if ((flags & ~SUPPORTED_RECEIVE_FLAGS) != 0) {
+		[[nodiscard]] Optional<Pair<Span<byte>, Endpoint>> receiveFrom([[maybe_unused]] UniqueLock<Mutex>& lock, Span<byte> buffer, MessageFlags flags,
+			std::error_code& errorCode) {
+			if ((static_cast<int>(flags) & ~SUPPORTED_RECEIVE_FLAGS) != 0) {
 				errorCode = make_error_code(std::errc::operation_not_supported);
 				return {};
 			}
@@ -699,7 +695,7 @@ private:
 			return Pair<Span<byte>, Endpoint>{buffer.first(bytesReceived), sender};
 		}
 
-		[[nodiscard]] Optional<size_t> send(UniqueLock<Mutex>& lock, SOCKET handle, Span<const byte> bytes, int flags, std::error_code& errorCode) {
+		[[nodiscard]] Optional<size_t> send(UniqueLock<Mutex>& lock, SOCKET handle, Span<const byte> bytes, MessageFlags flags, std::error_code& errorCode) {
 			if (!remoteEndpoint) {
 				errorCode = make_error_code(std::errc::destination_address_required);
 				return {};
@@ -707,8 +703,9 @@ private:
 			return sendTo(lock, handle, *remoteEndpoint, bytes, flags, errorCode);
 		}
 
-		[[nodiscard]] Optional<size_t> sendTo(UniqueLock<Mutex>& lock, SOCKET handle, const Endpoint& endpoint, Span<const byte> bytes, int flags, std::error_code& errorCode) {
-			if ((flags & ~SUPPORTED_SEND_FLAGS) != 0) {
+		[[nodiscard]] Optional<size_t> sendTo(UniqueLock<Mutex>& lock, SOCKET handle, const Endpoint& endpoint, Span<const byte> bytes, MessageFlags flags,
+			std::error_code& errorCode) {
+			if ((static_cast<int>(flags) & ~SUPPORTED_SEND_FLAGS) != 0) {
 				errorCode = make_error_code(std::errc::operation_not_supported);
 				return {};
 			}
@@ -947,11 +944,11 @@ private:
 		}
 		const auto itPort = ports.try_emplace(portNumber).first;
 		try {
-			switch (newEndpoint.getFamily()) {
-				case EndpointFamily::IPv4:
+			switch (newEndpoint.getAddressFamily()) {
+				case AddressFamily::IPv4:
 					itPort->second.ipv4Bindings.push_back(EmulatedPortIPv4Binding{.address = newEndpoint.getIPv4Endpoint()->getAddress(), .socketHandle = handle});
 					break;
-				case EndpointFamily::IPv6:
+				case AddressFamily::IPv6:
 					itPort->second.ipv6Bindings.push_back(EmulatedPortIPv6Binding{.address = newEndpoint.getIPv6Endpoint()->getAddress(), .socketHandle = handle});
 					break;
 			}
@@ -986,8 +983,8 @@ private:
 		}
 
 		ScopedLock socketsLock{socketsMutex};
-		switch (endpoint.getFamily()) {
-			case EndpointFamily::IPv4: {
+		switch (endpoint.getAddressFamily()) {
+			case AddressFamily::IPv4: {
 				const IPv4Endpoint ipv4Endpoint = *endpoint.getIPv4Endpoint();
 				if (const auto itPort = ports.find(ipv4Endpoint.getPortNumber()); itPort != ports.end()) {
 					for (const EmulatedPortIPv4Binding& binding : itPort->second.ipv4Bindings) {
@@ -1001,7 +998,7 @@ private:
 				}
 				break;
 			}
-			case EndpointFamily::IPv6: {
+			case AddressFamily::IPv6: {
 				const IPv6Endpoint ipv6Endpoint = *endpoint.getIPv6Endpoint();
 				if (const auto itPort = ports.find(ipv6Endpoint.getPortNumber()); itPort != ports.end()) {
 					for (const EmulatedPortIPv6Binding& binding : itPort->second.ipv6Bindings) {
@@ -1044,7 +1041,7 @@ void Socket::close(std::error_code& errorCode) noexcept {
 	}
 }
 
-void Socket::open(EndpointFamily domain, ProtocolType type, std::error_code& errorCode) {
+void Socket::open(AddressFamily domain, ProtocolType type, std::error_code& errorCode) {
 	const SOCKET newHandle = EmulatedSockets::getInstance().open(domain, type, errorCode);
 	if (errorCode) {
 		return;
@@ -1052,16 +1049,16 @@ void Socket::open(EndpointFamily domain, ProtocolType type, std::error_code& err
 	handle.reset(newHandle);
 }
 
-void Socket::setBlockingMode(BlockingMode mode, std::error_code& errorCode) {
-	EmulatedSockets::getInstance().setBlockingMode(handle.get(), mode, errorCode);
+void Socket::setBlockingMode(BlockingMode newMode, std::error_code& errorCode) {
+	EmulatedSockets::getInstance().setBlockingMode(handle.get(), newMode, errorCode);
 }
 
-void Socket::setReceiveTimeout(Duration timeout, std::error_code& errorCode) {
-	EmulatedSockets::getInstance().setReceiveTimeout(handle.get(), timeout, errorCode);
+void Socket::setReceiveTimeout(Duration newTimeout, std::error_code& errorCode) {
+	EmulatedSockets::getInstance().setReceiveTimeout(handle.get(), newTimeout, errorCode);
 }
 
-void Socket::setSendTimeout(Duration timeout, std::error_code& errorCode) {
-	EmulatedSockets::getInstance().setSendTimeout(handle.get(), timeout, errorCode);
+void Socket::setSendTimeout(Duration newTimeout, std::error_code& errorCode) {
+	EmulatedSockets::getInstance().setSendTimeout(handle.get(), newTimeout, errorCode);
 }
 
 void Socket::connect(const Endpoint& endpoint, std::error_code& errorCode) {
@@ -1088,27 +1085,27 @@ void Socket::listen(size_t listenQueueBacklogSize, std::error_code& errorCode) {
 	EmulatedSockets::getInstance().listen(handle.get(), listenQueueBacklogSize, errorCode);
 }
 
-Optional<Socket> Socket::accept(BlockingMode mode, std::error_code& errorCode) {
-	const SOCKET newHandle = EmulatedSockets::getInstance().accept(handle.get(), mode, errorCode);
+Optional<Socket> Socket::accept(std::error_code& errorCode) {
+	const SOCKET newHandle = EmulatedSockets::getInstance().accept(handle.get(), errorCode);
 	if (newHandle == INVALID_SOCKET) {
 		return {};
 	}
 	return Socket{newHandle};
 }
 
-Optional<Span<byte>> Socket::receive(Span<byte> buffer, int flags, std::error_code& errorCode) {
+Optional<Span<byte>> Socket::receive(Span<byte> buffer, MessageFlags flags, std::error_code& errorCode) {
 	return EmulatedSockets::getInstance().receive(handle.get(), buffer, flags, errorCode);
 }
 
-Optional<Pair<Span<byte>, Endpoint>> Socket::receiveFrom(Span<byte> buffer, int flags, std::error_code& errorCode) {
+Optional<Pair<Span<byte>, Endpoint>> Socket::receiveFrom(Span<byte> buffer, MessageFlags flags, std::error_code& errorCode) {
 	return EmulatedSockets::getInstance().receiveFrom(handle.get(), buffer, flags, errorCode);
 }
 
-Optional<size_t> Socket::send(Span<const byte> bytes, int flags, std::error_code& errorCode) {
+Optional<size_t> Socket::send(Span<const byte> bytes, MessageFlags flags, std::error_code& errorCode) {
 	return EmulatedSockets::getInstance().send(handle.get(), bytes, flags, errorCode);
 }
 
-Optional<size_t> Socket::sendTo(const Endpoint& endpoint, Span<const byte> bytes, int flags, std::error_code& errorCode) {
+Optional<size_t> Socket::sendTo(const Endpoint& endpoint, Span<const byte> bytes, MessageFlags flags, std::error_code& errorCode) {
 	return EmulatedSockets::getInstance().sendTo(handle.get(), endpoint, bytes, flags, errorCode);
 }
 
@@ -1127,13 +1124,18 @@ void Socket::SocketDeleter::operator()(SOCKET handle) const noexcept {
 	}
 }
 
-void TCPSocket::connect(BlockingMode mode, const Endpoint& endpoint, Duration timeout, std::error_code& errorCode) {
-	Socket::close();
-	Socket::open(endpoint.getFamily(), ProtocolType::TCP, errorCode);
+void TCPSocket::connect(BlockingMode mode, const Endpoint& endpoint, std::error_code& errorCode, const TCPSocketOptions& options) {
+	if (*this) {
+		Socket::close(errorCode);
+		if (errorCode) {
+			return;
+		}
+	}
+	Socket::open(endpoint.getAddressFamily(), ProtocolType::TCP, errorCode);
 	if (errorCode) {
 		return;
 	}
-	if (timeout <= Duration{}) {
+	if (options.connectionTimeout <= Duration{}) {
 		Socket::setBlockingMode(mode, errorCode);
 		if (errorCode) {
 			return;
@@ -1151,7 +1153,7 @@ void TCPSocket::connect(BlockingMode mode, const Endpoint& endpoint, Duration ti
 		if (mode != BlockingMode::BLOCKING || errorCode != SocketError::WAIT) {
 			return;
 		}
-		Socket::awaitWritable(timeout, errorCode);
+		Socket::awaitWritable(options.connectionTimeout, errorCode);
 		if (errorCode) {
 			return;
 		}

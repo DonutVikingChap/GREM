@@ -53,7 +53,7 @@ Optional<IPv4Address> IPv4Address::parse(CStringView string, std::error_code& er
 		case 0: errorCode = make_error_code(std::errc::invalid_argument); return {};
 		case 1: break;
 		default:
-			errorCode = Error::getLastErrorCode();
+			errorCode = networking::Error::getLastErrorCode();
 			if (!errorCode) {
 				errorCode = make_error_code(std::errc::address_family_not_supported);
 			}
@@ -61,18 +61,6 @@ Optional<IPv4Address> IPv4Address::parse(CStringView string, std::error_code& er
 	}
 	errorCode.clear();
 	return IPv4Address{addr};
-}
-
-Optional<IPv4Address> IPv4Address::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
-	return IPv4Endpoint::resolve(hostName, service, errorCode).transform(&IPv4Endpoint::getAddress);
-}
-
-Optional<IPv4Address> IPv4Address::resolve(CStringView host, std::error_code& errorCode) {
-	return IPv4Endpoint::resolve(host, errorCode).transform(&IPv4Endpoint::getAddress);
-}
-
-Optional<IPv4Address> IPv4Address::getLocalAddress(std::error_code& errorCode) {
-	return IPv4Endpoint::getLocalEndpoint(errorCode).transform(&IPv4Endpoint::getAddress);
 }
 
 IPv4Address IPv4Address::parse(CStringView string) {
@@ -87,6 +75,10 @@ IPv4Address IPv4Address::parse(CStringView string) {
 	return *result;
 }
 
+Optional<IPv4Address> IPv4Address::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
+	return IPv4Endpoint::resolve(hostName, service, errorCode).transform(&IPv4Endpoint::getAddress);
+}
+
 IPv4Address IPv4Address::resolve(const char* hostName, const char* service) {
 	std::error_code errorCode{};
 	Optional<IPv4Address> result = resolve(hostName, service, errorCode);
@@ -99,6 +91,10 @@ IPv4Address IPv4Address::resolve(const char* hostName, const char* service) {
 	return *result;
 }
 
+Optional<IPv4Address> IPv4Address::resolve(CStringView host, std::error_code& errorCode) {
+	return IPv4Endpoint::resolve(host, errorCode).transform(&IPv4Endpoint::getAddress);
+}
+
 IPv4Address IPv4Address::resolve(CStringView host) {
 	std::error_code errorCode{};
 	Optional<IPv4Address> result = resolve(host, errorCode);
@@ -109,6 +105,10 @@ IPv4Address IPv4Address::resolve(CStringView host) {
 		throw networking::Error{make_error_code(EndpointError::FAIL)};
 	}
 	return *result;
+}
+
+Optional<IPv4Address> IPv4Address::getLocalAddress(std::error_code& errorCode) {
+	return IPv4Endpoint::getLocalEndpoint(errorCode).transform(&IPv4Endpoint::getAddress);
 }
 
 IPv4Address IPv4Address::getLocalAddress() {
@@ -134,7 +134,7 @@ Optional<IPv6Address> IPv6Address::parse(CStringView string, std::error_code& er
 		case 0: errorCode = make_error_code(std::errc::invalid_argument); return {};
 		case 1: break;
 		default:
-			errorCode = Error::getLastErrorCode();
+			errorCode = networking::Error::getLastErrorCode();
 			if (!errorCode) {
 				errorCode = make_error_code(std::errc::address_family_not_supported);
 			}
@@ -142,18 +142,6 @@ Optional<IPv6Address> IPv6Address::parse(CStringView string, std::error_code& er
 	}
 	errorCode.clear();
 	return IPv6Address{addr};
-}
-
-Optional<IPv6Address> IPv6Address::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
-	return IPv6Endpoint::resolve(hostName, service, errorCode).transform(&IPv6Endpoint::getAddress);
-}
-
-Optional<IPv6Address> IPv6Address::resolve(CStringView host, std::error_code& errorCode) {
-	return IPv6Endpoint::resolve(host, errorCode).transform(&IPv6Endpoint::getAddress);
-}
-
-Optional<IPv6Address> IPv6Address::getLocalAddress(std::error_code& errorCode) {
-	return IPv6Endpoint::getLocalEndpoint(errorCode).transform(&IPv6Endpoint::getAddress);
 }
 
 IPv6Address IPv6Address::parse(CStringView string) {
@@ -168,6 +156,10 @@ IPv6Address IPv6Address::parse(CStringView string) {
 	return *result;
 }
 
+Optional<IPv6Address> IPv6Address::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
+	return IPv6Endpoint::resolve(hostName, service, errorCode).transform(&IPv6Endpoint::getAddress);
+}
+
 IPv6Address IPv6Address::resolve(const char* hostName, const char* service) {
 	std::error_code errorCode{};
 	Optional<IPv6Address> result = resolve(hostName, service, errorCode);
@@ -180,6 +172,10 @@ IPv6Address IPv6Address::resolve(const char* hostName, const char* service) {
 	return *result;
 }
 
+Optional<IPv6Address> IPv6Address::resolve(CStringView host, std::error_code& errorCode) {
+	return IPv6Endpoint::resolve(host, errorCode).transform(&IPv6Endpoint::getAddress);
+}
+
 IPv6Address IPv6Address::resolve(CStringView host) {
 	std::error_code errorCode{};
 	Optional<IPv6Address> result = resolve(host, errorCode);
@@ -190,6 +186,10 @@ IPv6Address IPv6Address::resolve(CStringView host) {
 		throw networking::Error{make_error_code(EndpointError::FAIL)};
 	}
 	return *result;
+}
+
+Optional<IPv6Address> IPv6Address::getLocalAddress(std::error_code& errorCode) {
+	return IPv6Endpoint::getLocalEndpoint(errorCode).transform(&IPv6Endpoint::getAddress);
 }
 
 IPv6Address IPv6Address::getLocalAddress() {
@@ -216,6 +216,18 @@ Optional<IPv4Endpoint> IPv4Endpoint::parse(CStringView addressString, CStringVie
 	return IPv4Endpoint{*address, *portNumber};
 }
 
+IPv4Endpoint IPv4Endpoint::parse(CStringView addressString, CStringView portNumberString) {
+	std::error_code errorCode{};
+	Optional<IPv4Endpoint> result = parse(addressString, portNumberString, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
+	}
+	if (!result) {
+		throw networking::Error{make_error_code(std::errc::invalid_argument)};
+	}
+	return *result;
+}
+
 Optional<IPv4Endpoint> IPv4Endpoint::parse(CStringView string, std::error_code& errorCode) noexcept {
 	if (const size_t lastColonOffset = string.rfind(':'); lastColonOffset != CStringView::npos && lastColonOffset < INET_ADDRSTRLEN) {
 		Array<char, INET_ADDRSTRLEN> addressStringBuffer{};
@@ -231,33 +243,6 @@ Optional<IPv4Endpoint> IPv4Endpoint::parse(CStringView string, std::error_code& 
 	return IPv4Endpoint{*address, 0};
 }
 
-Optional<IPv4Endpoint> IPv4Endpoint::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
-	return Endpoint::resolve(EndpointFamily::IPv4, hostName, service, errorCode).and_then(&Endpoint::getIPv4Endpoint);
-}
-
-Optional<IPv4Endpoint> IPv4Endpoint::resolve(CStringView host, std::error_code& errorCode) {
-	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
-		return IPv4Endpoint::resolve(String{host.c_str(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
-	}
-	return IPv4Endpoint::resolve(host.c_str(), nullptr, errorCode);
-}
-
-Optional<IPv4Endpoint> IPv4Endpoint::getLocalEndpoint(std::error_code& errorCode) {
-	return Endpoint::getLocalEndpoint(EndpointFamily::IPv4, errorCode).and_then(&Endpoint::getIPv4Endpoint);
-}
-
-IPv4Endpoint IPv4Endpoint::parse(CStringView addressString, CStringView portNumberString) {
-	std::error_code errorCode{};
-	Optional<IPv4Endpoint> result = parse(addressString, portNumberString, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
-	}
-	if (!result) {
-		throw networking::Error{make_error_code(std::errc::invalid_argument)};
-	}
-	return *result;
-}
-
 IPv4Endpoint IPv4Endpoint::parse(CStringView string) {
 	std::error_code errorCode{};
 	Optional<IPv4Endpoint> result = parse(string, errorCode);
@@ -268,6 +253,10 @@ IPv4Endpoint IPv4Endpoint::parse(CStringView string) {
 		throw networking::Error{make_error_code(std::errc::invalid_argument)};
 	}
 	return *result;
+}
+
+Optional<IPv4Endpoint> IPv4Endpoint::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
+	return Endpoint::resolve(AddressFamily::IPv4, hostName, service, errorCode).and_then(&Endpoint::getIPv4Endpoint);
 }
 
 IPv4Endpoint IPv4Endpoint::resolve(const char* hostName, const char* service) {
@@ -282,6 +271,13 @@ IPv4Endpoint IPv4Endpoint::resolve(const char* hostName, const char* service) {
 	return *result;
 }
 
+Optional<IPv4Endpoint> IPv4Endpoint::resolve(CStringView host, std::error_code& errorCode) {
+	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
+		return IPv4Endpoint::resolve(String{host.data(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+	}
+	return IPv4Endpoint::resolve(host.c_str(), nullptr, errorCode);
+}
+
 IPv4Endpoint IPv4Endpoint::resolve(CStringView host) {
 	std::error_code errorCode{};
 	Optional<IPv4Endpoint> result = resolve(host, errorCode);
@@ -292,6 +288,10 @@ IPv4Endpoint IPv4Endpoint::resolve(CStringView host) {
 		throw networking::Error{make_error_code(EndpointError::FAIL)};
 	}
 	return *result;
+}
+
+Optional<IPv4Endpoint> IPv4Endpoint::getLocalEndpoint(std::error_code& errorCode) {
+	return Endpoint::getLocalEndpoint(AddressFamily::IPv4, errorCode).and_then(&Endpoint::getIPv4Endpoint);
 }
 
 IPv4Endpoint IPv4Endpoint::getLocalEndpoint() {
@@ -318,6 +318,18 @@ Optional<IPv6Endpoint> IPv6Endpoint::parse(CStringView addressString, CStringVie
 	return IPv6Endpoint{*address, *portNumber};
 }
 
+IPv6Endpoint IPv6Endpoint::parse(CStringView addressString, CStringView portNumberString) {
+	std::error_code errorCode{};
+	Optional<IPv6Endpoint> result = parse(addressString, portNumberString, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
+	}
+	if (!result) {
+		throw networking::Error{make_error_code(std::errc::invalid_argument)};
+	}
+	return *result;
+}
+
 Optional<IPv6Endpoint> IPv6Endpoint::parse(CStringView string, std::error_code& errorCode) noexcept {
 	if (const size_t lastColonOffset = string.rfind(':'); lastColonOffset != CStringView::npos) {
 		if (lastColonOffset > 1 && string[lastColonOffset - 1] == ']' && string[0] == '[' && lastColonOffset - 2 < INET6_ADDRSTRLEN) {
@@ -335,35 +347,6 @@ Optional<IPv6Endpoint> IPv6Endpoint::parse(CStringView string, std::error_code& 
 	return IPv6Endpoint{*address, 0};
 }
 
-Optional<IPv6Endpoint> IPv6Endpoint::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
-	return Endpoint::resolve(EndpointFamily::IPv6, hostName, service, errorCode).and_then(&Endpoint::getIPv6Endpoint);
-}
-
-Optional<IPv6Endpoint> IPv6Endpoint::resolve(CStringView host, std::error_code& errorCode) {
-	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
-		if (lastColonOffset > 0 && host[lastColonOffset - 1] == ']' && host[0] == '[') {
-			return IPv6Endpoint::resolve(String{host.data() + 1, lastColonOffset - 2}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
-		}
-	}
-	return IPv6Endpoint::resolve(host.c_str(), nullptr, errorCode);
-}
-
-Optional<IPv6Endpoint> IPv6Endpoint::getLocalEndpoint(std::error_code& errorCode) {
-	return Endpoint::getLocalEndpoint(EndpointFamily::IPv6, errorCode).and_then(&Endpoint::getIPv6Endpoint);
-}
-
-IPv6Endpoint IPv6Endpoint::parse(CStringView addressString, CStringView portNumberString) {
-	std::error_code errorCode{};
-	Optional<IPv6Endpoint> result = parse(addressString, portNumberString, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
-	}
-	if (!result) {
-		throw networking::Error{make_error_code(std::errc::invalid_argument)};
-	}
-	return *result;
-}
-
 IPv6Endpoint IPv6Endpoint::parse(CStringView string) {
 	std::error_code errorCode{};
 	Optional<IPv6Endpoint> result = parse(string, errorCode);
@@ -374,6 +357,10 @@ IPv6Endpoint IPv6Endpoint::parse(CStringView string) {
 		throw networking::Error{make_error_code(std::errc::invalid_argument)};
 	}
 	return *result;
+}
+
+Optional<IPv6Endpoint> IPv6Endpoint::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
+	return Endpoint::resolve(AddressFamily::IPv6, hostName, service, errorCode).and_then(&Endpoint::getIPv6Endpoint);
 }
 
 IPv6Endpoint IPv6Endpoint::resolve(const char* hostName, const char* service) {
@@ -388,6 +375,18 @@ IPv6Endpoint IPv6Endpoint::resolve(const char* hostName, const char* service) {
 	return *result;
 }
 
+Optional<IPv6Endpoint> IPv6Endpoint::resolve(CStringView host, std::error_code& errorCode) {
+	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
+		if (lastColonOffset > 0 && host[lastColonOffset - 1] == ']' && host[0] == '[') {
+			return IPv6Endpoint::resolve(String{host.data() + 1, lastColonOffset - 2}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+		}
+		if (StringView{host.data(), lastColonOffset}.find(':') == StringView::npos) {
+			return IPv6Endpoint::resolve(String{host.data(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+		}
+	}
+	return IPv6Endpoint::resolve(host.c_str(), nullptr, errorCode);
+}
+
 IPv6Endpoint IPv6Endpoint::resolve(CStringView host) {
 	std::error_code errorCode{};
 	Optional<IPv6Endpoint> result = resolve(host, errorCode);
@@ -398,6 +397,10 @@ IPv6Endpoint IPv6Endpoint::resolve(CStringView host) {
 		throw networking::Error{make_error_code(EndpointError::FAIL)};
 	}
 	return *result;
+}
+
+Optional<IPv6Endpoint> IPv6Endpoint::getLocalEndpoint(std::error_code& errorCode) {
+	return Endpoint::getLocalEndpoint(AddressFamily::IPv6, errorCode).and_then(&Endpoint::getIPv6Endpoint);
 }
 
 IPv6Endpoint IPv6Endpoint::getLocalEndpoint() {
@@ -417,6 +420,39 @@ Optional<Endpoint> Endpoint::parse(CStringView addressString, CStringView portNu
 		return IPv6Endpoint::parse(addressString, portNumberString, errorCode);
 	}
 	return IPv4Endpoint::parse(addressString, portNumberString, errorCode);
+}
+
+Endpoint Endpoint::parse(CStringView addressString, CStringView portNumberString) {
+	std::error_code errorCode{};
+	Optional<Endpoint> result = parse(addressString, portNumberString, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
+	}
+	if (!result) {
+		throw networking::Error{make_error_code(std::errc::invalid_argument)};
+	}
+	return *result;
+}
+
+Optional<Endpoint> Endpoint::parse(AddressFamily family, CStringView addressString, CStringView portNumberString, std::error_code& errorCode) noexcept {
+	switch (family) {
+		case AddressFamily::IPv4: return IPv4Endpoint::parse(addressString, portNumberString, errorCode);
+		case AddressFamily::IPv6: return IPv6Endpoint::parse(addressString, portNumberString, errorCode);
+	}
+	errorCode = make_error_code(std::errc::address_family_not_supported);
+	return {};
+}
+
+Endpoint Endpoint::parse(AddressFamily family, CStringView addressString, CStringView portNumberString) {
+	std::error_code errorCode{};
+	Optional<Endpoint> result = parse(family, addressString, portNumberString, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
+	}
+	if (!result) {
+		throw networking::Error{make_error_code(std::errc::invalid_argument)};
+	}
+	return *result;
 }
 
 Optional<Endpoint> Endpoint::parse(CStringView string, std::error_code& errorCode) noexcept {
@@ -448,22 +484,37 @@ Optional<Endpoint> Endpoint::parse(CStringView string, std::error_code& errorCod
 	return IPv4Endpoint{*address, 0};
 }
 
-Optional<Endpoint> Endpoint::parse(EndpointFamily family, CStringView addressString, CStringView portNumberString, std::error_code& errorCode) noexcept {
+Endpoint Endpoint::parse(CStringView string) {
+	std::error_code errorCode{};
+	Optional<Endpoint> result = parse(string, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
+	}
+	if (!result) {
+		throw networking::Error{make_error_code(std::errc::invalid_argument)};
+	}
+	return *result;
+}
+
+Optional<Endpoint> Endpoint::parse(AddressFamily family, CStringView string, std::error_code& errorCode) noexcept {
 	switch (family) {
-		case EndpointFamily::IPv4: return IPv4Endpoint::parse(addressString, portNumberString, errorCode);
-		case EndpointFamily::IPv6: return IPv6Endpoint::parse(addressString, portNumberString, errorCode);
+		case AddressFamily::IPv4: return IPv4Endpoint::parse(string, errorCode);
+		case AddressFamily::IPv6: return IPv6Endpoint::parse(string, errorCode);
 	}
 	errorCode = make_error_code(std::errc::address_family_not_supported);
 	return {};
 }
 
-Optional<Endpoint> Endpoint::parse(EndpointFamily family, CStringView string, std::error_code& errorCode) noexcept {
-	switch (family) {
-		case EndpointFamily::IPv4: return IPv4Endpoint::parse(string, errorCode);
-		case EndpointFamily::IPv6: return IPv6Endpoint::parse(string, errorCode);
+Endpoint Endpoint::parse(AddressFamily family, CStringView string) {
+	std::error_code errorCode{};
+	Optional<Endpoint> result = parse(family, string, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
 	}
-	errorCode = make_error_code(std::errc::address_family_not_supported);
-	return {};
+	if (!result) {
+		throw networking::Error{make_error_code(std::errc::invalid_argument)};
+	}
+	return *result;
 }
 
 Optional<Endpoint> Endpoint::resolve(const char* hostName, const char* service, std::error_code& errorCode) {
@@ -494,12 +545,12 @@ Optional<Endpoint> Endpoint::resolve(const char* hostName, const char* service, 
 	}
 	Optional<Endpoint> result{};
 	switch (info->ai_family) {
-		case static_cast<int>(static_cast<short>(EndpointFamily::IPv4)):
+		case static_cast<int>(static_cast<short>(AddressFamily::IPv4)):
 			if (info->ai_addrlen == static_cast<socklen_t>(sizeof(sockaddr_in))) {
 				result.emplace(IPv4Endpoint{*std::launder(reinterpret_cast<const sockaddr_in*>(info->ai_addr))});
 			}
 			break;
-		case static_cast<int>(static_cast<short>(EndpointFamily::IPv6)):
+		case static_cast<int>(static_cast<short>(AddressFamily::IPv6)):
 			if (info->ai_addrlen == static_cast<socklen_t>(sizeof(sockaddr_in6))) {
 				result.emplace(IPv6Endpoint{*std::launder(reinterpret_cast<const sockaddr_in6*>(info->ai_addr))});
 			}
@@ -515,19 +566,19 @@ Optional<Endpoint> Endpoint::resolve(const char* hostName, const char* service, 
 	return result;
 }
 
-Optional<Endpoint> Endpoint::resolve(CStringView host, std::error_code& errorCode) {
-	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
-		if (lastColonOffset > 0 && host[lastColonOffset - 1] == ']' && host[0] == '[') {
-			return Endpoint::resolve(String{host.data() + 1, lastColonOffset - 2}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
-		}
-		if (StringView{host.data(), lastColonOffset}.find(':') == StringView::npos) {
-			return Endpoint::resolve(String{host.data(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
-		}
+Endpoint Endpoint::resolve(const char* hostName, const char* service) {
+	std::error_code errorCode{};
+	Optional<Endpoint> result = resolve(hostName, service, errorCode);
+	if (errorCode) {
+		throw networking::Error{errorCode};
 	}
-	return Endpoint::resolve(host.c_str(), nullptr, errorCode);
+	if (!result) {
+		throw networking::Error{make_error_code(EndpointError::FAIL)};
+	}
+	return *result;
 }
 
-Optional<Endpoint> Endpoint::resolve(EndpointFamily family, const char* hostName, const char* service, std::error_code& errorCode) {
+Optional<Endpoint> Endpoint::resolve(AddressFamily family, const char* hostName, const char* service, std::error_code& errorCode) {
 	ensurePlatformInitialized(errorCode);
 	if (errorCode) {
 		return {};
@@ -560,12 +611,12 @@ Optional<Endpoint> Endpoint::resolve(EndpointFamily family, const char* hostName
 	}
 	Optional<Endpoint> result{};
 	switch (family) {
-		case EndpointFamily::IPv4:
+		case AddressFamily::IPv4:
 			if (info->ai_addrlen == static_cast<socklen_t>(sizeof(sockaddr_in))) {
 				result.emplace(IPv4Endpoint{*std::launder(reinterpret_cast<const sockaddr_in*>(info->ai_addr))});
 			}
 			break;
-		case EndpointFamily::IPv6:
+		case AddressFamily::IPv6:
 			if (info->ai_addrlen == static_cast<socklen_t>(sizeof(sockaddr_in6))) {
 				result.emplace(IPv6Endpoint{*std::launder(reinterpret_cast<const sockaddr_in6*>(info->ai_addr))});
 			}
@@ -580,85 +631,9 @@ Optional<Endpoint> Endpoint::resolve(EndpointFamily family, const char* hostName
 	return result;
 }
 
-Optional<Endpoint> Endpoint::resolve(EndpointFamily family, CStringView host, std::error_code& errorCode) {
-	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
-		if (lastColonOffset > 0 && host[lastColonOffset - 1] == ']' && host[0] == '[') {
-			return Endpoint::resolve(family, String{host.data() + 1, lastColonOffset - 2}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
-		}
-		if (StringView{host.data(), lastColonOffset}.find(':') == StringView::npos) {
-			return Endpoint::resolve(family, String{host.data(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
-		}
-	}
-	return Endpoint::resolve(family, host.c_str(), nullptr, errorCode);
-}
-
-Optional<Endpoint> Endpoint::getLocalEndpoint(EndpointFamily family, std::error_code& errorCode) {
-	Socket socket{family, ProtocolType::UDP, errorCode};
-	if (errorCode) {
-		return {};
-	}
-	const Endpoint dummyEndpoint =
-		(family == EndpointFamily::IPv6) //
-			? Endpoint{IPv6Endpoint{IPv6Address::LOOPBACK, 9}}
-			: Endpoint{IPv4Endpoint{IPv4Address::LOOPBACK, 9}};
-	socket.connect(dummyEndpoint, errorCode);
-	if (errorCode) {
-		return {};
-	}
-	return socket.getLocalEndpoint(errorCode);
-}
-
-Endpoint Endpoint::parse(CStringView addressString, CStringView portNumberString) {
+Endpoint Endpoint::resolve(AddressFamily family, const char* hostName, const char* service) {
 	std::error_code errorCode{};
-	Optional<Endpoint> result = parse(addressString, portNumberString, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
-	}
-	if (!result) {
-		throw networking::Error{make_error_code(std::errc::invalid_argument)};
-	}
-	return *result;
-}
-
-Endpoint Endpoint::parse(CStringView string) {
-	std::error_code errorCode{};
-	Optional<Endpoint> result = parse(string, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
-	}
-	if (!result) {
-		throw networking::Error{make_error_code(std::errc::invalid_argument)};
-	}
-	return *result;
-}
-
-Endpoint Endpoint::parse(EndpointFamily family, CStringView addressString, CStringView portNumberString) {
-	std::error_code errorCode{};
-	Optional<Endpoint> result = parse(family, addressString, portNumberString, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
-	}
-	if (!result) {
-		throw networking::Error{make_error_code(std::errc::invalid_argument)};
-	}
-	return *result;
-}
-
-Endpoint Endpoint::parse(EndpointFamily family, CStringView string) {
-	std::error_code errorCode{};
-	Optional<Endpoint> result = parse(family, string, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
-	}
-	if (!result) {
-		throw networking::Error{make_error_code(std::errc::invalid_argument)};
-	}
-	return *result;
-}
-
-Endpoint Endpoint::resolve(const char* hostName, const char* service) {
-	std::error_code errorCode{};
-	Optional<Endpoint> result = resolve(hostName, service, errorCode);
+	Optional<Endpoint> result = resolve(family, hostName, service, errorCode);
 	if (errorCode) {
 		throw networking::Error{errorCode};
 	}
@@ -666,6 +641,18 @@ Endpoint Endpoint::resolve(const char* hostName, const char* service) {
 		throw networking::Error{make_error_code(EndpointError::FAIL)};
 	}
 	return *result;
+}
+
+Optional<Endpoint> Endpoint::resolve(CStringView host, std::error_code& errorCode) {
+	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
+		if (lastColonOffset > 0 && host[lastColonOffset - 1] == ']' && host[0] == '[') {
+			return Endpoint::resolve(String{host.data() + 1, lastColonOffset - 2}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+		}
+		if (StringView{host.data(), lastColonOffset}.find(':') == StringView::npos) {
+			return Endpoint::resolve(String{host.data(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+		}
+	}
+	return Endpoint::resolve(host.c_str(), nullptr, errorCode);
 }
 
 Endpoint Endpoint::resolve(CStringView host) {
@@ -680,19 +667,19 @@ Endpoint Endpoint::resolve(CStringView host) {
 	return *result;
 }
 
-Endpoint Endpoint::resolve(EndpointFamily family, const char* hostName, const char* service) {
-	std::error_code errorCode{};
-	Optional<Endpoint> result = resolve(family, hostName, service, errorCode);
-	if (errorCode) {
-		throw networking::Error{errorCode};
+Optional<Endpoint> Endpoint::resolve(AddressFamily family, CStringView host, std::error_code& errorCode) {
+	if (const size_t lastColonOffset = host.rfind(':'); lastColonOffset != CStringView::npos) {
+		if (lastColonOffset > 0 && host[lastColonOffset - 1] == ']' && host[0] == '[') {
+			return Endpoint::resolve(family, String{host.data() + 1, lastColonOffset - 2}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+		}
+		if (StringView{host.data(), lastColonOffset}.find(':') == StringView::npos) {
+			return Endpoint::resolve(family, String{host.data(), lastColonOffset}.c_str(), host.substr(lastColonOffset + 1).c_str(), errorCode);
+		}
 	}
-	if (!result) {
-		throw networking::Error{make_error_code(EndpointError::FAIL)};
-	}
-	return *result;
+	return Endpoint::resolve(family, host.c_str(), nullptr, errorCode);
 }
 
-Endpoint Endpoint::resolve(EndpointFamily family, CStringView host) {
+Endpoint Endpoint::resolve(AddressFamily family, CStringView host) {
 	std::error_code errorCode{};
 	Optional<Endpoint> result = resolve(family, host, errorCode);
 	if (errorCode) {
@@ -704,7 +691,23 @@ Endpoint Endpoint::resolve(EndpointFamily family, CStringView host) {
 	return *result;
 }
 
-Endpoint Endpoint::getLocalEndpoint(EndpointFamily family) {
+Optional<Endpoint> Endpoint::getLocalEndpoint(AddressFamily family, std::error_code& errorCode) {
+	Socket socket{family, ProtocolType::UDP, errorCode};
+	if (errorCode) {
+		return {};
+	}
+	const Endpoint dummyEndpoint =
+		(family == AddressFamily::IPv6) //
+			? Endpoint{IPv6Endpoint{IPv6Address::LOOPBACK, 9}}
+			: Endpoint{IPv4Endpoint{IPv4Address::LOOPBACK, 9}};
+	socket.connect(dummyEndpoint, errorCode);
+	if (errorCode) {
+		return {};
+	}
+	return socket.getLocalEndpoint(errorCode);
+}
+
+Endpoint Endpoint::getLocalEndpoint(AddressFamily family) {
 	std::error_code errorCode{};
 	Optional<Endpoint> result = getLocalEndpoint(family, errorCode);
 	if (errorCode) {

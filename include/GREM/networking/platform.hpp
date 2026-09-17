@@ -21,7 +21,7 @@
 
 #else
 
-#include <arpa/inet.h> // IWYU pragma: export / inet_pton, inet_ntop
+#include <arpa/inet.h> // IWYU pragma: export // inet_pton, inet_ntop
 #include <fcntl.h>     // IWYU pragma: export // fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <netdb.h>     // IWYU pragma: export // EAI_..., gai_strerror, struct addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h> // IWYU pragma: export // INADDR_..., IN6ADDR_..., struct sockaddr_in, struct sockaddr_in6, struct in_addr, struct in6_addr, INET_ADDRSTRLEN, INET6_ADDRSTRLEN
@@ -30,6 +30,7 @@
 #include <time.h>       // IWYU pragma: export // timeval // NOLINT(modernize-deprecated-headers)
 #include <unistd.h>     // IWYU pragma: export // close
 
+/// \cond
 inline constexpr int SD_RECEIVE = SHUT_RD;
 inline constexpr int SD_SEND = SHUT_WR;
 inline constexpr int SD_BOTH = SHUT_RDWR;
@@ -41,11 +42,27 @@ inline constexpr int INVALID_SOCKET = -1;
 inline int closesocket(SOCKET handle) {
 	return close(handle);
 }
+/// \endcond
 
 #endif
 
 namespace grem::networking {
 
+/**
+ * Initialize the underlying platform of the native socket API if it has not
+ * already been initialized.
+ *
+ * \param errorCode error code that is filled in on failure to initialize the
+ *        platform, or cleared on success.
+ *
+ * \note If the platform was already initialized, the function will clear the
+ *       error code, indicating success, and then immediately return.
+ * \note The platform is automatically deinitialized when the program exits.
+ * \note This function is used internally by the implementations of Endpoint and
+ *       Socket, and does not need to be called manually in normal use of those
+ *       APIs, but it may be useful when directly calling the native API
+ *       functions exported by `platform.hpp`.
+ */
 GREM_API(networking) void ensurePlatformInitialized(std::error_code& errorCode);
 
 } // namespace grem::networking
