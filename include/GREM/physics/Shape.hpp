@@ -399,6 +399,23 @@ struct Ray {
 	static constexpr MagnitudeType MAGNITUDE{};         ///< Unit magnitude.
 
 	/**
+	 * Create a ray between two points.
+	 *
+	 * \param origin starting point of the ray.
+	 * \param destination end point of the ray.
+	 *
+	 * \return a ray from the specified origin to the specified destination, or
+	 *         an empty optional if the distance between the points is too
+	 *         small to calculate a unit direction vector.
+	 */
+	[[nodiscard]] static constexpr Optional<Ray> between(Position<N> origin, Position<N> destination) {
+		if (const Optional<grem::Ray<N, float>> result = grem::Ray<N, float>::between(origin.in(UNIT), destination.in(UNIT))) {
+			return Ray::reinterpret(*result);
+		}
+		return {};
+	}
+
+	/**
 	 * Reinterpret a unitless ray as a physical ray in default units.
 	 *
 	 * \param ray ray to reinterpret.

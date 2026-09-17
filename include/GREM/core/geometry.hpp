@@ -48,6 +48,26 @@ struct Ray {
 	using Component = T;              ///< Scalar coordinate component type.
 
 	/**
+	 * Create a ray between two points.
+	 *
+	 * \param origin starting point of the ray.
+	 * \param destination end point of the ray.
+	 *
+	 * \return a ray from the specified origin to the specified destination, or
+	 *         an empty optional if the distance between the points is too
+	 *         small to calculate a unit direction vector.
+	 */
+	[[nodiscard]] static constexpr Optional<Ray> between(Point<N, T> origin, Point<N, T> destination) {
+		const vec<N, T> difference = destination - origin;
+		const T distance = length(difference);
+		const Optional<T> inverseDistance = tryDivide(T{1}, distance);
+		if (!inverseDistance) {
+			return {};
+		}
+		return Ray{.origin = origin, .direction = difference * *inverseDistance, .maxDistance = distance};
+	}
+
+	/**
 	 * Starting position of the ray.
 	 */
 	Point<N, T> origin;
@@ -1488,13 +1508,8 @@ template <size_t N, typename T>
  */
 template <size_t N, typename T>
 [[nodiscard]] constexpr bool intersects(const raycastable_shape auto& a, const LineSegment<N, T>& b) noexcept {
-	const vec<N, T> lineDifference = b.pointB - b.pointA;
-	const T lineLength = length(lineDifference);
-	if (lineLength <= Limits<T>::MACHINE_EPSILON) {
-		return a.contains(b.pointA);
-	}
-	const Ray<N, T> ray{.origin = b.pointA, .direction = lineDifference * (T{1} / lineLength), .maxDistance = lineLength};
-	return a.intersects(ray);
+	const Optional<Ray<N, T>> ray = Ray<N, T>::between(b.pointA, b.pointB);
+	return (ray) ? a.intersects(*ray) : a.contains(b.pointA);
 }
 
 /**
@@ -1528,15 +1543,12 @@ template <typename T>
 	if (intersects(boxA, capsuleCircleA) || intersects(boxA, capsuleCircleB)) {
 		return true;
 	}
-	const vec<2, T> centerLineDifference = b.centerLine.pointB - b.centerLine.pointA;
-	const float centerLineLength = length(centerLineDifference);
-	if (centerLineLength <= Limits<T>::MACHINE_EPSILON) {
+	const Optional<Ray<2, T>> ray = Ray<2, T>::between(b.centerLine.pointA, b.centerLine.pointA);
+	if (!ray) {
 		return false;
 	}
-	const vec<2, T> centerLineDirection = centerLineDifference * (T{1} / centerLineLength);
-	const vec<2, T> boxExpansion = b.radius * vec<2, T>{abs(centerLineDirection.y), abs(centerLineDirection.x)};
-	const Ray<2, T> ray{.origin = b.centerLine.pointA, .direction = centerLineDirection, .maxDistance = centerLineLength};
-	return boxA.getExpanded(boxExpansion).intersects(ray);
+	const vec<2, T> boxExpansion = b.radius * vec<2, T>{abs(ray->direction.y), abs(ray->direction.x)};
+	return boxA.getExpanded(boxExpansion).intersects(*ray);
 }
 
 /**

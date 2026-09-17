@@ -103,16 +103,12 @@ private:
 		Entities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D, const SynchronizedEntityID,
 			const EntityType, Exclude<ParticleType>> targetEntities,
 		const phys::Broadphase3D& broadphase, SynchronizedEntityID projectileOwner, phys::Position3D oldProjectilePosition, phys::Position3D newProjectilePosition) {
-		const phys::Length3D difference = newProjectilePosition - oldProjectilePosition;
-		const phys::SquaredDistance squaredDistance = length2(difference);
-		if (squaredDistance < phys::SquaredDistance::MACHINE_EPSILON) {
+		const Optional<phys::Ray3D> ray = phys::Ray3D::between(oldProjectilePosition, newProjectilePosition);
+		if (!ray) {
 			return {};
 		}
 		projectileDebugVisualization.physicsDebugVisualization.drawWorldLineSegment(oldProjectilePosition, newProjectilePosition, Color::LIME);
 		projectileDebugVisualization.physicsDebugVisualization.drawWorldPoint(newProjectilePosition, Color::LIME, 1.5_x);
-		const phys::Distance maxRayDistance = sqrt(squaredDistance);
-		const phys::Direction3D rayDirection = phys::Direction3D::reinterpret(difference * (1_x / maxRayDistance));
-		const phys::Ray3D ray{.origin = oldProjectilePosition, .direction = rayDirection, .maxDistance = maxRayDistance};
 
 		Optional<Hit> result{};
 		broadphase.traverseEntities(
@@ -122,14 +118,14 @@ private:
 				}
 
 				const auto& [entityID, position, orientation, scale, collider, bounds, synchronizedEntityID, entityType] = targetEntities[objectID];
-				if (synchronizedEntityID == projectileOwner || !bounds.boundingBox.intersects(ray)) {
+				if (synchronizedEntityID == projectileOwner || !bounds.boundingBox.intersects(*ray)) {
 					return false;
 				}
 
-				GREM_MATCH(phys::raycast(ray, phys::CollisionFilter{}, collider, translateRotateScale(position, orientation, scale), phys::CollisionFilterTest::RESPONSE).first) {
+				GREM_MATCH(phys::raycast(*ray, phys::CollisionFilter{}, collider, translateRotateScale(position, orientation, scale), phys::CollisionFilterTest::RESPONSE).first) {
 					GREM_CASE(const phys::RayMiss& miss) break;
 					GREM_CASE(const phys::RayHit3D& hit) {
-						const phys::Position3D point = ray.origin + ray.direction * hit.distance;
+						const phys::Position3D point = ray->origin + ray->direction * hit.distance;
 						projectileDebugVisualization.physicsDebugVisualization.drawWorldPoint(point, Color::RED, 2.4_x);
 						projectileDebugVisualization.physicsDebugVisualization.drawWorldVector(point, hit.normal, Color::DARK_RED, 0.9_x, 2.4_x);
 						if (!result || hit.distance < result->distance) {
@@ -138,7 +134,7 @@ private:
 								.synchronizedEntityID = synchronizedEntityID,
 								.entityType = entityType,
 								.point = point,
-								.direction = ray.direction,
+								.direction = ray->direction,
 								.normal = hit.normal,
 								.distance = hit.distance,
 							};
@@ -146,14 +142,14 @@ private:
 						break;
 					}
 					GREM_CASE(const phys::RayHitInterior3D& hitInterior) {
-						projectileDebugVisualization.physicsDebugVisualization.drawWorldPoint(ray.origin, Color::RED, 2.4_x);
-						projectileDebugVisualization.physicsDebugVisualization.drawWorldVector(ray.origin, -ray.direction, Color::DARK_RED, 0.9_x, 2.4_x);
+						projectileDebugVisualization.physicsDebugVisualization.drawWorldPoint(ray->origin, Color::RED, 2.4_x);
+						projectileDebugVisualization.physicsDebugVisualization.drawWorldVector(ray->origin, -ray->direction, Color::DARK_RED, 0.9_x, 2.4_x);
 						result = Hit{
 							.synchronizedEntityID = synchronizedEntityID,
 							.entityType = entityType,
-							.point = ray.origin,
-							.direction = ray.direction,
-							.normal = -ray.direction,
+							.point = ray->origin,
+							.direction = ray->direction,
+							.normal = -ray->direction,
 							.distance{},
 						};
 						break;
@@ -161,7 +157,7 @@ private:
 				}
 				return false;
 			},
-			[&](const phys::Box3D& boundingBox) -> bool { return boundingBox.intersects(ray); });
+			[&](const phys::Box3D& boundingBox) -> bool { return boundingBox.intersects(*ray); });
 		return result;
 	}
 
@@ -248,20 +244,15 @@ private:
 		fastForward(startTimestamp, endTimestamp, tickInterval,
 			[&](Timestamp, Duration deltaTime) -> void { integrateProjectileKinematics(projectileState.position, projectileState.linearVelocity, deltaTime); });
 		const phys::Position3D newProjectilePosition = projectileState.position;
-
-		const phys::Length3D difference = newProjectilePosition - oldProjectilePosition;
-		const phys::SquaredDistance squaredDistance = length2(difference);
-		if (squaredDistance < phys::SquaredDistance::MACHINE_EPSILON) {
+		const Optional<phys::Ray3D> ray = phys::Ray3D::between(oldProjectilePosition, newProjectilePosition);
+		if (!ray) {
 			return {};
 		}
 		projectileDebugVisualization.physicsDebugVisualization.drawWorldLineSegment(oldProjectilePosition, newProjectilePosition, Color::LIME);
 		projectileDebugVisualization.physicsDebugVisualization.drawWorldPoint(newProjectilePosition, Color::LIME, 1.5_x);
-		const phys::Distance maxRayDistance = sqrt(squaredDistance);
-		const phys::Direction3D rayDirection = phys::Direction3D::reinterpret(difference * (1_x / maxRayDistance));
-		const phys::Ray3D ray{.origin = oldProjectilePosition, .direction = rayDirection, .maxDistance = maxRayDistance};
 
 		const WorldView worldView = currentPlayer.getWorldViewAtTimestamp(registry, resources, {}, startTimestamp);
-		return detectLagCompensatedHit(projectileDebugVisualization, worldView, synchronizedEntityID, projectileState.owner, ray);
+		return detectLagCompensatedHit(projectileDebugVisualization, worldView, synchronizedEntityID, projectileState.owner, *ray);
 	}
 
 	static void clearProjectileHits(ProjectileHits& projectileHits) {
