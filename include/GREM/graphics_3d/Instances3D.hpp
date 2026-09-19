@@ -518,7 +518,7 @@ public:
 	}
 
 	/**
-	 * Add a 3D model instance to be rendered using the default PBR shader.
+	 * %Add a 3D model instance to be rendered using the default PBR shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance. Must contain
@@ -533,8 +533,8 @@ public:
 	GREM_API(graphics_3d) void putPBRModelInstance(const Model3D& model, resource::Model::TransformationView transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in its default bind pose using the
-	 * default PBR shader.
+	 * %Add a 3D model instance to be rendered in its default bind pose using
+	 * the default PBR shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -548,8 +548,8 @@ public:
 	GREM_API(graphics_3d) void putPBRModelInstance(const Model3D& model, const mat4& transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in a specific local pose using the
-	 * default PBR shader.
+	 * %Add a 3D model instance to be rendered in a specific local pose using
+	 * the default PBR shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -565,7 +565,7 @@ public:
 	GREM_API(graphics_3d) void putPBRModelInstance(const Model3D& model, const mat4& transformation, resource::Model::PoseView pose, const ModelInstance3D& instance);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * PBR shader.
 	 *
 	 * \param model model to draw.
@@ -583,7 +583,7 @@ public:
 	void putPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const ModelInstance3D> instances);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * PBR shader.
 	 *
 	 * \param model model to draw.
@@ -600,7 +600,7 @@ public:
 	GREM_API(graphics_3d) void putPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, const ModelInstance3D& instance);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * PBR shader.
 	 *
 	 * \param model model to draw.
@@ -615,7 +615,7 @@ public:
 	GREM_API(graphics_3d) void putPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * PBR shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -636,7 +636,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * PBR shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -657,7 +657,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * PBR shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -675,7 +675,7 @@ public:
 	void putVisiblePBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a 3D model instance to be rendered using the default HDR PBR shader.
+	 * %Add a 3D model instance to be rendered using the default HDR PBR shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance. Must contain
@@ -690,8 +690,8 @@ public:
 	GREM_API(graphics_3d) void putHDRPBRModelInstance(const Model3D& model, resource::Model::TransformationView transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in its default bind pose using the
-	 * default HDR PBR shader.
+	 * %Add a 3D model instance to be rendered in its default bind pose using
+	 * the default HDR PBR shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -705,8 +705,8 @@ public:
 	GREM_API(graphics_3d) void putHDRPBRModelInstance(const Model3D& model, const mat4& transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in a specific local pose using the
-	 * default HDR PBR shader.
+	 * %Add a 3D model instance to be rendered in a specific local pose using
+	 * the default HDR PBR shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -722,7 +722,7 @@ public:
 	GREM_API(graphics_3d) void putHDRPBRModelInstance(const Model3D& model, const mat4& transformation, resource::Model::PoseView pose, const ModelInstance3D& instance);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR PBR shader.
 	 *
 	 * \param model model to draw.
@@ -740,7 +740,7 @@ public:
 	void putHDRPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const ModelInstance3D> instances);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR PBR shader.
 	 *
 	 * \param model model to draw.
@@ -758,7 +758,7 @@ public:
 	void putHDRPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, const ModelInstance3D& instance);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR PBR shader.
 	 *
 	 * \param model model to draw.
@@ -773,7 +773,7 @@ public:
 	GREM_API(graphics_3d) void putHDRPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR PBR shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -794,7 +794,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR PBR shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -815,7 +815,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR PBR shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -833,7 +833,7 @@ public:
 	void putVisibleHDRPBRModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a 3D model instance to be rendered using the default unlit shader.
+	 * %Add a 3D model instance to be rendered using the default unlit shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance. Must contain
@@ -848,8 +848,8 @@ public:
 	GREM_API(graphics_3d) void putUnlitModelInstance(const Model3D& model, resource::Model::TransformationView transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in its default bind pose using the
-	 * default unlit shader.
+	 * %Add a 3D model instance to be rendered in its default bind pose using
+	 * the default unlit shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -863,8 +863,8 @@ public:
 	GREM_API(graphics_3d) void putUnlitModelInstance(const Model3D& model, const mat4& transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in a specific local pose using the
-	 * default unlit shader.
+	 * %Add a 3D model instance to be rendered in a specific local pose using
+	 * the default unlit shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -880,7 +880,7 @@ public:
 	GREM_API(graphics_3d) void putUnlitModelInstance(const Model3D& model, const mat4& transformation, resource::Model::PoseView pose, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * unlit shader.
 	 *
 	 * \param model model to draw.
@@ -898,7 +898,7 @@ public:
 	void putUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const ModelInstance3D> instances);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * unlit shader.
 	 *
 	 * \param model model to draw.
@@ -916,7 +916,7 @@ public:
 	void putUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, const ModelInstance3D& instance);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * unlit shader.
 	 *
 	 * \param model model to draw.
@@ -931,7 +931,7 @@ public:
 	GREM_API(graphics_3d) void putUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * unlit shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -952,7 +952,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * unlit shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -973,7 +973,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * unlit shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -991,7 +991,7 @@ public:
 	void putVisibleUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a 3D model instance to be rendered using the default HDR unlit
+	 * %Add a 3D model instance to be rendered using the default HDR unlit
 	 * shader.
 	 *
 	 * \param model model to draw.
@@ -1007,8 +1007,8 @@ public:
 	GREM_API(graphics_3d) void putHDRUnlitModelInstance(const Model3D& model, resource::Model::TransformationView transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in its default bind pose using the
-	 * default HDR unlit shader.
+	 * %Add a 3D model instance to be rendered in its default bind pose using
+	 * the default HDR unlit shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -1022,8 +1022,8 @@ public:
 	GREM_API(graphics_3d) void putHDRUnlitModelInstance(const Model3D& model, const mat4& transformation, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a 3D model instance to be rendered in a specific local pose using the
-	 * default HDR unlit shader.
+	 * %Add a 3D model instance to be rendered in a specific local pose using
+	 * the default HDR unlit shader.
 	 *
 	 * \param model model to draw.
 	 * \param transformation transformation of the model instance.
@@ -1039,7 +1039,7 @@ public:
 	GREM_API(graphics_3d) void putHDRUnlitModelInstance(const Model3D& model, const mat4& transformation, resource::Model::PoseView pose, const ModelInstance3D& instance = {});
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR unlit shader.
 	 *
 	 * \param model model to draw.
@@ -1057,7 +1057,7 @@ public:
 	void putHDRUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const ModelInstance3D> instances);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR unlit shader.
 	 *
 	 * \param model model to draw.
@@ -1075,7 +1075,7 @@ public:
 	void putHDRUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, const ModelInstance3D& instance);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR unlit shader.
 	 *
 	 * \param model model to draw.
@@ -1090,7 +1090,7 @@ public:
 	GREM_API(graphics_3d) void putHDRUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR unlit shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -1111,7 +1111,7 @@ public:
 		StridedSpan<const ModelInstance3D> instances, StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR unlit shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -1132,7 +1132,7 @@ public:
 		StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using the default
+	 * %Add a list of instances of a 3D model to be rendered using the default
 	 * HDR unlit shader if they are in a visible set.
 	 *
 	 * \param model model to draw.
@@ -1150,7 +1150,7 @@ public:
 	void putVisibleHDRUnlitModelInstances(const Model3D& model, StridedSpan<const resource::Model::TransformationView> transformations, StridedSpan<const bool> instancesVisible);
 
 	/**
-	 * Add a 3D model instance to be rendered using a specific shader pipeline.
+	 * %Add a 3D model instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
 	 *        to render each mesh of the model with, given its shader
@@ -1173,7 +1173,7 @@ public:
 	}
 
 	/**
-	 * Add a 3D model instance to be rendered in its default bind pose using a
+	 * %Add a 3D model instance to be rendered in its default bind pose using a
 	 * specific shader pipeline.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1196,7 +1196,7 @@ public:
 	}
 
 	/**
-	 * Add a 3D model instance to be rendered in a specific local pose using a
+	 * %Add a 3D model instance to be rendered in a specific local pose using a
 	 * specific shader pipeline.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1222,7 +1222,7 @@ public:
 	}
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using a specific
+	 * %Add a list of instances of a 3D model to be rendered using a specific
 	 * shader pipeline.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1249,7 +1249,7 @@ public:
 	}
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using a specific
+	 * %Add a list of instances of a 3D model to be rendered using a specific
 	 * shader pipeline.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1275,7 +1275,7 @@ public:
 	}
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using a specific
+	 * %Add a list of instances of a 3D model to be rendered using a specific
 	 * shader pipeline.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1299,7 +1299,7 @@ public:
 	}
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using a specific
+	 * %Add a list of instances of a 3D model to be rendered using a specific
 	 * shader pipeline if they are in a visible set.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1328,7 +1328,7 @@ public:
 	}
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using a specific
+	 * %Add a list of instances of a 3D model to be rendered using a specific
 	 * shader pipeline if they are in a visible set.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1356,7 +1356,7 @@ public:
 	}
 
 	/**
-	 * Add a list of instances of a 3D model to be rendered using a specific
+	 * %Add a list of instances of a 3D model to be rendered using a specific
 	 * shader pipeline if they are in a visible set.
 	 *
 	 * \param shaderPipelineSelector function that returns the shader pipeline
@@ -1383,7 +1383,7 @@ public:
 	}
 
 	/**
-	 * Add a flat 2D model instance to be rendered using a plain 2D model
+	 * %Add a flat 2D model instance to be rendered using a plain 2D model
 	 * shader.
 	 *
 	 * \param model model to draw.
@@ -1400,7 +1400,7 @@ public:
 	GREM_API(graphics_3d) void putFlatModelInstance(const Model2D& model, const FlatModelInstance3D& instance);
 
 	/**
-	 * Add a flat 2D model instance to be rendered using a specific shader
+	 * %Add a flat 2D model instance to be rendered using a specific shader
 	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the model with.
@@ -1418,7 +1418,7 @@ public:
 	GREM_API(graphics_3d) void putShadedFlatModelInstance(const Model2D::ShaderPipeline& shaderPipeline, const Model2D& model, const FlatModelInstance3D& instance);
 
 	/**
-	 * Add a triangle instance to be rendered using a plain 2D model shader.
+	 * %Add a triangle instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param instance configuration of the triangle instance to draw, see
 	 *        TriangleInstance3D.
@@ -1432,7 +1432,7 @@ public:
 	GREM_API(graphics_3d) void putTriangleInstance(const TriangleInstance3D& instance);
 
 	/**
-	 * Add a triangle instance to be rendered using a specific shader pipeline.
+	 * %Add a triangle instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the triangle with.
 	 * \param instance configuration of the triangle instance to draw, see
@@ -1447,7 +1447,7 @@ public:
 	GREM_API(graphics_3d) void putShadedTriangleInstance(const Model2D::ShaderPipeline& shaderPipeline, const TriangleInstance3D& instance);
 
 	/**
-	 * Add a quad instance to be rendered using a plain 2D model shader.
+	 * %Add a quad instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param instance configuration of the quad instance to draw, see
 	 *        QuadInstance3D.
@@ -1462,7 +1462,7 @@ public:
 	GREM_API(graphics_3d) void putQuadInstance(const QuadInstance3D& instance);
 
 	/**
-	 * Add a quad instance to be rendered using a specific shader pipeline.
+	 * %Add a quad instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the quad with.
 	 * \param instance configuration of the quad instance to draw, see
@@ -1478,7 +1478,7 @@ public:
 	GREM_API(graphics_3d) void putShadedQuadInstance(const Model2D::ShaderPipeline& shaderPipeline, const QuadInstance3D& instance);
 
 	/**
-	 * Add a sprite instance to be rendered using a plain 2D model shader.
+	 * %Add a sprite instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param spriteAtlas sprite atlas to fetch the sprite image from.
 	 * \param spriteID identifier of the sprite in the atlas to draw. Must be a
@@ -1496,7 +1496,7 @@ public:
 	GREM_API(graphics_3d) void putSpriteInstance(const SpriteAtlas& spriteAtlas, SpriteID spriteID, const SpriteInstance3D& instance);
 
 	/**
-	 * Add a sprite instance to be rendered using a specific shader pipeline.
+	 * %Add a sprite instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the sprite with.
 	 * \param spriteAtlas sprite atlas to fetch the sprite image from.
@@ -1516,7 +1516,7 @@ public:
 	void putShadedSpriteInstance(const Model2D::ShaderPipeline& shaderPipeline, const SpriteAtlas& spriteAtlas, SpriteID spriteID, const SpriteInstance3D& instance);
 
 	/**
-	 * Add a 3D text instance to be rendered using a plain 3D text shader.
+	 * %Add a 3D text instance to be rendered using a plain 3D text shader.
 	 *
 	 * \param text shaped text to draw.
 	 * \param instance configuration of the text instance to draw, see
@@ -1531,7 +1531,7 @@ public:
 	GREM_API(graphics_3d) void putTextInstance(const Text2D& text, const TextInstance3D& instance);
 
 	/**
-	 * Add a 3D text instance to be rendered using a specific shader pipeline.
+	 * %Add a 3D text instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the text with.
 	 * \param text shaped text to draw.
@@ -1547,7 +1547,7 @@ public:
 	GREM_API(graphics_3d) void putShadedTextInstance(const Model2D::ShaderPipeline& shaderPipeline, const Text2D& text, const TextInstance3D& instance);
 
 	/**
-	 * Add a 3D text string instance to be rendered using a plain 3D text
+	 * %Add a 3D text string instance to be rendered using a plain 3D text
 	 * shader.
 	 *
 	 * \param font font from which to shape the text.
@@ -1571,7 +1571,7 @@ public:
 	GREM_API(graphics_3d) void putTextStringInstance(Font2D& font, UTF8StringView string, const TextStringInstance3D& instance);
 
 	/**
-	 * Add a 3D text string instance to be rendered using a specific shader
+	 * %Add a 3D text string instance to be rendered using a specific shader
 	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the text with.
@@ -1597,7 +1597,7 @@ public:
 	void putShadedTextStringInstance(const Model2D::ShaderPipeline& shaderPipeline, Font2D& font, UTF8StringView string, const TextStringInstance3D& instance);
 
 	/**
-	 * Add a 3D text string instance to be rendered using a plain 3D text
+	 * %Add a 3D text string instance to be rendered using a plain 3D text
 	 * shader.
 	 *
 	 * \param font font from which to shape the text.
@@ -1622,7 +1622,7 @@ public:
 	GREM_API(graphics_3d) void putTextStringInstance(Font2D& font, StringView string, const TextStringInstance3D& instance);
 
 	/**
-	 * Add a 3D text string instance to be rendered using a specific shader
+	 * %Add a 3D text string instance to be rendered using a specific shader
 	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the text with.

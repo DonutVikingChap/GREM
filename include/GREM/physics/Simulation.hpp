@@ -430,7 +430,7 @@ using ScheduleStepOptions3D = ScheduleStepOptions<3>; ///< Options for schedulin
 template <size_t N>
 struct Simulation {
 	/**
-	 * Add all resources required to run a simulation to a resource registry.
+	 * %Add all resources required to run a simulation to a resource registry.
 	 *
 	 * \param resources resource registry to add the resources to.
 	 * \param options initial configuration options of the simulation, see
@@ -466,7 +466,7 @@ struct Simulation {
 	GREM_API(physics) static void removeResources(ResourceRegistry<N>& resources) noexcept;
 
 	/**
-	 * Add all components required to create a simulated object to an entity in
+	 * %Add all components required to create a simulated object to an entity in
 	 * a registry.
 	 *
 	 * \param registry entity registry containing the given entity.
@@ -593,7 +593,7 @@ struct Simulation {
 	GREM_API(physics) static void updateBroadphase(EntityRegistry<N>& registry, ResourceRegistry<N>& resources);
 
 	/**
-	 * Add all components required to create a simulated generic joint that
+	 * %Add all components required to create a simulated generic joint that
 	 * connects two objects to an entity in a registry.
 	 *
 	 * \param registry entity registry containing the given entity.
@@ -664,7 +664,7 @@ struct Simulation {
 		const GenericJointOptions<N>& options);
 
 	/**
-	 * Add all components required to create a simulated weld joint that
+	 * %Add all components required to create a simulated weld joint that
 	 * restricts all motion between two objects to an entity in a registry.
 	 *
 	 * \param registry entity registry containing the given entity.
@@ -694,7 +694,7 @@ struct Simulation {
 		const WeldOptions<N>& options = {});
 
 	/**
-	 * Add all components required to create a simulated hinge joint that
+	 * %Add all components required to create a simulated hinge joint that
 	 * restricts the linear motion between and aligns the X axes of two objects
 	 * to an entity in a registry.
 	 *
@@ -726,7 +726,7 @@ struct Simulation {
 		const HingeJointOptions<N>& options = {});
 
 	/**
-	 * Add all components required to create a simulated ball joint that
+	 * %Add all components required to create a simulated ball joint that
 	 * restricts the linear motion between two objects to an entity in a
 	 * registry.
 	 *
@@ -758,7 +758,7 @@ struct Simulation {
 		const BallJointOptions<N>& options = {});
 
 	/**
-	 * Add all components required to create a simulated prismatic joint that
+	 * %Add all components required to create a simulated prismatic joint that
 	 * restricts the angular motion between and aligns the X and Y axes of two
 	 * objects to an entity in a registry.
 	 *
@@ -790,7 +790,7 @@ struct Simulation {
 		const PrismaticJointOptions<N>& options = {});
 
 	/**
-	 * Add all components required to create a simulated cylindrical joint that
+	 * %Add all components required to create a simulated cylindrical joint that
 	 * restricts the angular motion between and aligns the X axes of two objects
 	 * to an entity in a registry.
 	 *

@@ -170,7 +170,7 @@ struct Library {
 	}
 
 	/**
-	 * Add materials parsed from an MTL string to the material library.
+	 * %Add materials parsed from an MTL string to the material library.
 	 *
 	 * \param mtlString read-only view over the MTL string to parse.
 	 *

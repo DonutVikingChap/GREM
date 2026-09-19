@@ -202,7 +202,7 @@ public:
 	}
 
 	/**
-	 * Add a new image to the spritesheet, possibly expanding the texture atlas
+	 * %Add a new image to the spritesheet, possibly expanding the texture atlas
 	 * in order to make space for it.
 	 *
 	 * \param image non-owning view over the image to copy into the spritesheet.
@@ -268,7 +268,7 @@ public:
 	}
 
 	/**
-	 * Add a new sprite that is defined as a sub-region of an existing sprite.
+	 * %Add a new sprite that is defined as a sub-region of an existing sprite.
 	 *
 	 * \param baseSpriteID identifier for the existing sprite to create a
 	 *        sub-region of. Must have been obtained from a previous call to

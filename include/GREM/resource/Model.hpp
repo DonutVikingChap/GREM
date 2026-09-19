@@ -735,7 +735,7 @@ struct Model {
 		}
 
 		/**
-		 * Add the influence of an animation state to the current pose.
+		 * %Add the influence of an animation state to the current pose.
 		 *
 		 * \param animationState animation state to apply to the joints and
 		 *        morph target weights.
@@ -771,7 +771,7 @@ struct Model {
 		}
 
 		/**
-		 * Add the influence of an animation state to the current pose.
+		 * %Add the influence of an animation state to the current pose.
 		 *
 		 * \param animationState animation state to apply to the joints and
 		 *        morph target weights.

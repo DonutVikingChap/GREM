@@ -351,21 +351,21 @@ enum class FrontFace : uint8_t {
  * \sa BlendState
  */
 enum class BlendFactor : uint8_t {
-	ZERO,                         ///< Multiply all components by 0.
-	ONE,                          ///< Multiply all components by 1.
-	SOURCE_COLOR,                 ///< Multiply all components by the source components.
-	ONE_MINUS_SOURCE_COLOR,       ///< Multiply all components by 1 minus each source component.
-	DESTINATION_COLOR,            ///< Multiply all components by the destination components.
-	ONE_MINUS_DESTINATION_COLOR,  ///< Multiply all components by 1 minus each destination component.
-	SOURCE_ALPHA,                 ///< Multiply all components by the source alpha.
-	ONE_MINUS_SOURCE_ALPHA,       ///< Multiply all components by 1 minus the source alpha.
-	DESTINATION_ALPHA,            ///< Multiply all components by the destination alpha.
-	ONE_MINUS_DESTINATION__ALPHA, ///< Multiply all components by 1 minus the destination alpha.
-	CONSTANT_COLOR,               ///< Multiply all components by the constant components.
-	ONE_MINUS_CONSTANT_COLOR,     ///< Multiply all components by 1 minus each constant component.
-	CONSTANT_ALPHA,               ///< Multiply all components by the constant alpha.
-	ONE_MINUS_CONSTANT_ALPHA,     ///< Multiply all components by 1 minus the constant alpha.
-	SOURCE_ALPHA_SATURATE,        ///< Multiply the color components by the smaller of the source alpha or 1 minus the destination alpha, and multiply the alpha component by 1.
+	ZERO,                         ///< %Multiply all components by 0.
+	ONE,                          ///< %Multiply all components by 1.
+	SOURCE_COLOR,                 ///< %Multiply all components by the source components.
+	ONE_MINUS_SOURCE_COLOR,       ///< %Multiply all components by 1 minus each source component.
+	DESTINATION_COLOR,            ///< %Multiply all components by the destination components.
+	ONE_MINUS_DESTINATION_COLOR,  ///< %Multiply all components by 1 minus each destination component.
+	SOURCE_ALPHA,                 ///< %Multiply all components by the source alpha.
+	ONE_MINUS_SOURCE_ALPHA,       ///< %Multiply all components by 1 minus the source alpha.
+	DESTINATION_ALPHA,            ///< %Multiply all components by the destination alpha.
+	ONE_MINUS_DESTINATION__ALPHA, ///< %Multiply all components by 1 minus the destination alpha.
+	CONSTANT_COLOR,               ///< %Multiply all components by the constant components.
+	ONE_MINUS_CONSTANT_COLOR,     ///< %Multiply all components by 1 minus each constant component.
+	CONSTANT_ALPHA,               ///< %Multiply all components by the constant alpha.
+	ONE_MINUS_CONSTANT_ALPHA,     ///< %Multiply all components by 1 minus the constant alpha.
+	SOURCE_ALPHA_SATURATE,        ///< %Multiply the color components by the smaller of the source alpha or 1 minus the destination alpha, and multiply the alpha component by 1.
 };
 
 /**
@@ -374,9 +374,9 @@ enum class BlendFactor : uint8_t {
  * \sa BlendState
  */
 enum class BlendOperation : uint8_t {
-	ADD,              ///< Add the blended components.
-	SUBTRACT,         ///< Subtract the blended destination components from the blended source components.
-	REVERSE_SUBTRACT, ///< Subtract the blended source components from the blended destination components.
+	ADD,              ///< %Add the blended components.
+	SUBTRACT,         ///< %Subtract the blended destination components from the blended source components.
+	REVERSE_SUBTRACT, ///< %Subtract the blended source components from the blended destination components.
 	MIN,              ///< Take the minimum of the components.
 	MAX,              ///< Take the maximum of the components.
 };

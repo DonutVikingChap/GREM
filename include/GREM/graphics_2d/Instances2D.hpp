@@ -603,7 +603,7 @@ public:
 	}
 
 	/**
-	 * Add a 2D model instance to be rendered using a plain 2D model shader.
+	 * %Add a 2D model instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param model model to draw.
 	 * \param instance configuration of the model instance to draw, see
@@ -616,7 +616,7 @@ public:
 	GREM_API(graphics_2d) void putModelInstance(const Model2D& model, const ModelInstance2D& instance);
 
 	/**
-	 * Add a 2D model instance to be rendered using a specific shader
+	 * %Add a 2D model instance to be rendered using a specific shader
 	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the model with.
@@ -631,7 +631,7 @@ public:
 	GREM_API(graphics_2d) void putShadedModelInstance(const Model2D::ShaderPipeline& shaderPipeline, const Model2D& model, const ModelInstance2D& instance);
 
 	/**
-	 * Add a triangle instance to be rendered using a plain 2D model shader.
+	 * %Add a triangle instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param instance configuration of the triangle instance to draw, see
 	 *        TriangleInstance2D.
@@ -645,7 +645,7 @@ public:
 	GREM_API(graphics_2d) void putTriangleInstance(const TriangleInstance2D& instance);
 
 	/**
-	 * Add a triangle instance to be rendered using a specific shader pipeline.
+	 * %Add a triangle instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the triangle with.
 	 * \param instance configuration of the triangle instance to draw, see
@@ -660,7 +660,7 @@ public:
 	GREM_API(graphics_2d) void putShadedTriangleInstance(const Model2D::ShaderPipeline& shaderPipeline, const TriangleInstance2D& instance);
 
 	/**
-	 * Add a quad instance to be rendered using a plain 2D model shader.
+	 * %Add a quad instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param instance configuration of the quad instance to draw, see
 	 *        QuadInstance2D.
@@ -676,7 +676,7 @@ public:
 	GREM_API(graphics_2d) void putQuadInstance(const QuadInstance2D& instance);
 
 	/**
-	 * Add a quad instance to be rendered using a specific shader pipeline.
+	 * %Add a quad instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the quad with.
 	 * \param instance configuration of the quad instance to draw, see
@@ -693,7 +693,7 @@ public:
 	GREM_API(graphics_2d) void putShadedQuadInstance(const Model2D::ShaderPipeline& shaderPipeline, const QuadInstance2D& instance);
 
 	/**
-	 * Add a rectangle instance to be rendered using a plain 2D model shader.
+	 * %Add a rectangle instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param instance configuration of the rectangle instance to draw, see
 	 *        RectangleInstance2D.
@@ -709,7 +709,8 @@ public:
 	GREM_API(graphics_2d) void putRectangleInstance(const RectangleInstance2D& instance);
 
 	/**
-	 * Add a rectangle instance to be rendered using a specific shader pipeline.
+	 * %Add a rectangle instance to be rendered using a specific shader
+	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the rectangle with.
 	 * \param instance configuration of the rectangle instance to draw, see
@@ -726,7 +727,7 @@ public:
 	GREM_API(graphics_2d) void putShadedRectangleInstance(const Model2D::ShaderPipeline& shaderPipeline, const RectangleInstance2D& instance);
 
 	/**
-	 * Add an image instance to be rendered using a plain 2D model shader.
+	 * %Add an image instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param texture texture of the image to draw. Must be a valid 2D texture.
 	 * \param instance configuration of the image instance to draw, see
@@ -743,7 +744,7 @@ public:
 	GREM_API(graphics_2d) void putImageInstance(const Texture& texture, const ImageInstance2D& instance = {});
 
 	/**
-	 * Add an image instance to be rendered using a specific shader pipeline.
+	 * %Add an image instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the texture with.
 	 * \param texture texture of the image to draw. Must be a valid 2D texture.
@@ -761,7 +762,7 @@ public:
 	GREM_API(graphics_2d) void putShadedImageInstance(const Model2D::ShaderPipeline& shaderPipeline, const Texture& texture, const ImageInstance2D& instance = {});
 
 	/**
-	 * Add a sprite instance to be rendered using a plain 2D model shader.
+	 * %Add a sprite instance to be rendered using a plain 2D model shader.
 	 *
 	 * \param spriteAtlas sprite atlas to fetch the sprite image from.
 	 * \param spriteID identifier of the sprite in the atlas to draw. Must be a
@@ -780,7 +781,7 @@ public:
 	GREM_API(graphics_2d) void putSpriteInstance(const SpriteAtlas& spriteAtlas, SpriteID spriteID, const SpriteInstance2D& instance);
 
 	/**
-	 * Add a sprite instance to be rendered using a specific shader pipeline.
+	 * %Add a sprite instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the sprite with.
 	 * \param spriteAtlas sprite atlas to fetch the sprite image from.
@@ -801,7 +802,7 @@ public:
 	void putShadedSpriteInstance(const Model2D::ShaderPipeline& shaderPipeline, const SpriteAtlas& spriteAtlas, SpriteID spriteID, const SpriteInstance2D& instance);
 
 	/**
-	 * Add a 2D text instance to be rendered using a plain 2D text shader.
+	 * %Add a 2D text instance to be rendered using a plain 2D text shader.
 	 *
 	 * \param text shaped text to draw.
 	 * \param instance configuration of the text instance to draw, see
@@ -816,7 +817,7 @@ public:
 	GREM_API(graphics_2d) void putTextInstance(const Text2D& text, const TextInstance2D& instance);
 
 	/**
-	 * Add a text instance to be rendered using a specific shader pipeline.
+	 * %Add a text instance to be rendered using a specific shader pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the text with.
 	 * \param text shaped text to draw.
@@ -832,7 +833,7 @@ public:
 	GREM_API(graphics_2d) void putShadedTextInstance(const Model2D::ShaderPipeline& shaderPipeline, const Text2D& text, const TextInstance2D& instance);
 
 	/**
-	 * Add a 2D text string instance to be rendered using a plain 2D text
+	 * %Add a 2D text string instance to be rendered using a plain 2D text
 	 * shader.
 	 *
 	 * \param font font from which to shape the text.
@@ -856,7 +857,7 @@ public:
 	GREM_API(graphics_2d) void putTextStringInstance(Font2D& font, UTF8StringView string, const TextStringInstance2D& instance);
 
 	/**
-	 * Add a 2D text string instance to be rendered using a specific shader
+	 * %Add a 2D text string instance to be rendered using a specific shader
 	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the text with.
@@ -882,7 +883,7 @@ public:
 	void putShadedTextStringInstance(const Model2D::ShaderPipeline& shaderPipeline, Font2D& font, UTF8StringView string, const TextStringInstance2D& instance);
 
 	/**
-	 * Add a 2D text string instance to be rendered using a plain 2D text
+	 * %Add a 2D text string instance to be rendered using a plain 2D text
 	 * shader.
 	 *
 	 * \param font font from which to shape the text.
@@ -907,7 +908,7 @@ public:
 	GREM_API(graphics_2d) void putTextStringInstance(Font2D& font, StringView string, const TextStringInstance2D& instance);
 
 	/**
-	 * Add a 2D text string instance to be rendered using a specific shader
+	 * %Add a 2D text string instance to be rendered using a specific shader
 	 * pipeline.
 	 *
 	 * \param shaderPipeline shader pipeline to render the text with.

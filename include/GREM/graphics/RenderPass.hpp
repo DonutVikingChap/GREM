@@ -78,7 +78,7 @@ public:
 		[[nodiscard]] constexpr bool operator==(const Statistics& other) const noexcept = default;
 
 		/**
-		 * Add another set of render pass statistics to this one.
+		 * %Add another set of render pass statistics to this one.
 		 *
 		 * \param other statistics to add.
 		 *
@@ -93,7 +93,7 @@ public:
 		}
 
 		/**
-		 * Subtract another set of render pass statistics from this one, using
+		 * %Subtract another set of render pass statistics from this one, using
 		 * unsigned modular arithmetic.
 		 *
 		 * \param other statistics to subtract.
@@ -109,7 +109,7 @@ public:
 		}
 
 		/**
-		 * Add two sets of render pass statistics together.
+		 * %Add two sets of render pass statistics together.
 		 *
 		 * \param a first statistics set.
 		 * \param b second statistics set.
@@ -123,8 +123,8 @@ public:
 		}
 
 		/**
-		 * Subtract two sets of render pass statistics to produce the difference
-		 * between them, using unsigned modular arithmetic.
+		 * %Subtract two sets of render pass statistics to produce the
+		 * difference between them, using unsigned modular arithmetic.
 		 *
 		 * \param a first statistics set.
 		 * \param b second statistics set.

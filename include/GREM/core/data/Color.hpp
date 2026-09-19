@@ -575,7 +575,7 @@ public:
 	}
 
 	/**
-	 * Multiply the component values of this color with their respective
+	 * %Multiply the component values of this color with their respective
 	 * component values in another color.
 	 *
 	 * \param other the other color to multiply this color by.
@@ -588,7 +588,7 @@ public:
 	}
 
 	/**
-	 * Divide the component values of this color by their respective component
+	 * %Divide the component values of this color by their respective component
 	 * values in another color.
 	 *
 	 * \param other the other color to divide this color by.
@@ -601,7 +601,7 @@ public:
 	}
 
 	/**
-	 * Multiply the RGB component values of this color by the corresponding
+	 * %Multiply the RGB component values of this color by the corresponding
 	 * values in a 3-component vector.
 	 *
 	 * \param rgbCoefficients vector containing the values to multiply the red,
@@ -617,7 +617,7 @@ public:
 	}
 
 	/**
-	 * Multiply the RGBA component values of this color by the corresponding
+	 * %Multiply the RGBA component values of this color by the corresponding
 	 * values in a 4-component vector.
 	 *
 	 * \param rgbaCoefficients vector containing the values to multiply the red,
@@ -631,7 +631,7 @@ public:
 	}
 
 	/**
-	 * Divide the RGB component values of this color by the corresponding
+	 * %Divide the RGB component values of this color by the corresponding
 	 * values in a 3-component vector.
 	 *
 	 * \param rgbDenominators vector containing the values to divide the red,
@@ -647,7 +647,7 @@ public:
 	}
 
 	/**
-	 * Divide the RGBA component values of this color by the corresponding
+	 * %Divide the RGBA component values of this color by the corresponding
 	 * values in a 4-component vector.
 	 *
 	 * \param rgbaDenominators vector containing the values to divide the red,

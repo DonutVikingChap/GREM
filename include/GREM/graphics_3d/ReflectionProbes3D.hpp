@@ -210,7 +210,7 @@ public:
 	GREM_API(graphics_3d) void clearReflectionProbes() noexcept;
 
 	/**
-	 * Add a reflection probe to the set.
+	 * %Add a reflection probe to the set.
 	 *
 	 * \param options reflection probe options, see ReflectionProbeOptions3D.
 	 *

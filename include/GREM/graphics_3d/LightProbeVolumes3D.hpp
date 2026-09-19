@@ -209,7 +209,7 @@ public:
 	GREM_API(graphics_3d) void clearLightProbeVolumes() noexcept;
 
 	/**
-	 * Add a light probe volume to the set.
+	 * %Add a light probe volume to the set.
 	 *
 	 * \param options light probe volume options, see LightProbeVolumeOptions3D.
 	 *

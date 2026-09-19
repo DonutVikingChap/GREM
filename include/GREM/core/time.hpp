@@ -63,7 +63,7 @@ using FloatMicroseconds = DurationBase<float, Ratio<1, 1'000'000>>;
 using FloatNanoseconds = DurationBase<float, Ratio<1, 1'000'000'000>>;
 
 /**
- * Subtract time from a time value and then check if it reached 0.
+ * %Subtract time from a time value and then check if it reached 0.
  *
  * \param timer time value to update.
  * \param deltaTime time delta to subtract from the timer.
@@ -86,7 +86,7 @@ constexpr bool countdown(Timer& timer, DeltaTime deltaTime) {
 }
 
 /**
- * Subtract time from a time value and then check if it reached a given target
+ * %Subtract time from a time value and then check if it reached a given target
  * time value.
  *
  * \param timer time value to update.
@@ -113,7 +113,7 @@ constexpr bool countdown(Timer& timer, DeltaTime deltaTime, TargetTime targetTim
 }
 
 /**
- * Add time to a time value and then check if it reached a given target time
+ * %Add time to a time value and then check if it reached a given target time
  * value.
  *
  * \param timer time value to update.
@@ -140,7 +140,7 @@ constexpr bool countup(Timer& timer, DeltaTime deltaTime, TargetTime targetTime)
 }
 
 /**
- * Subtract time from a time value and then check how many times it reached 0
+ * %Subtract time from a time value and then check how many times it reached 0
  * while looping back to a given time interval.
  *
  * \param timer time value to update.
@@ -173,7 +173,7 @@ template <typename Timer, typename DeltaTime, typename Interval>
 }
 
 /**
- * Add time to a time value and then check how many times it reached a given
+ * %Add time to a time value and then check how many times it reached a given
  * time interval while looping back to 0.
  *
  * \param timer time value to update.

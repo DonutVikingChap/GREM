@@ -203,7 +203,7 @@ public:
 	}
 
 	/**
-	 * Add the world debug visualization to a batch of instances.
+	 * %Add the world debug visualization to a batch of instances.
 	 *
 	 * \param renderer2D renderer of the batch.
 	 * \param instances batch of instances to add to.
@@ -259,7 +259,7 @@ public:
 	}
 
 	/**
-	 * Add the world debug visualization to a batch of instances.
+	 * %Add the world debug visualization to a batch of instances.
 	 *
 	 * \param renderer3D renderer of the batch.
 	 * \param instances batch of instances to add to.
@@ -314,7 +314,7 @@ public:
 	}
 
 	/**
-	 * Add the UI debug visualization to a batch of instances.
+	 * %Add the UI debug visualization to a batch of instances.
 	 *
 	 * \param renderer2D renderer of the batch.
 	 * \param instances batch of instances to add to.
