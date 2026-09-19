@@ -1225,23 +1225,34 @@ struct Simulation {
 	}
 
 	/**
-	 * Perform a step of the physics simulation.
+	 * Perform a step of the physics simulation using a specific executor.
 	 *
 	 * \param executor executor to execute the step schedule on.
 	 *
 	 * \throws std::length_error if an internal size limit was exceeded.
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \note When creating a Simulation, its
+	 *       SimulationOptions::targetParallelism value should roughly
+	 *       correspond to the `executor.getMaxParallelism()` value of the
+	 *       executor given here to make sure its tasks are distributed across
+	 *       an appropriate number of threads.
 	 */
 	GREM_API(physics) void step(execution::Executor& executor);
 
 	/**
-	 * Perform a step of the physics simulation using a single-threaded
-	 * executor.
+	 * Perform a step of the physics simulation using a basic sequential
+	 * executor that runs directly on the calling thread.
 	 *
 	 * \throws std::length_error if an internal size limit was exceeded.
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \note When creating a Simulation with the intent of using this basic
+	 *       sequential step() overload, the simulation's
+	 *       SimulationOptions::targetParallelism value should ideally be set to
+	 *       1 to prevent unnecessary task chunking.
 	 */
 	GREM_API(physics) void step();
 

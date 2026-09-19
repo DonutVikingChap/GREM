@@ -158,7 +158,7 @@ Here is a list of all modules and their most important components:
     - [EntityRegistry](@ref grem::execution::EntityRegistry) - Container of [EntityID](@ref grem::execution::EntityID)-mapped components available to scheduled tasks
 	- [EntityTable](@ref grem::execution::EntityTable) - Alternative to EntityRegistry that uses indexed rows instead of entity IDs and a fixed number of type columns instead of a dynamic set of component pools
     - [Executor](@ref grem::execution::Executor) - Generic interface to a pool of execution resources (e.g. threads) for executing scheduled tasks
-	- [SequentialExecutor](@ref grem::execution::SequentialExecutor) - Single-threaded executor implementation
+	- [SequentialExecutor](@ref grem::execution::SequentialExecutor) - Basic executor implementation that runs all tasks sequentially, directly on the caller's thread
 	- [DynamicExecutor](@ref grem::execution::DynamicExecutor) - Dynamic executor whose implementation is chosen at runtime, defaulting to a parallel thread pool on supported platforms
     - [ResourceRegistry](@ref grem::execution::ResourceRegistry) - Container of shared resources available to scheduled tasks
     - [ResourceTable](@ref grem::execution::ResourceTable) - Alternative to ResourceRegistry that always holds a statically known set of resource types
