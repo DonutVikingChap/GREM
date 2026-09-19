@@ -54,7 +54,7 @@ struct ShaderPipelineImplementation; ///< Backend-specific implementation of Sha
  */
 enum class DepthBufferMode : uint8_t {
 	/**
-	 * Ignore the depth buffer.
+	 * %Ignore the depth buffer.
 	 */
 	NONE,
 
@@ -144,7 +144,7 @@ enum class DepthTestPredicate : uint8_t {
  */
 enum class StencilBufferMode : uint8_t {
 	/**
-	 * Ignore the stencil buffer.
+	 * %Ignore the stencil buffer.
 	 */
 	NONE,
 
@@ -314,7 +314,7 @@ enum class PolygonMode : uint8_t {
  */
 enum class FaceCullingMode : uint8_t {
 	/**
-	 * Ignore facing, don't cull primitives based on their winding order.
+	 * %Ignore facing, don't cull primitives based on their winding order.
 	 */
 	NONE,
 
