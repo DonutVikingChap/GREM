@@ -195,7 +195,7 @@ private:
 };
 
 /**
- * Create a std::error_code from an SocketError value.
+ * Create a std::error_code from a SocketError value.
  *
  * \param error error code value to create the error code from.
  *
@@ -207,7 +207,7 @@ private:
 }
 
 /**
- * Create a std::error_condition from an SocketError value.
+ * Create a std::error_condition from a SocketError value.
  *
  * \param error error condition value to create the error code from.
  *
