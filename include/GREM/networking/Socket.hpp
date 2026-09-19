@@ -51,8 +51,8 @@ enum class ShutdownType : int { // NOLINT(performance-enum-size)
 enum class MessageFlags : int {};
 
 /**
- * Socket handle/file descriptor for receiving and transmitting data across the
- * network.
+ * Generic socket handle/file descriptor for receiving and transmitting data
+ * across the network.
  */
 class Socket {
 public:

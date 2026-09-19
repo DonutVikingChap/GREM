@@ -35,7 +35,7 @@ struct Error : grem::Error {
 namespace grem::networking {
 
 /**
- * Error code value type for error codes originating from the Winsock API.
+ * %Error code value type for error codes originating from the Winsock API.
  */
 struct WSAError {
 	int value{}; ///< Underlying WSA error code.
@@ -49,7 +49,7 @@ struct std::is_error_code_enum<grem::networking::WSAError> : std::true_type {};
 namespace grem::networking {
 
 /**
- * Error category type for error codes originating from the Winsock API.
+ * %Error category type for error codes originating from the Winsock API.
  */
 struct WSAErrorCategory : std::error_category {
 	[[nodiscard]] GREM_API(networking) const char* name() const noexcept override;
@@ -88,7 +88,7 @@ private:
 namespace grem::networking {
 
 /**
- * Error code value type for error codes originating from the `getaddrinfo()`
+ * %Error code value type for error codes originating from the `getaddrinfo()`
  * API.
  */
 enum class EndpointError : int { // NOLINT(performance-enum-size)
@@ -121,7 +121,8 @@ struct std::is_error_code_enum<grem::networking::EndpointError> : std::true_type
 namespace grem::networking {
 
 /**
- * Error category type for error codes originating from the `getaddrinfo()` API.
+ * %Error category type for error codes originating from the `getaddrinfo()`
+ * API.
  */
 struct EndpointErrorCategory : std::error_category {
 	[[nodiscard]] GREM_API(networking) const char* name() const noexcept override;
@@ -154,7 +155,7 @@ private:
 }
 
 /**
- * Error condition type for error codes originating from the Socket API.
+ * %Error condition type for error codes originating from the Socket API.
  */
 enum class SocketError : int { // NOLINT(performance-enum-size)
 	// The value 0 is reserved for success.
@@ -172,7 +173,7 @@ struct std::is_error_condition_enum<grem::networking::SocketError> : std::true_t
 namespace grem::networking {
 
 /**
- * Error category type for error codes originating from the Socket API.
+ * %Error category type for error codes originating from the Socket API.
  */
 struct SocketErrorCategory : std::error_category {
 	[[nodiscard]] GREM_API(networking) const char* name() const noexcept override;
