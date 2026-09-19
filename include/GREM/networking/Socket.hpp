@@ -599,7 +599,7 @@ public:
 	 * \param buffer writable span to read received data into. The size of the
 	 *        span determines the maximum number of bytes that are attempted to
 	 *        be read.
-	 * \param flags bitset of `MSG_...` flags to pass to `recv()`, or 0 for no
+	 * \param flags bitmask of `MSG_...` flags to pass to `recv()`, or 0 for no
 	 *        flags.
 	 * \param errorCode error code that is filled in on failure to receive data,
 	 *        or cleared on success.
@@ -631,7 +631,7 @@ public:
 	 * \param buffer writable span to read received data into. The size of the
 	 *        span determines the maximum number of bytes that are attempted to
 	 *        be read.
-	 * \param flags bitset of `MSG_...` flags to pass to `recv()`, or 0 for no
+	 * \param flags bitmask of `MSG_...` flags to pass to `recv()`, or 0 for no
 	 *        flags.
 	 *
 	 * \return a subspan of the start of the given buffer containing the data
@@ -735,7 +735,7 @@ public:
 	 * \param buffer writable span to read received data into. The size of the
 	 *        span determines the maximum number of bytes that are attempted to
 	 *        be read.
-	 * \param flags bitset of `MSG_...` flags to pass to `recvfrom()`, or 0 for
+	 * \param flags bitmask of `MSG_...` flags to pass to `recvfrom()`, or 0 for
 	 *        no flags.
 	 * \param errorCode error code that is filled in on failure to receive data,
 	 *        or cleared on success.
@@ -769,7 +769,7 @@ public:
 	 * \param buffer writable span to read received data into. The size of the
 	 *        span determines the maximum number of bytes that are attempted to
 	 *        be read.
-	 * \param flags bitset of `MSG_...` flags to pass to `recvfrom()`, or 0 for
+	 * \param flags bitmask of `MSG_...` flags to pass to `recvfrom()`, or 0 for
 	 *        no flags.
 	 *
 	 * \return an empty optional on timeout, or a pair of:
@@ -873,7 +873,7 @@ public:
 	 * outgoing TCP stream.
 	 *
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `send()`, or 0 for no
+	 * \param flags bitmask of `MSG_...` flags to pass to `send()`, or 0 for no
 	 *        flags.
 	 * \param errorCode error code that is filled in on failure to send data, or
 	 *        cleared on success.
@@ -897,7 +897,7 @@ public:
 	 * outgoing TCP stream.
 	 *
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `send()`, or 0 for no
+	 * \param flags bitmask of `MSG_...` flags to pass to `send()`, or 0 for no
 	 *        flags.
 	 *
 	 * \return the number of bytes that were successfully written, or an empty
@@ -978,8 +978,8 @@ public:
 	 *
 	 * \param endpoint destination address to send the data to.
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `sendto()`, or 0 for no
-	 *        flags.
+	 * \param flags bitmask of `MSG_...` flags to pass to `sendto()`, or 0 for
+	 *        no flags.
 	 * \param errorCode error code that is filled in on failure to send data, or
 	 *        cleared on success.
 	 *
@@ -1004,8 +1004,8 @@ public:
 	 *
 	 * \param endpoint destination address to send the data to.
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `sendto()`, or 0 for no
-	 *        flags.
+	 * \param flags bitmask of `MSG_...` flags to pass to `sendto()`, or 0 for
+	 *        no flags.
 	 *
 	 * \return the number of bytes that were successfully written, or an empty
 	 *         optional on timeout.
@@ -1471,7 +1471,7 @@ public:
 	 * remote address specified through a previous call to connect().
 	 *
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `send()`, or 0 for no
+	 * \param flags bitmask of `MSG_...` flags to pass to `send()`, or 0 for no
 	 *        flags.
 	 * \param errorCode error code that is filled in on failure to send data, or
 	 *        cleared on success.
@@ -1507,7 +1507,7 @@ public:
 	 * an exception on failure.
 	 *
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `send()`, or 0 for no
+	 * \param flags bitmask of `MSG_...` flags to pass to `send()`, or 0 for no
 	 *        flags.
 	 *
 	 * \return the number of bytes that were successfully written, or an empty
@@ -1579,8 +1579,8 @@ public:
 	 *
 	 * \param endpoint destination address to send the data to.
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `sendto()`, or 0 for no
-	 *        flags.
+	 * \param flags bitmask of `MSG_...` flags to pass to `sendto()`, or 0 for
+	 *        no flags.
 	 * \param errorCode error code that is filled in on failure to send data, or
 	 *        cleared on success.
 	 *
@@ -1615,8 +1615,8 @@ public:
 	 *
 	 * \param endpoint destination address to send the data to.
 	 * \param bytes data to write.
-	 * \param flags bitset of `MSG_...` flags to pass to `sendto()`, or 0 for no
-	 *        flags.
+	 * \param flags bitmask of `MSG_...` flags to pass to `sendto()`, or 0 for
+	 *        no flags.
 	 * \param errorCode error code that is filled in on failure to send data, or
 	 *        cleared on success.
 	 *

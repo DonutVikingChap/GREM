@@ -807,7 +807,7 @@ struct alignas(64) Contact {
 	/**
 	 * Remove a specific set of manifolds.
 	 *
-	 * \param removeMask bitset of manifolds to remove, where each set bit
+	 * \param removeMask bitmask of manifolds to remove, where each set bit
 	 *        refers to the corresponding index to remove from the list of
 	 *        manifolds.
 	 */
