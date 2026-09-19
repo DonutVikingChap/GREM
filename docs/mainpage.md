@@ -190,11 +190,11 @@ Here is a list of all modules and their most important components:
 - [grem::imgui](@ref grem::imgui) - ImGui integration
 	- [GraphicalUserInterface](@ref grem::imgui::GraphicalUserInterface) - Platform+renderer backend for Dear ImGui
 - [grem::networking](@ref grem::networking) - Network communication
-    - [Endpoint](@ref grem::networking::Endpoint) - IP address and port number of a network location
-    - [Socket](@ref grem::networking::Socket) - Generic interface for sending/receiving data to/from an endpoint
-    - [TCPListener](@ref grem::networking::TCPListener) - Broker for incoming connections over TCP
-    - [TCPSocket](@ref grem::networking::TCPSocket) - Channel for sending/receiving a stream of data to/from a connected endpoint over TCP
-    - [UDPSocket](@ref grem::networking::UDPSocket) - Channel for sending/receiving packets to/from arbitrary endpoints over UDP
+    - [Endpoint](@ref grem::networking::Endpoint) - IP address, port number, etc. of a network location
+    - [Socket](@ref grem::networking::Socket) - Generic socket for receiving and transmitting data across the network
+    - [TCPListener](@ref grem::networking::TCPListener) - Socket for accepting incoming TCP connections
+    - [TCPSocket](@ref grem::networking::TCPSocket) - Connection-oriented socket for sending/receiving a reliable stream of ordered data to/from a connected endpoint over TCP
+    - [UDPSocket](@ref grem::networking::UDPSocket) - Connectionless socket for sending/receiving unreliable packets of unordered datagrams to/from arbitrary endpoints over UDP
 - [grem::physics](@ref grem::physics) - Physics engine
     - [Simulation](@ref grem::physics::Simulation) - Discrete-time rigid body dynamics simulation
 	- [quantities](@ref include/GREM/physics/quantities.hpp) - Physical quantity types with concrete units, such as [Position](@ref grem::physics::Position) and [Speed](@ref grem::physics::Speed)
