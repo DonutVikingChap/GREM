@@ -1227,7 +1227,7 @@ public:
 	 *
 	 * \return a reference to the null value.
 	 *
-	 * \throw json::Error if this value is not null.
+	 * \throws json::Error if this value is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Null& getNull() & {
 		if (!this->template is<Null>()) {
@@ -1241,7 +1241,7 @@ public:
 	 *
 	 * \return a read-only reference to the null value.
 	 *
-	 * \throw json::Error if this value is not null.
+	 * \throws json::Error if this value is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Null& getNull() const& {
 		if (!this->template is<Null>()) {
@@ -1255,7 +1255,7 @@ public:
 	 *
 	 * \return an rvalue reference to the null value.
 	 *
-	 * \throw json::Error if this value is not null.
+	 * \throws json::Error if this value is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Null&& getNull() && {
 		if (!this->template is<Null>()) {
@@ -1269,7 +1269,7 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the null value.
 	 *
-	 * \throw json::Error if this value is not null.
+	 * \throws json::Error if this value is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Null& getNull() const&& {
 		if (!this->template is<Null>()) {
@@ -1293,7 +1293,7 @@ public:
 	 *
 	 * \return a reference to the boolean value.
 	 *
-	 * \throw json::Error if this value is not a boolean.
+	 * \throws json::Error if this value is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Boolean& getBoolean() & {
 		if (!this->template is<Boolean>()) {
@@ -1308,7 +1308,7 @@ public:
 	 *
 	 * \return a read-only reference to the boolean value.
 	 *
-	 * \throw json::Error if this value is not a boolean.
+	 * \throws json::Error if this value is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Boolean& getBoolean() const& {
 		if (!this->template is<Boolean>()) {
@@ -1323,7 +1323,7 @@ public:
 	 *
 	 * \return an rvalue reference to the boolean value.
 	 *
-	 * \throw json::Error if this value is not a boolean.
+	 * \throws json::Error if this value is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Boolean&& getBoolean() && {
 		if (!this->template is<Boolean>()) {
@@ -1338,7 +1338,7 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the boolean value.
 	 *
-	 * \throw json::Error if this value is not a boolean.
+	 * \throws json::Error if this value is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Boolean&& getBoolean() const&& {
 		if (!this->template is<Boolean>()) {
@@ -1362,7 +1362,7 @@ public:
 	 *
 	 * \return a read-only reference to the the string value.
 	 *
-	 * \throw json::Error if this value is not a string.
+	 * \throws json::Error if this value is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const StringBase<Allocator>& getString() const& {
 		if (!this->template is<StringBase<Allocator>>()) {
@@ -1377,7 +1377,7 @@ public:
 	 *
 	 * \return a reference to the string value.
 	 *
-	 * \throw json::Error if this value is not a string.
+	 * \throws json::Error if this value is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE StringBase<Allocator>& getString() & {
 		if (!this->template is<StringBase<Allocator>>()) {
@@ -1392,7 +1392,7 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the string value.
 	 *
-	 * \throw json::Error if this value is not a string.
+	 * \throws json::Error if this value is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE StringBase<Allocator>&& getString() && {
 		if (!this->template is<StringBase<Allocator>>()) {
@@ -1407,7 +1407,7 @@ public:
 	 *
 	 * \return an rvalue reference to the string value.
 	 *
-	 * \throw json::Error if this value is not a string.
+	 * \throws json::Error if this value is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const StringBase<Allocator>&& getString() const&& {
 		if (!this->template is<StringBase<Allocator>>()) {
@@ -1431,7 +1431,7 @@ public:
 	 *
 	 * \return a reference to the number value.
 	 *
-	 * \throw json::Error if this value is not a number.
+	 * \throws json::Error if this value is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Number& getNumber() & {
 		if (!this->template is<Number>()) {
@@ -1446,7 +1446,7 @@ public:
 	 *
 	 * \return a read-only reference to the number value.
 	 *
-	 * \throw json::Error if this value is not a number.
+	 * \throws json::Error if this value is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Number& getNumber() const& {
 		if (!this->template is<Number>()) {
@@ -1461,7 +1461,7 @@ public:
 	 *
 	 * \return an rvalue reference to the number value.
 	 *
-	 * \throw json::Error if this value is not a number.
+	 * \throws json::Error if this value is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Number&& getNumber() && {
 		if (!this->template is<Number>()) {
@@ -1476,7 +1476,7 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the number value.
 	 *
-	 * \throw json::Error if this value is not a number.
+	 * \throws json::Error if this value is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Number&& getNumber() const&& {
 		if (!this->template is<Number>()) {
@@ -1493,7 +1493,8 @@ public:
 	 *
 	 * \return the number value, converted to the given type.
 	 *
-	 * \throw json::Error if this value is not a valid number of the given type.
+	 * \throws json::Error if this value is not a valid number of the given
+	 *         type.
 	 */
 	template <typename T>
 	[[nodiscard]] GREM_ALWAYS_INLINE T getNumber() const {
@@ -1524,7 +1525,7 @@ public:
 	 *
 	 * \return a reference to the object value.
 	 *
-	 * \throw json::Error if this value is not an object.
+	 * \throws json::Error if this value is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ObjectBase<Allocator>& getObject() & {
 		if (!this->template is<ObjectBase<Allocator>>()) {
@@ -1539,7 +1540,7 @@ public:
 	 *
 	 * \return a read-only reference to the object value.
 	 *
-	 * \throw json::Error if this value is not an object.
+	 * \throws json::Error if this value is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ObjectBase<Allocator>& getObject() const& {
 		if (!this->template is<ObjectBase<Allocator>>()) {
@@ -1554,7 +1555,7 @@ public:
 	 *
 	 * \return an rvalue reference to the object value.
 	 *
-	 * \throw json::Error if this value is not an object.
+	 * \throws json::Error if this value is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ObjectBase<Allocator>&& getObject() && {
 		if (!this->template is<ObjectBase<Allocator>>()) {
@@ -1569,7 +1570,7 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the object value.
 	 *
-	 * \throw json::Error if this value is not an object.
+	 * \throws json::Error if this value is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ObjectBase<Allocator>&& getObject() const&& {
 		if (!this->template is<ObjectBase<Allocator>>()) {
@@ -1593,7 +1594,7 @@ public:
 	 *
 	 * \return the number of elements in the array.
 	 *
-	 * \throw json::Error if this value is not an array.
+	 * \throws json::Error if this value is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE size_t getArraySize() const {
 		if (!this->template is<ArrayBase<Allocator>>()) {
@@ -1608,7 +1609,7 @@ public:
 	 *
 	 * \return a reference to the array value.
 	 *
-	 * \throw json::Error if this value is not an array.
+	 * \throws json::Error if this value is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ArrayBase<Allocator>& getArray() & {
 		if (!this->template is<ArrayBase<Allocator>>()) {
@@ -1623,7 +1624,7 @@ public:
 	 *
 	 * \return a read-only reference to the array value.
 	 *
-	 * \throw json::Error if this value is not an array.
+	 * \throws json::Error if this value is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ArrayBase<Allocator>& getArray() const& {
 		if (!this->template is<ArrayBase<Allocator>>()) {
@@ -1638,7 +1639,7 @@ public:
 	 *
 	 * \return an rvalue reference to the array value.
 	 *
-	 * \throw json::Error if this value is not an array.
+	 * \throws json::Error if this value is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ArrayBase<Allocator>&& getArray() && {
 		if (!this->template is<ArrayBase<Allocator>>()) {
@@ -1653,7 +1654,7 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the array value.
 	 *
-	 * \throw json::Error if this value is not an array.
+	 * \throws json::Error if this value is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ArrayBase<Allocator>&& getArray() const&& {
 		if (!this->template is<ArrayBase<Allocator>>()) {
@@ -1723,8 +1724,8 @@ public:
 	 *
 	 * \return a reference to the specified property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ValueBase<Allocator>& getProperty(StringView key) & {
 		ObjectBase<Allocator>& object = getObject();
@@ -1743,8 +1744,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ValueBase<Allocator>& getProperty(StringView key) const& {
 		const ObjectBase<Allocator>& object = getObject();
@@ -1763,8 +1764,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ValueBase<Allocator>&& getProperty(StringView key) && {
 		ObjectBase<Allocator>&& object = std::move(*this).getObject();
@@ -1783,8 +1784,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ValueBase<Allocator>&& getProperty(StringView key) const&& {
 		const ObjectBase<Allocator>&& object = std::move(*this).getObject();
@@ -1855,8 +1856,8 @@ public:
 	 *
 	 * \return a reference to the specified item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ValueBase<Allocator>& getItem(size_t index) & {
 		ArrayBase<Allocator>& array = getArray();
@@ -1874,8 +1875,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ValueBase<Allocator>& getItem(size_t index) const& {
 		const ArrayBase<Allocator>& array = getArray();
@@ -1893,8 +1894,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE ValueBase<Allocator>&& getItem(size_t index) && {
 		ArrayBase<Allocator>&& array = std::move(*this).getArray();
@@ -1912,8 +1913,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const ValueBase<Allocator>&& getItem(size_t index) const&& {
 		const ArrayBase<Allocator>&& array = std::move(*this).getArray();
@@ -1932,8 +1933,8 @@ public:
 	 *
 	 * \return a reference to the specified null property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not null.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Null& getNullProperty(StringView key) & {
 		return getProperty(key).getNull();
@@ -1948,8 +1949,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified null property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not null.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Null& getNullProperty(StringView key) const& {
 		return getProperty(key).getNull();
@@ -1964,8 +1965,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified null property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not null.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Null&& getNullProperty(StringView key) && {
 		return std::move(*this).getProperty(key).getNull();
@@ -1981,8 +1982,8 @@ public:
 	 * \return a read-only rvalue reference to the specified null property
 	 *         value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not null.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Null& getNullProperty(StringView key) const&& {
 		return std::move(*this).getProperty(key).getNull();
@@ -1997,8 +1998,8 @@ public:
 	 *
 	 * \return a reference to the specified null item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not null.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Null& getNullItem(size_t index) & {
 		return getItem(index).getNull();
@@ -2013,8 +2014,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified null item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not null.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Null& getNullItem(size_t index) const& {
 		return getItem(index).getNull();
@@ -2029,8 +2030,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified null item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not null.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Null&& getNullItem(size_t index) && {
 		return std::move(*this).getItem(index).getNull();
@@ -2045,8 +2046,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified null item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not null.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not null.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Null& getNullItem(size_t index) const&& {
 		return std::move(*this).getItem(index).getNull();
@@ -2061,9 +2062,9 @@ public:
 	 *
 	 * \return a reference to the specified boolean property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        boolean.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Boolean& getBooleanProperty(StringView key) & {
 		return getProperty(key).getBoolean();
@@ -2078,9 +2079,9 @@ public:
 	 *
 	 * \return a read-only reference to the specified boolean property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        boolean.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Boolean& getBooleanProperty(StringView key) const& {
 		return getProperty(key).getBoolean();
@@ -2095,9 +2096,9 @@ public:
 	 *
 	 * \return an rvalue reference to the specified boolean property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        boolean.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Boolean&& getBooleanProperty(StringView key) && {
 		return std::move(*this).getProperty(key).getBoolean();
@@ -2113,9 +2114,9 @@ public:
 	 * \return a read-only rvalue reference to the specified boolean property
 	 *         value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        boolean.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Boolean& getBooleanProperty(StringView key) const&& {
 		return std::move(*this).getProperty(key).getBoolean();
@@ -2130,8 +2131,8 @@ public:
 	 *
 	 * \return a reference to the specified boolean item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a boolean.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Boolean& getBooleanItem(size_t index) & {
 		return getItem(index).getBoolean();
@@ -2146,8 +2147,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified boolean item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a boolean.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Boolean& getBooleanItem(size_t index) const& {
 		return getItem(index).getBoolean();
@@ -2162,8 +2163,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified boolean item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a boolean.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Boolean&& getBooleanItem(size_t index) && {
 		return std::move(*this).getItem(index).getBoolean();
@@ -2178,8 +2179,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified boolean item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a boolean.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a boolean.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Boolean& getBooleanItem(size_t index) const&& {
 		return std::move(*this).getItem(index).getBoolean();
@@ -2194,9 +2195,9 @@ public:
 	 *
 	 * \return a reference to the specified string property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        string.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE String& getStringProperty(StringView key) & {
 		return getProperty(key).getString();
@@ -2211,9 +2212,9 @@ public:
 	 *
 	 * \return a read-only reference to the specified string property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        string.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const String& getStringProperty(StringView key) const& {
 		return getProperty(key).getString();
@@ -2228,9 +2229,9 @@ public:
 	 *
 	 * \return an rvalue reference to the specified string property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        string.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE String&& getStringProperty(StringView key) && {
 		return std::move(*this).getProperty(key).getString();
@@ -2246,9 +2247,9 @@ public:
 	 * \return a read-only rvalue reference to the specified string property
 	 *         value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        string.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const String& getStringProperty(StringView key) const&& {
 		return std::move(*this).getProperty(key).getString();
@@ -2263,8 +2264,8 @@ public:
 	 *
 	 * \return a reference to the specified string item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a string.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE String& getStringItem(size_t index) & {
 		return getItem(index).getString();
@@ -2279,8 +2280,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified string item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a string.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const String& getStringItem(size_t index) const& {
 		return getItem(index).getString();
@@ -2295,8 +2296,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified string item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a string.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE String&& getStringItem(size_t index) && {
 		return std::move(*this).getItem(index).getString();
@@ -2311,8 +2312,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified string item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a string.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a string.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const String& getStringItem(size_t index) const&& {
 		return std::move(*this).getItem(index).getString();
@@ -2327,9 +2328,9 @@ public:
 	 *
 	 * \return a reference to the specified number property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        number.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Number& getNumberProperty(StringView key) & {
 		return getProperty(key).getNumber();
@@ -2344,9 +2345,9 @@ public:
 	 *
 	 * \return a read-only reference to the specified number property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        number.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Number& getNumberProperty(StringView key) const& {
 		return getProperty(key).getNumber();
@@ -2361,9 +2362,9 @@ public:
 	 *
 	 * \return an rvalue reference to the specified number property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        number.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Number&& getNumberProperty(StringView key) && {
 		return std::move(*this).getProperty(key).getNumber();
@@ -2379,9 +2380,9 @@ public:
 	 * \return a read-only rvalue reference to the specified number property
 	 *         value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        number.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Number& getNumberProperty(StringView key) const&& {
 		return std::move(*this).getProperty(key).getNumber();
@@ -2400,9 +2401,9 @@ public:
 	 * \return the number value of the specified property, converted to the
 	 *         given type.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not a
-	 *        number of the given type.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not a
+	 *         number of the given type.
 	 */
 	template <typename T>
 	[[nodiscard]] GREM_ALWAYS_INLINE T getNumberProperty(StringView key) const {
@@ -2418,8 +2419,8 @@ public:
 	 *
 	 * \return a reference to the specified number item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a number.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Number& getNumberItem(size_t index) & {
 		return getItem(index).getNumber();
@@ -2434,8 +2435,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified number item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a number.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Number& getNumberItem(size_t index) const& {
 		return getItem(index).getNumber();
@@ -2450,8 +2451,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified number item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a number.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Number&& getNumberItem(size_t index) && {
 		return std::move(*this).getItem(index).getNumber();
@@ -2466,8 +2467,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified number item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a number.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a number.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Number& getNumberItem(size_t index) const&& {
 		return std::move(*this).getItem(index).getNumber();
@@ -2486,9 +2487,9 @@ public:
 	 * \return the number value of the specified item, converted to the given
 	 *         type.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not a number of
-	 *        the given type.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not a number
+	 *         of the given type.
 	 */
 	template <typename T>
 	[[nodiscard]] GREM_ALWAYS_INLINE T getNumberItem(size_t index) const {
@@ -2504,9 +2505,9 @@ public:
 	 *
 	 * \return a reference to the specified object property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        object.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Object& getObjectProperty(StringView key) & {
 		return getProperty(key).getObject();
@@ -2521,9 +2522,9 @@ public:
 	 *
 	 * \return a read-only reference to the specified object property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        object.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Object& getObjectProperty(StringView key) const& {
 		return getProperty(key).getObject();
@@ -2538,9 +2539,9 @@ public:
 	 *
 	 * \return an rvalue reference to the specified object property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        object.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Object&& getObjectProperty(StringView key) && {
 		return std::move(*this).getProperty(key).getObject();
@@ -2556,9 +2557,9 @@ public:
 	 * \return a read-only rvalue reference to the specified object property
 	 *         value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        object.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Object& getObjectProperty(StringView key) const&& {
 		return std::move(*this).getProperty(key).getObject();
@@ -2573,8 +2574,8 @@ public:
 	 *
 	 * \return a reference to the specified object item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an object.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Object& getObjectItem(size_t index) & {
 		return getItem(index).getObject();
@@ -2589,8 +2590,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified object item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an object.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Object& getObjectItem(size_t index) const& {
 		return getItem(index).getObject();
@@ -2605,8 +2606,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified object item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an object.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Object&& getObjectItem(size_t index) && {
 		return std::move(*this).getItem(index).getObject();
@@ -2621,8 +2622,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified object item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an object.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an object.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Object& getObjectItem(size_t index) const&& {
 		return std::move(*this).getItem(index).getObject();
@@ -2637,9 +2638,9 @@ public:
 	 *
 	 * \return a reference to the specified array property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        array.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Array& getArrayProperty(StringView key) & {
 		return getProperty(key).getArray();
@@ -2654,9 +2655,9 @@ public:
 	 *
 	 * \return a read-only reference to the specified array property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        array.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Array& getArrayProperty(StringView key) const& {
 		return getProperty(key).getArray();
@@ -2671,9 +2672,9 @@ public:
 	 *
 	 * \return an rvalue reference to the specified array property value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        array.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Array&& getArrayProperty(StringView key) && {
 		return std::move(*this).getProperty(key).getArray();
@@ -2689,9 +2690,9 @@ public:
 	 * \return a read-only rvalue reference to the specified array property
 	 *         value.
 	 *
-	 * \throw json::Error if this value is not an object, or if the specified
-	 *        property doesn't exist, or if the specified property is not an
-	 *        array.
+	 * \throws json::Error if this value is not an object, or if the specified
+	 *         property doesn't exist, or if the specified property is not an
+	 *         array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Array& getArrayProperty(StringView key) const&& {
 		return std::move(*this).getProperty(key).getArray();
@@ -2706,8 +2707,8 @@ public:
 	 *
 	 * \return a reference to the specified array item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an array.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Array& getArrayItem(size_t index) & {
 		return getItem(index).getArray();
@@ -2722,8 +2723,8 @@ public:
 	 *
 	 * \return a read-only reference to the specified array item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an array.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Array& getArrayItem(size_t index) const& {
 		return getItem(index).getArray();
@@ -2738,8 +2739,8 @@ public:
 	 *
 	 * \return an rvalue reference to the specified array item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an array.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Array&& getArrayItem(size_t index) && {
 		return std::move(*this).getItem(index).getArray();
@@ -2754,8 +2755,8 @@ public:
 	 *
 	 * \return a read-only rvalue reference to the specified array item value.
 	 *
-	 * \throw json::Error if this value is not an array, or if the specified
-	 *        index is out of range, or if the specified item is not an array.
+	 * \throws json::Error if this value is not an array, or if the specified
+	 *         index is out of range, or if the specified item is not an array.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE const Array& getArrayItem(size_t index) const&& {
 		return std::move(*this).getItem(index).getArray();
