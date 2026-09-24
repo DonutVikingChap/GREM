@@ -230,8 +230,8 @@ inline constexpr size_t INPUT_COUNT /** \cond */ = [] {
 }
 
 /**
- * Get a short human-readable string description of an #Input in English, e.g.
- * "K", "Left Click" or "Right Shoulder Button".
+ * Get a short human-readable string description of an #Input in English,
+ * e.g.\ "K", "Left Click" or "Right Shoulder Button".
  *
  * \param input valid input value to get the string of.
  *

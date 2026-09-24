@@ -22,7 +22,7 @@ namespace grem::application {
  */
 struct ApplicationOptions {
 	/**
-	 * Desired average time between ticks, i.e. the reciprocal of the
+	 * Desired average time between ticks, i.e.\ the reciprocal of the
 	 * application's desired tick rate.
 	 *
 	 * This controls the rate at which the application will try to execute calls
@@ -69,7 +69,7 @@ struct ApplicationOptions {
 	Duration maxAccumulatedTickTime = Seconds{1};
 
 	/**
-	 * Minimum frame time before frames are delayed, i.e. the reciprocal of the
+	 * Minimum frame time before frames are delayed, i.e.\ the reciprocal of the
 	 * application's maximum frame rate.
 	 *
 	 * If the frame rate is too fast, and the frame time goes below this limit,
@@ -92,8 +92,8 @@ struct ApplicationOptions {
 
 	/**
 	 * Maximum frame time before tick time is accumulated and deferred to later
-	 * frames, i.e. the reciprocal of the application's minimum acceptable frame
-	 * rate.
+	 * frames, i.e.\ the reciprocal of the application's minimum acceptable
+	 * frame rate.
 	 *
 	 * If the frame rate is too slow, and the frame time goes above this limit,
 	 * the application will start to delay the processing of some ticks in order

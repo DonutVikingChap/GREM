@@ -1977,7 +1977,7 @@ public:
 	}
 
 	/**
-	 * Check if a specific output is currently pressed, i.e. if its
+	 * Check if a specific output is currently pressed, i.e.\ if its
 	 * contributions from all of its bound inputs and external sources sum up to
 	 * a value greater than 0.
 	 *
@@ -1996,9 +1996,9 @@ public:
 	}
 
 	/**
-	 * Check if a specific output was pressed on the previous frame, i.e. if its
-	 * contributions from all of its bound inputs and external sources summed up
-	 * to a value greater than 0.
+	 * Check if a specific output was pressed on the previous frame, i.e.\ if
+	 * its contributions from all of its bound inputs and external sources
+	 * summed up to a value greater than 0.
 	 *
 	 * \param outputIndex valid output number between 0 (inclusive) and
 	 *        #OUTPUT_COUNT (exclusive) to check the associated state of.

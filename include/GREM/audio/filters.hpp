@@ -477,7 +477,7 @@ struct DCRemovalFilterOptions {
 };
 
 /**
- * Filter for removing DC signal from the sound, i.e. centering the sound
+ * Filter for removing DC signal from the sound, i.e.\ centering the sound
  * waveform around 0.
  *
  * The filter works by calculating the average sample value over a relatively

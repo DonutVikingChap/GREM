@@ -767,7 +767,7 @@ template <strict_unsigned_integral UnsignedInteger>
 }
 
 /**
- * Check if a given integer is a power of 2, i.e. if the number appears in the
+ * Check if a given integer is a power of 2, i.e.\ if the number appears in the
  * infinite sequence 2^0, 2^1, 2^2, ..., 2^n.
  *
  * For example, the first 15 powers of 2 are: 1, 2, 4, 8, 16, 32, 64, 128, 256,

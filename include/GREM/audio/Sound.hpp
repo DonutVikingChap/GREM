@@ -108,7 +108,7 @@ struct SoundOptions {
 	 * override is specified when the sound is played.
 	 *
 	 * When used, the amplitude of the playing sound is multiplied by this gain
-	 * value, meaning that a value of 1 represents no change, i.e. 100% of the
+	 * value, meaning that a value of 1 represents no change, i.e.\ 100% of the
 	 * original volume of the loaded sound file.
 	 */
 	float volume = 1.0f;

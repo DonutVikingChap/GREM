@@ -107,7 +107,7 @@ public:
 
 	/**
 	 * Check if this is a valid open (though not necessarily bound or connected)
-	 * socket, i.e. if its handle is not equal to INVALID_SOCKET.
+	 * socket, i.e.\ if its handle is not equal to INVALID_SOCKET.
 	 *
 	 * \return `get() != INVALID_SOCKET`.
 	 */

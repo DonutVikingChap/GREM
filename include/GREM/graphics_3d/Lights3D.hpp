@@ -154,7 +154,7 @@ struct DirectionalLightOptions3D {
 
 /**
  * Configuration options for an infinitesimally small point light source,
- * which can be used to approximate e.g. a light bulb.
+ * which can be used to approximate e.g.\ a light bulb.
  */
 struct PointLightOptions3D {
 	/**
@@ -218,7 +218,7 @@ struct PointLightOptions3D {
 
 /**
  * Configuration options for a point light source that is limited to a cone
- * shape, which can be used to approximate e.g. a headlamp on a car.
+ * shape, which can be used to approximate e.g.\ a headlamp on a car.
  */
 struct SpotLightOptions3D {
 	/**
@@ -466,7 +466,7 @@ public:
 
 	/**
 	 * Create an infinitesimally small point light, which can be used to
-	 * approximate e.g. a light bulb.
+	 * approximate e.g.\ a light bulb.
 	 *
 	 * \param options light options, see PointLightOptions3D.
 	 *
@@ -485,7 +485,7 @@ public:
 
 	/**
 	 * Create a point light that is limited to a cone shape, which can be used
-	 * to approximate e.g. a headlamp on a car.
+	 * to approximate e.g.\ a headlamp on a car.
 	 *
 	 * \param options light options, see SpotLightOptions3D.
 	 *

@@ -75,7 +75,7 @@ struct Dimension {
 
 	/**
 	 * Get an ASCII string representation of the symbol of the SI unit for this
-	 * dimension, e.g. "kg m^2/s" if the dimension is ANGULAR_MOMENTUM.
+	 * dimension, e.g.\ "kg m^2/s" if the dimension is ANGULAR_MOMENTUM.
 	 *
 	 * \return a String or StringView of the SI unit symbol string.
 	 */
@@ -564,8 +564,8 @@ struct BaseUnit {
 	static constexpr MagnitudeType MAGNITUDE = M;           ///< Magintude of the unit.
 
 	/**
-	 * Get an ASCII string representation of the unit symbol of this unit, e.g.
-	 * "kg m^2/s" if D is ANGULAR_MOMENTUM and M is 1.
+	 * Get an ASCII string representation of the unit symbol of this unit,
+	 * e.g.\ "kg m^2/s" if D is ANGULAR_MOMENTUM and M is 1.
 	 *
 	 * \return a String or StringView of the unit symbol string.
 	 */

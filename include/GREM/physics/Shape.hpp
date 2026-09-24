@@ -2777,7 +2777,7 @@ public:
 	 * \param direction direction to get the reference area for.
 	 *
 	 * \return the reference area, or an empty optional if an area cannot be
-	 *         determined, e.g. because the shape is infinite.
+	 *         determined, e.g.\ because the shape is infinite.
 	 */
 	[[nodiscard]] GREM_API(physics) Optional<Area> getReferenceArea(const Basis<N>& basis, Direction<N> direction) const;
 

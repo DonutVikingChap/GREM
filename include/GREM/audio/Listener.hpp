@@ -11,7 +11,7 @@
 namespace grem::audio {
 
 /**
- * Current state of the sound listener, i.e. the user perceiving the audio,
+ * Current state of the sound listener, i.e.\ the user perceiving the audio,
  * within a SoundStage.
  *
  * This information is used in the calculations for various 3D sound effect

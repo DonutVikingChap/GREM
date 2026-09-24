@@ -91,7 +91,7 @@ public:
 	}
 
 	/**
-	 * Check if this handle has an associated resource, i.e. if it is not null.
+	 * Check if this handle has an associated resource, i.e.\ if it is not null.
 	 *
 	 * \return true if the handle has an associated resource, false if the
 	 *         handle is null.

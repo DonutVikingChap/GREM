@@ -241,7 +241,8 @@ namespace grem::ascii {
 
 /**
  * Check if two characters are equal if any ASCII letters are treated as the
- * same case, i.e. ignoring whether they are lowercase (a-z) or uppercase (A-Z).
+ * same case, i.e.\ ignoring whether they are lowercase (a-z) or uppercase
+ * (A-Z).
  *
  * \param a first character.
  * \param b second character.
@@ -255,7 +256,7 @@ namespace grem::ascii {
 
 /**
  * Check if two null-terminated strings are equal if any ASCII letters are
- * treated as the same case, i.e. ignoring whether they are lowercase (a-z) or
+ * treated as the same case, i.e.\ ignoring whether they are lowercase (a-z) or
  * uppercase (A-Z).
  *
  * \param a first string. Must be null-terminated. Must not be nullptr.
@@ -279,7 +280,7 @@ namespace grem::ascii {
 
 /**
  * Check if two strings are equal if any ASCII letters are treated as the same
- * case, i.e. ignoring whether they are lowercase (a-z) or uppercase (A-Z).
+ * case, i.e.\ ignoring whether they are lowercase (a-z) or uppercase (A-Z).
  *
  * \param a first string.
  * \param b second string.

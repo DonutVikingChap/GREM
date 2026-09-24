@@ -138,7 +138,7 @@ public:
 		: handle(pointer, std::move(deleter)) {}
 
 	/**
-	 * Check if this pointer has an associated object, i.e. if it is not null.
+	 * Check if this pointer has an associated object, i.e.\ if it is not null.
 	 *
 	 * \return true if the pointer has an associated object, false if the
 	 *         pointer is null.
@@ -334,7 +334,7 @@ public:
 		: handle(pointer, std::move(deleter)) {}
 
 	/**
-	 * Check if this pointer has an associated array, i.e. if it is not null.
+	 * Check if this pointer has an associated array, i.e.\ if it is not null.
 	 *
 	 * \return true if the pointer has an associated array, false if the
 	 *         pointer is null.

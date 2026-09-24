@@ -16,13 +16,13 @@ namespace grem::graphics {
  * Declarations of special features supported by a Device.
  */
 struct FeatureSupport {
-	/** Name of the active video driver, e.g. "windows", "x11" or "wayland". */
+	/** Name of the active video driver, e.g.\ "windows", "x11" or "wayland". */
 	CStringView videoDriverName{};
 
-	/** Name of the active graphics backend API, e.g. "OpenGL", "WebGL" or "Vulkan". */
+	/** Name of the active graphics backend API, e.g.\ "OpenGL", "WebGL" or "Vulkan". */
 	CStringView graphicsBackendAPIName{};
 
-	/** Name of the active graphics backend API version, e.g. "3.3 Core", "ES 3.0", "2.0" or "1.2". */
+	/** Name of the active graphics backend API version, e.g.\ "3.3 Core", "ES 3.0", "2.0" or "1.2". */
 	CStringView graphicsBackendAPIVersionName{};
 
 	/** Maximum allowed 2D texture width or height, in texels. */

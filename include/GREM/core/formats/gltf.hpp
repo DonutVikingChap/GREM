@@ -157,8 +157,8 @@ using SkinIndex = size_t;
 using TextureIndex = size_t;
 
 /**
- * Reference to Asset::binChunk, i.e. the data of the BIN chunk in a binary glTF
- * Asset.
+ * Reference to Asset::binChunk, i.e.\ the data of the BIN chunk in a binary
+ * glTF Asset.
  *
  * See the glTF 2.0 [API Reference Guide](https://www.khronos.org/files/gltf20-reference-guide.pdf)
  * and [specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
