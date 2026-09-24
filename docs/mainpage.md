@@ -160,11 +160,11 @@ Here is a list of all modules and their most important components:
     - [Executor](@ref grem::execution::Executor) - Generic interface to a pool of execution resources (e.g. threads) for executing scheduled tasks
 	- [SequentialExecutor](@ref grem::execution::SequentialExecutor) - Basic executor implementation that runs all tasks sequentially, directly on the caller's thread
 	- [DynamicExecutor](@ref grem::execution::DynamicExecutor) - Dynamic executor whose implementation is chosen at runtime, defaulting to a parallel thread pool on supported platforms
-    - [ResourceRegistry](@ref grem::execution::ResourceRegistry) - Container of shared resources available to scheduled tasks
+    - [ResourceRegistry](@ref grem::execution::ResourceRegistry) - Container of singleton resources available to scheduled tasks
     - [ResourceTable](@ref grem::execution::ResourceTable) - Alternative to ResourceRegistry that always holds a statically known set of resource types
-    - [Schedule](@ref grem::execution::Schedule) - Compiled execution graph of tasks
-    - [Scheduler](@ref grem::execution::Scheduler) - Execution graph builder
-    - [Task](@ref grem::execution::Task) - Basic task function wrapper
+    - [Schedule](@ref grem::execution::Schedule) - Statically scheduled task graph
+    - [Scheduler](@ref grem::execution::Scheduler) - Task graph builder
+    - [Task](@ref grem::execution::Task) - Task function wrapper
 - [grem::graphics](@ref grem::graphics) - Portable graphics hardware interface
     - [Device](@ref grem::graphics::Device) - Rendering context for a [Window](@ref grem::graphics::Window)
     - [Display](@ref grem::graphics::Display) - Information about a connected display

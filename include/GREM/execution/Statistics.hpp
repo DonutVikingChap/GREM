@@ -12,29 +12,38 @@
 
 namespace grem::execution {
 
+/**
+ * Performance statistics produced by an Executor invocation.
+ */
 struct Statistics {
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4324)
 #endif
+	/**
+	 * Statistics produced by a distinct worker thread.
+	 */
 	struct alignas(64) Worker {
+		/**
+		 * Statistics produced by a distinct task.
+		 */
 		struct Task {
-			size_t taskIndex;
-			TimePoint startTime;
-			TimePoint endTime;
+			size_t taskIndex;    ///< Index of the task in the topologically ordered task list of the task graph.
+			TimePoint startTime; ///< Time when execution of the task started.
+			TimePoint endTime;   ///< Time when execution of the task ended.
 		};
 
-		TimePoint startTime{};
-		TimePoint endTime{};
-		Buffer<Task> tasks{};
+		TimePoint startTime{}; ///< Time when execution of the full task graph started on this worker thread.
+		TimePoint endTime{};   ///< Time when execution of the full task graph ended on this worker thread.
+		Buffer<Task> tasks{};  ///< Sub-statistics of each distinct task that was executed.
 	};
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-	TimePoint startTime{};
-	TimePoint endTime{};
-	Buffer<Worker> workers{};
+	TimePoint startTime{};    ///< Time when execution of the full task graph started.
+	TimePoint endTime{};      ///< Time when execution of the full task graph ended.
+	Buffer<Worker> workers{}; ///< Sub-statistics of each distinct worker thread.
 };
 
 } // namespace grem::execution

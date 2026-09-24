@@ -661,7 +661,7 @@ Simulation<N>::Simulation(const SimulationOptions<N>& options, const ScheduleSte
 
 	Scheduler<N> scheduler{};
 	scheduleStep(scheduler, options, scheduleStepOptions);
-	stepSchedule = scheduler.buildSchedule();
+	stepSchedule = scheduler.buildSchedule("Step physics simulation");
 }
 
 template <size_t N>

@@ -5,6 +5,7 @@
 
 #include <GREM/aliases.hpp>
 #include <GREM/core/data/Span.hpp>
+#include <GREM/core/data/String.hpp>
 #include <GREM/core/extents.hpp>
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/core/profiling.hpp>
@@ -15,11 +16,14 @@
 #include "GameSystems.hpp"
 #include "System.hpp"
 
-GameState::GameState(AssetCache& assetCache, Audio* audio, Graphics* graphics, const GameSystems& gameSystems, exec::Executor& executor)
+#include <utility> // std::move
+
+GameState::GameState(AssetCache& assetCache, Audio* audio, Graphics* graphics, const GameSystems& gameSystems, exec::Executor& executor, String name)
 	: systemAudio(audio)
 	, systemGraphics(graphics)
 	, gameSystems(gameSystems)
-	, executor(executor) {
+	, executor(executor)
+	, name(std::move(name)) {
 	resources.addExternalResource<AssetCache>(&assetCache);
 }
 
@@ -349,14 +353,14 @@ void GameState::rescheduleIfNecessary() {
 			system->scheduleCurrentPlayerUpdate(scheduler, resources, executor.getMaxParallelism());
 		}
 	}
-	updateCurrentPlayerSchedule = scheduler.buildSchedule();
+	updateCurrentPlayerSchedule = scheduler.buildSchedule(name + " - Update current player");
 
 	for (const SystemsLayerStackEntry& systemsLayerStackEntry : Span{systemsLayerStack}.subspan(currentSystemsLayerStackOffset)) {
 		for (System* const system : systemsLayerStackEntry.systemList) {
 			system->scheduleTick(scheduler, resources, executor.getMaxParallelism());
 		}
 	}
-	tickSchedule = scheduler.buildSchedule();
+	tickSchedule = scheduler.buildSchedule(name + " - Tick");
 
 	rescheduleNecessary = false;
 }

@@ -979,7 +979,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createObject(ObjectOptions<N>&& options, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addObjectComponents(r, resources, entityID, std::move(options)); });
+		addObjectComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), std::move(options));
 		return entityBuilder;
 	}
 
@@ -1061,7 +1061,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createGenericJoint(Pair<EntityID> objectIDs, const GenericJointOptions<N>& options, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addGenericJointComponents(r, resources, entityID, objectIDs, options); });
+		addGenericJointComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), objectIDs, options);
 		return entityBuilder;
 	}
 
@@ -1092,7 +1092,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createWeld(Pair<EntityID> objectIDs, const WeldOptions<N>& options = {}, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addWeldComponents(r, resources, entityID, objectIDs, options); });
+		addWeldComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), objectIDs, options);
 		return entityBuilder;
 	}
 
@@ -1124,7 +1124,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createHingeJoint(Pair<EntityID> objectIDs, const HingeJointOptions<N>& options = {}, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addHingeJointComponents(r, resources, entityID, objectIDs, options); });
+		addHingeJointComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), objectIDs, options);
 		return entityBuilder;
 	}
 
@@ -1156,7 +1156,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createBallJoint(Pair<EntityID> objectIDs, const BallJointOptions<N>& options = {}, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addBallJointComponents(r, resources, entityID, objectIDs, options); });
+		addBallJointComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), objectIDs, options);
 		return entityBuilder;
 	}
 
@@ -1188,7 +1188,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createPrismaticJoint(Pair<EntityID> objectIDs, const PrismaticJointOptions<N>& options = {}, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addPrismaticJointComponents(r, resources, entityID, objectIDs, options); });
+		addPrismaticJointComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), objectIDs, options);
 		return entityBuilder;
 	}
 
@@ -1220,7 +1220,7 @@ struct Simulation {
 	 */
 	[[nodiscard]] EntityBuilder<N> createCylinderJoint(Pair<EntityID> objectIDs, const CylinderJointOptions<N>& options = {}, EntityID::Flags flags = {}) {
 		EntityBuilder<N> entityBuilder = registry.createEntity(flags);
-		entityBuilder.extend([&](EntityRegistry<N>& r, EntityID entityID) { addCylinderJointComponents(r, resources, entityID, objectIDs, options); });
+		addCylinderJointComponents(entityBuilder.getRegistry(), resources, entityBuilder.getEntityID(), objectIDs, options);
 		return entityBuilder;
 	}
 

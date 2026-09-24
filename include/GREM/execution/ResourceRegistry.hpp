@@ -23,6 +23,22 @@
 
 namespace grem::execution {
 
+/**
+ * Dynamic container of singleton #resource instances, available to tasks
+ * defined through a Scheduler.
+ *
+ * This container supports extending the set of possible resource types
+ * dynamically at runtime.
+ *
+ * \tparam KnownResourcesOrPointers compile-time-known set of possible #resource
+ *         types, or pointers to external resources, which are given dedicated
+ *         slots in the resource registry to speed up access to them. Any
+ *         unknown resource types that are not in this list will be stored in a
+ *         dynamic associative container keyed by the resource's typeid, which
+ *         is looked up at runtime, incurring some performance overhead.
+ *
+ * \sa ResourceTable
+ */
 template <typename... KnownResourcesOrPointers>
 class ResourceRegistry : private Tuple<KnownResourcesOrPointers...> {
 private:
@@ -34,16 +50,21 @@ public:
 
 	using KnownResourceTuple::Tuple;
 
+	/** Destructor. */
+	~ResourceRegistry() = default;
+
+	/** Move constructor. */
 	ResourceRegistry(ResourceRegistry&&) noexcept = default;
 
+	/** Copy constructor. */
 	ResourceRegistry(const ResourceRegistry& other) {
 		*this = other;
 	}
 
-	~ResourceRegistry() = default;
-
+	/** Move assignment. */
 	ResourceRegistry& operator=(ResourceRegistry&&) noexcept = default;
 
+	/** Copy assignment. */
 	ResourceRegistry& operator=(const ResourceRegistry& other) {
 		if (this == &other) {
 			return *this;
@@ -63,6 +84,14 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Erase all resources from the registry.
+	 *
+	 * \note Each removed resource object is destroyed if it is owned by the
+	 *       registry, or if it has shared ownership and removing it causes its
+	 *       reference count to hit 0. Otherwise, e.g. if the removed resource
+	 *       was added using addExternalResource(), the object is not destroyed.
+	 */
 	void clear() noexcept {
 		meta::forEach(static_cast<KnownResourceTuple&>(*this), [&]<typename KnownResourceOrPointer>(KnownResourceOrPointer& resource) -> void {
 			if constexpr (requires { resource.clear(); }) {
@@ -74,6 +103,22 @@ public:
 		resources.clear();
 	}
 
+	/**
+	 * Add an owned resource to the registry.
+	 *
+	 * \tparam T #resource type to add.
+	 *
+	 * \param args arguments to forward to the resource constructor.
+	 *
+	 * \return a reference to the newly created resource.
+	 *
+	 * \throws std::logic_error if the registry already contained a resource of
+	 *         the specified type.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the resource constructor.
+	 */
 	template <resource T, typename... Args>
 	T& addResource(Args&&... args) {
 		static_assert(!meta::type_list_contains_v<KnownResourceTypeList, T> && !meta::type_list_contains_v<KnownResourceTypeList, T*>, "Cannot add known resource.");
@@ -101,7 +146,7 @@ public:
 		T* const resource = new T(std::forward<Args>(args)...); // NOLINT(cppcoreguidelines-owning-memory)
 		try {
 			if (!resources.try_emplace(typeid(T), resource, Deleter{destroy, copyAssign, get}).second) {
-				throw std::out_of_range{("Resource \"" + meta::unqualified_type_name_v<T> + "\" was already added to the registry.").c_str()};
+				throw std::logic_error{("Resource \"" + meta::unqualified_type_name_v<T> + "\" was already added to the registry.").c_str()};
 			}
 		} catch (...) {
 			delete resource; // NOLINT(cppcoreguidelines-owning-memory)
@@ -110,6 +155,21 @@ public:
 		return *resource;
 	}
 
+	/**
+	 * Add an owned resource to the registry if it doesn't already have it.
+	 *
+	 * \tparam T #resource type to add.
+	 *
+	 * \param args arguments to forward to the resource constructor.
+	 *
+	 * \return a pointer to the newly created resource, or nullptr if the
+	 *         registry already contains a resource of the specified type.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the resource constructor.
+	 */
 	template <resource T, typename... Args>
 	T* addResourceIfMissing(Args&&... args) {
 		if (hasResource<T>()) {
@@ -118,6 +178,23 @@ public:
 		return &addResource<T>(std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Add a reference-counted resource to the registry, whose ownership is
+	 * shared between copies of the registry.
+	 *
+	 * \tparam T #resource type to add.
+	 *
+	 * \param args arguments to forward to the resource constructor.
+	 *
+	 * \return a reference to the newly created resource.
+	 *
+	 * \throws std::logic_error if the registry already contained a resource of
+	 *         the specified type.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the resource constructor.
+	 */
 	template <resource T, typename... Args>
 	T& addSharedResource(Args&&... args) {
 		static_assert(!meta::type_list_contains_v<KnownResourceTypeList, T> && !meta::type_list_contains_v<KnownResourceTypeList, T*>, "Cannot add known resource.");
@@ -149,7 +226,7 @@ public:
 			ControlBlock{.value = T(std::forward<Args>(args)...), .referenceCount = 1};
 		try {
 			if (!resources.try_emplace(typeid(T), controlBlock, Deleter{destroy, copyAssign, get}).second) {
-				throw std::out_of_range{("Resource \"" + meta::unqualified_type_name_v<T> + "\" was already added to the registry.").c_str()};
+				throw std::logic_error{("Resource \"" + meta::unqualified_type_name_v<T> + "\" was already added to the registry.").c_str()};
 			}
 		} catch (...) {
 			delete controlBlock; // NOLINT(cppcoreguidelines-owning-memory)
@@ -158,6 +235,22 @@ public:
 		return controlBlock->value;
 	}
 
+	/**
+	 * Add a reference-counted resource to the registry, whose ownership is
+	 * shared between copies of the registry, if it doesn't already have it.
+	 *
+	 * \tparam T #resource type to add.
+	 *
+	 * \param args arguments to forward to the resource constructor.
+	 *
+	 * \return a pointer to the newly created resource, or nullptr if the
+	 *         registry already contains a resource of the specified type.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the resource constructor.
+	 */
 	template <resource T, typename... Args>
 	T* addSharedResourceIfMissing(Args&&... args) {
 		if (hasResource<T>()) {
@@ -166,6 +259,22 @@ public:
 		return &addSharedResource<T>(std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Add an unowned external resource reference to the registry.
+	 *
+	 * \tparam T #resource type to add.
+	 *
+	 * \param resource non-owning pointer to the resource to add to the
+	 *        registry. Must not be nullptr.
+	 *
+	 * \return `*resource`.
+	 *
+	 * \throws std::logic_error if the registry already contained a resource of
+	 *         the specified type.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <resource T>
 	T& addExternalResource(T* resource) {
 		static_assert(!meta::type_list_contains_v<KnownResourceTypeList, T> && !meta::type_list_contains_v<KnownResourceTypeList, T*>, "Cannot add known resource.");
@@ -181,11 +290,27 @@ public:
 
 		GREM_ASSERT(resource);
 		if (!resources.try_emplace(typeid(T), resource, Deleter{destroy, copyAssign, get}).second) {
-			throw std::out_of_range{("Resource \"" + meta::unqualified_type_name_v<T> + "\" was already added to the registry.").c_str()};
+			throw std::logic_error{("Resource \"" + meta::unqualified_type_name_v<T> + "\" was already added to the registry.").c_str()};
 		}
 		return *resource;
 	}
 
+	/**
+	 * Add an unowned external resource reference to the registry if it doesn't
+	 * already have it.
+	 *
+	 * \tparam T #resource type to add.
+	 *
+	 * \param resource non-owning pointer to the resource to add to the
+	 *        registry. Must not be nullptr.
+	 *
+	 * \return `resource`, or nullptr if the registry already contains a
+	 *         resource of the specified type.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <resource T>
 	T* addExternalResourceIfMissing(T* resource) {
 		if (hasResource<T>()) {
@@ -194,6 +319,19 @@ public:
 		return &addExternalResource<T>(resource);
 	}
 
+	/**
+	 * Erase a resource from the registry.
+	 *
+	 * \tparam T #resource type to remove.
+	 *
+	 * \return true if the registry contained a resource of the specified type,
+	 *         false otherwise.
+	 *
+	 * \note The removed resource object is destroyed if it is owned by the
+	 *       registry, or if it has shared ownership and removing it causes its
+	 *       reference count to hit 0. Otherwise, e.g. if the removed resource
+	 *       was added using addExternalResource(), the object is not destroyed.
+	 */
 	template <resource T>
 	bool removeResource() noexcept {
 		static_assert(!meta::type_list_contains_v<KnownResourceTypeList, T> && !meta::type_list_contains_v<KnownResourceTypeList, T*>, "Cannot remove known resource.");
@@ -201,6 +339,14 @@ public:
 		return resources.erase(typeid(T)) > 0;
 	}
 
+	/**
+	 * Check if the registry contains a specific resource.
+	 *
+	 * \tparam T #resource type to check for.
+	 *
+	 * \return true if the registry contains a resource of the specified type,
+	 *         false otherwise.
+	 */
 	template <resource T>
 	[[nodiscard]] bool hasResource() const noexcept {
 		if constexpr (meta::type_list_contains_v<KnownResourceTypeList, T> || meta::type_list_contains_v<KnownResourceTypeList, T*>) {
@@ -210,6 +356,16 @@ public:
 		}
 	}
 
+	/**
+	 * Get a specific resource in the registry.
+	 *
+	 * \tparam T #resource type to get.
+	 *
+	 * \return a reference to the specified resource.
+	 *
+	 * \throws std::out_of_range if the registry does not contain a resource of
+	 *         the specified type.
+	 */
 	template <resource T>
 	[[nodiscard]] T& getResource() {
 		if constexpr (meta::type_list_contains_v<KnownResourceTypeList, T*>) {
@@ -225,6 +381,16 @@ public:
 		}
 	}
 
+	/**
+	 * Get a specific resource in the registry.
+	 *
+	 * \tparam T #resource type to get.
+	 *
+	 * \return a read-only reference to the specified resource.
+	 *
+	 * \throws std::out_of_range if the registry does not contain a resource of
+	 *         the specified type.
+	 */
 	template <resource T>
 	[[nodiscard]] const T& getResource() const {
 		if constexpr (meta::type_list_contains_v<KnownResourceTypeList, T*>) {
@@ -240,6 +406,14 @@ public:
 		}
 	}
 
+	/**
+	 * Try to get a specific resource in the registry.
+	 *
+	 * \tparam T #resource type to get.
+	 *
+	 * \return a pointer to the specified resource, or nullptr if the registry
+	 *         does not contain a resource of the specified type.
+	 */
 	template <resource T>
 	[[nodiscard]] T* findResource() noexcept {
 		if constexpr (meta::type_list_contains_v<KnownResourceTypeList, T*>) {
@@ -254,6 +428,14 @@ public:
 		}
 	}
 
+	/**
+	 * Try to get a specific resource in the registry.
+	 *
+	 * \tparam T #resource type to get.
+	 *
+	 * \return a read-only pointer to the specified resource, or nullptr if the
+	 *         registry does not contain a resource of the specified type.
+	 */
 	template <resource T>
 	[[nodiscard]] const T* findResource() const noexcept {
 		if constexpr (meta::type_list_contains_v<KnownResourceTypeList, T*>) {
@@ -266,24 +448,6 @@ public:
 			}
 			return nullptr;
 		}
-	}
-
-	template <resource T>
-	T& convertToOwnedResource() {
-		static_assert(!meta::type_list_contains_v<KnownResourceTypeList, T> && !meta::type_list_contains_v<KnownResourceTypeList, T*>, "Cannot convert known resource to owned.");
-
-		T resource = std::move(getResource<T>());
-		removeResource<T>();
-		return addResource<T>(std::move(resource));
-	}
-
-	template <resource T>
-	T& convertToSharedResource() {
-		static_assert(!meta::type_list_contains_v<KnownResourceTypeList, T> && !meta::type_list_contains_v<KnownResourceTypeList, T*>, "Cannot convert known resource to shared.");
-
-		T resource = std::move(getResource<T>());
-		removeResource<T>();
-		return addSharedResource<T>(std::move(resource));
 	}
 
 private:

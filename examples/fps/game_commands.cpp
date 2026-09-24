@@ -138,7 +138,7 @@ void SingleStepPausedSimulationCommand::execute(GameState& gameState, PlayerID, 
 	if (resources.getResource<SessionState>().flags.contains(SessionState::PAUSED)) {
 		Scheduler scheduler{};
 		phys::Simulation3D::scheduleStep(scheduler, resources.getResource<phys::SimulationOptions3D>());
-		const Schedule schedule = scheduler.buildSchedule();
+		const Schedule schedule = scheduler.buildSchedule("Single-step paused physics simulation");
 		exec::SequentialExecutor{}.executeSchedule(schedule, registry, resources);
 	}
 }

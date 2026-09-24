@@ -18,6 +18,16 @@
 
 namespace grem::execution {
 
+/**
+ * %Subrange of a #resource, corresponding to one of a fixed number of chunks
+ * that the resource has been divded into.
+ *
+ * \tparam Resource #resource type that the chunk is a subrange of, potentially
+ *         const-qualified to indicate read-only access.
+ * \tparam Projection function object that gets the full range of elements from
+ *         the resource that is to be chunked. The default projection assumes
+ *         that the range is the resource itself.
+ */
 template <typename Resource, auto Projection = std::identity{}>
 class Chunk {
 public:
@@ -28,6 +38,16 @@ public:
 	static_assert(resource<resource_type>, "Chunk must reference a valid resource type.");
 	static_assert(random_access_iterator<iterator>, "Chunk iterator category must be random-access.");
 
+	/**
+	 * Construct a resource chunk.
+	 *
+	 * \param resource reference to the resource to chunk. Must outlive the
+	 *        chunk's use.
+	 * \param chunkIndex index of the specific chunk that this subrange
+	 *        references. Must be less than `chunkCount`.
+	 * \param chunkCount number of chunks that the resource has been divided
+	 *        into. Must be positive, and greater than chunkIndex.
+	 */
 	constexpr Chunk(Resource& resource, size_t chunkIndex, size_t chunkCount)
 		: Chunk(std::invoke(Projection, resource), chunkIndex, chunkCount, 0) {}
 
@@ -79,12 +99,20 @@ private:
 	iterator s;
 };
 
+/// \cond
 template <typename T>
 struct is_chunk : std::false_type {};
 
 template <typename Resource, auto Projection>
 struct is_chunk<Chunk<Resource, Projection>> : std::true_type {};
+/// \endcond
 
+/**
+ * Boolean that evaluates to true if the given type is a specialization of
+ * Chunk.
+ *
+ * \tparam T type to check.
+ */
 template <typename T>
 inline constexpr bool is_chunk_v = is_chunk<T>::value;
 

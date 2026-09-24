@@ -24,7 +24,7 @@
 #include <GREM/core/system/synchronization.hpp>
 #endif
 
-#include <algorithm>   // std::fill, std::copy_n
+#include <algorithm>   // std::fill, std::copy_n, std::min
 #include <compare>     // std::strong_ordering
 #include <cstddef>     // std::size_t
 #include <functional>  // std::hash
@@ -44,6 +44,7 @@ class EntityRegistry; // Forward declaration.
 template <typename... ComponentsAndExclusions>
 class Entities; // Forward declaration.
 
+/// \cond
 // Mark Entities as an entity range type.
 template <typename... ComponentsAndExclusions>
 struct is_entity_range<Entities<ComponentsAndExclusions...>> : std::true_type {};
@@ -53,13 +54,16 @@ template <typename... ComponentsAndExclusions>
 struct entity_range_components_and_exclusions<Entities<ComponentsAndExclusions...>> {
 	using type = meta::TypeList<ComponentsAndExclusions...>;
 };
+/// \endcond
 
 template <typename Component>
 class ComponentPool; // Forward declaration.
 
+/// \cond
 // Mark ComponentPool as a component pool type.
 template <typename Component>
 struct is_component_pool<ComponentPool<Component>> : std::true_type {};
+/// \endcond
 
 /**
  * Handle to a specific entity in a registry.
@@ -799,12 +803,27 @@ private:
 
 } // namespace detail
 
+/**
+ * View of entities in an EntityRegistry that have all of the required
+ * components and none of the excluded components specified in a list of types.
+ *
+ * \tparam ComponentsAndExclusions component and component exclusion types
+ *         (e.g. Exclude<Component>) that specify which entities are part of the
+ *         range.
+ */
 template <typename... ComponentsAndExclusions>
 class Entities {
 public:
+	/** List of non-const components required by the range, provided as a meta::TypeList. */
 	using MutableComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::MutableComponents...>;
+
+	/** List of const components required by the range, provided as a meta::TypeList. */
 	using ImmutableComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::ImmutableComponents...>;
+
+	/** List of components required by the range, provided as a meta::TypeList. */
 	using IncludedComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::IncludedComponents...>;
+
+	/** List of components excluded by the range, provided as a meta::TypeList. */
 	using ExcludedComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::ExcludedComponents...>;
 
 private:
@@ -820,8 +839,19 @@ public:
 	using size_type = size_t;
 	using difference_type = ptrdiff_t;
 
+	/**
+	 * Construct an empty entity range.
+	 */
 	GREM_ALWAYS_INLINE constexpr Entities() noexcept = default;
 
+	/**
+	 * Construct an entity subrange from an iterator pair.
+	 *
+	 * \param first begin iterator of the subrange.
+	 * \param last past-the-end iterator of the subrange.
+	 *
+	 * \warning The subrange `[first, last)` must form a valid range.
+	 */
 	GREM_ALWAYS_INLINE constexpr Entities(const iterator& first, const iterator& last) noexcept
 		: candidateEntities(first.candidateEntities.data(), static_cast<size_t>(last.candidateEntities.data() - first.candidateEntities.data()))
 		, excludedIndexArrays(first.excludedIndexArrays)
@@ -849,10 +879,24 @@ public:
 		return sentinel{};
 	}
 
+	/**
+	 * Get an upper bound estimate on the number of entities in the range.
+	 *
+	 * \return a number greater than or equal to
+	 *         `std::distance(begin(), end())`.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr size_type getCandidateCount() const noexcept {
 		return candidateEntities.size();
 	}
 
+	/**
+	 * Check if the range contains a specific entity.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity in this
+	 *         range, false otherwise.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool containsEntity(EntityID id) const {
 		for (const EntityID::Index* const componentIndexArray : componentIndexArrays) {
 			if (!componentIndexArray) {
@@ -873,11 +917,35 @@ public:
 		return iterator::dereference(componentIndexArrays, componentArrays, id);
 	}
 
+	/**
+	 * Check if the range contains a specific entity with a specific component.
+	 *
+	 * \tparam T component type to check for. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity in this
+	 *         range that has the specified component, false otherwise.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE bool hasComponent(EntityID id) const noexcept {
 		return findComponent<T>(id) != nullptr;
 	}
 
+	/**
+	 * Get a specific component of a specific entity in the range.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a reference to the specified component of the specified entity.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity in this range that has the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto& getComponent(EntityID id) const {
 		auto* const result = findComponent<T>(id);
@@ -887,6 +955,22 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Get a specific component of a specific entity in the range, or a default
+	 * value in case the entity doesn't exist or doesn't have the specified
+	 * component.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 * \param defaultValue default value to return in case the given handle does
+	 *        not correspond to a valid entity with the specified component.
+	 *
+	 * \return a copy of the specified component of the specified entity, or the
+	 *         specified default value if the given handle does not correspond
+	 *         to a valid entity in this range that has the specified component.
+	 */
 	template <component T, typename U>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto getComponentOr(EntityID id, U&& defaultValue) const {
 		auto* const result = findComponent<T>(id);
@@ -896,6 +980,18 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Try to get a specific component of a specific entity in the range.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a pointer to the specified component of the specified entity, or
+	 *         nullptr if the given handle does not correspond to a valid entity
+	 *         in this range that has the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto* findComponent(EntityID id) const noexcept {
 		if (containsEntity(id)) {
@@ -904,11 +1000,40 @@ public:
 		return decltype(&getComponentAtEntityIndexUnsafe<T>(id.getIndex())){nullptr};
 	}
 
+	/**
+	 * Get the entity handle of the entity in a specific slot of the underlying
+	 * EntityRegistry.
+	 *
+	 * \param slotIndex index of the entity slot in the underlying
+	 *        EntityRegistry to get the entity handle of. Must be a valid slot
+	 *        index corresponding to an entity that is currently valid, e.g. the
+	 *        result of a previous call to `id.getIndex()` on a valid entity
+	 *        handle `id` that has not since been invalidated.
+	 *
+	 * \return the entity handle of the entity in the specified slot.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE EntityID getEntityIDAtEntityIndexUnsafe(EntityID::Index slotIndex) const {
 		GREM_ASSERT((slots[slotIndex].generation & 1) != 0);
 		return EntityID{slotIndex, slots[slotIndex].generation, slots[slotIndex].active.flags};
 	}
 
+	/**
+	 * Get a specific component of the entity in a specific slot of the
+	 * underlying EntityRegistry.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param slotIndex index of the entity slot in the underlying
+	 *        EntityRegistry to get the entity handle of. Must be a valid slot
+	 *        index corresponding to an entity that is currently valid and has
+	 *        the specified component, e.g. the result of a previous call to
+	 *        `id.getIndex()` on a valid entity handle `id` that is known to
+	 *        have the specified component, and has not since been invalidated.
+	 *
+	 * \return a reference to the specified component of the entity in the
+	 *         specified slot.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto& getComponentAtEntityIndexUnsafe(EntityID::Index slotIndex) const {
 		constexpr bool CONTAINS_CONST_COMPONENT = meta::type_list_contains_v<IncludedComponents, const T>;
@@ -977,12 +1102,27 @@ private:
 #endif
 };
 
+/**
+ * Specialization of Entities for a single required component with no
+ * exclusions.
+ *
+ * \tparam ComponentsAndExclusions component and component exclusion types
+ *         (e.g. Exclude<Component>) that specify which entities are part of the
+ *         range.
+ */
 template <typename... ComponentsAndExclusions>
 requires(detail::entities_is_single_component<ComponentsAndExclusions...>) class Entities<ComponentsAndExclusions...> {
 public:
+	/** List of non-const components required by the range, provided as a meta::TypeList. */
 	using MutableComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::MutableComponents...>;
+
+	/** List of const components required by the range, provided as a meta::TypeList. */
 	using ImmutableComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::ImmutableComponents...>;
+
+	/** List of components required by the range, provided as a meta::TypeList. */
 	using IncludedComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::IncludedComponents...>;
+
+	/** List of components excluded by the range, provided as a meta::TypeList. */
 	using ExcludedComponents = meta::type_list_concat_t<typename detail::entities_extract_components<ComponentsAndExclusions>::ExcludedComponents...>;
 
 private:
@@ -998,8 +1138,19 @@ public:
 	using size_type = size_t;
 	using difference_type = ptrdiff_t;
 
+	/**
+	 * Construct an empty entity range.
+	 */
 	GREM_ALWAYS_INLINE constexpr Entities() noexcept = default;
 
+	/**
+	 * Construct an entity subrange from an iterator pair.
+	 *
+	 * \param first begin iterator of the subrange.
+	 * \param last past-the-end iterator of the subrange.
+	 *
+	 * \warning The subrange `[first, last)` must form a valid range.
+	 */
 	GREM_ALWAYS_INLINE constexpr Entities(const iterator& first, const iterator& last) noexcept requires(IS_COMPONENT_EMPTY)
 		: candidateEntities(first.entity, static_cast<size_t>(last.entity - first.entity))
 		, componentIndexArray(first.componentIndexArray)
@@ -1010,6 +1161,14 @@ public:
 #endif
 	}
 
+	/**
+	 * Construct an entity subrange from an iterator pair.
+	 *
+	 * \param first begin iterator of the subrange.
+	 * \param last past-the-end iterator of the subrange.
+	 *
+	 * \warning The subrange `[first, last)` must form a valid range.
+	 */
 	GREM_ALWAYS_INLINE constexpr Entities(const iterator& first, const iterator& last) noexcept requires(!IS_COMPONENT_EMPTY)
 		: candidateEntities(first.entity, static_cast<size_t>(last.entity - first.entity))
 		, candidateComponents(first.component)
@@ -1052,10 +1211,24 @@ public:
 		return candidateEntities.empty();
 	}
 
+	/**
+	 * Get an upper bound estimate on the number of entities in the range, which
+	 * is equal to the exact number of entities in this single-component case.
+	 *
+	 * \return `size()`.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr size_t getCandidateCount() const noexcept {
 		return candidateEntities.size();
 	}
 
+	/**
+	 * Check if the range contains a specific entity.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity in this
+	 *         range, false otherwise.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool containsEntity(EntityID id) const {
 		if (!componentIndexArray) {
 			return false;
@@ -1072,11 +1245,35 @@ public:
 		return {id, getComponentAtEntityIndexUnsafe<std::remove_const_t<Component>>(id.getIndex())};
 	}
 
+	/**
+	 * Check if the range contains a specific entity with a specific component.
+	 *
+	 * \tparam T component type to check for. Must be one of the component
+	 *         types required by this entity range.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity in this
+	 *         range that has the specified component, false otherwise.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE bool hasComponent(EntityID id) const noexcept {
 		return findComponent<T>(id) != nullptr;
 	}
 
+	/**
+	 * Get a specific component of a specific entity in the range.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a reference to the specified component of the specified entity.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity in this range that has the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto& getComponent(EntityID id) const {
 		auto* const result = findComponent<T>(id);
@@ -1086,6 +1283,22 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Get a specific component of a specific entity in the range, with a
+	 * default value in case the entity doesn't exist or doesn't have the
+	 * specified component.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 * \param defaultValue default value to return in case the given handle does
+	 *        not correspond to a valid entity with the specified component.
+	 *
+	 * \return a copy of the specified component of the specified entity, or the
+	 *         specified default value if the given handle does not correspond
+	 *         to a valid entity in this range that has the specified component.
+	 */
 	template <component T, typename U>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto getComponentOr(EntityID id, U&& defaultValue) const {
 		auto* const result = findComponent<T>(id);
@@ -1095,6 +1308,18 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Try to get a specific component of a specific entity in the range.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a pointer to the specified component of the specified entity, or
+	 *         nullptr if the given handle does not correspond to a valid entity
+	 *         in this range that has the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto* findComponent(EntityID id) const noexcept {
 		if (containsEntity(id)) {
@@ -1103,11 +1328,40 @@ public:
 		return decltype(&getComponentAtEntityIndexUnsafe<T>(id.getIndex())){nullptr};
 	}
 
+	/**
+	 * Get the entity handle of the entity in a specific slot of the underlying
+	 * EntityRegistry.
+	 *
+	 * \param slotIndex index of the entity slot in the underlying
+	 *        EntityRegistry to get the entity handle of. Must be a valid slot
+	 *        index corresponding to an entity that is currently valid, e.g. the
+	 *        result of a previous call to `id.getIndex()` on a valid entity
+	 *        handle `id` that has not since been invalidated.
+	 *
+	 * \return the entity handle of the entity in the specified slot.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE EntityID getEntityIDAtEntityIndexUnsafe(EntityID::Index slotIndex) const {
 		GREM_ASSERT((slots[slotIndex].generation & 1) != 0);
 		return EntityID{slotIndex, slots[slotIndex].generation, slots[slotIndex].active.flags};
 	}
 
+	/**
+	 * Get a specific component of the entity in a specific slot of the
+	 * underlying EntityRegistry.
+	 *
+	 * \tparam T component type to get. Must be one of the component types
+	 *         required by this entity range.
+	 *
+	 * \param slotIndex index of the entity slot in the underlying
+	 *        EntityRegistry to get the entity handle of. Must be a valid slot
+	 *        index corresponding to an entity that is currently valid and has
+	 *        the specified component, e.g. the result of a previous call to
+	 *        `id.getIndex()` on a valid entity handle `id` that is known to
+	 *        have the specified component, and has not since been invalidated.
+	 *
+	 * \return a reference to the specified component of the entity in the
+	 *         specified slot.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE auto& getComponentAtEntityIndexUnsafe(EntityID::Index slotIndex) const {
 		static_assert(same_as<T, std::remove_const_t<Component>>, "The specified component type must be included in the entity range type.");
@@ -1448,6 +1702,13 @@ struct ComponentStorage {
 
 } // namespace detail
 
+/**
+ * Reference to an EntityRegistry's pool of instances of a specific component
+ * type.
+ *
+ * \tparam Component component type stored in the referenced pool, potentially
+ *         const-qualified to indicate read-only access.
+ */
 template <typename Component>
 class ComponentPool {
 public:
@@ -1459,8 +1720,17 @@ public:
 	using difference_type = typename iterator::difference_type;
 	using component_type = Component;
 
+	/**
+	 * Construct an invalid component pool reference.
+	 */
 	GREM_ALWAYS_INLINE constexpr ComponentPool() noexcept = default;
 
+	/**
+	 * Convert a non-const component pool reference to a const component pool
+	 * reference.
+	 *
+	 * \return a const-qualified view over the referenced component pool.
+	 */
 	GREM_ALWAYS_INLINE operator ComponentPool<const Component>() const noexcept requires(!std::is_const_v<Component>) {
 		return ComponentPool<const Component>{storage, slots};
 	}
@@ -1480,17 +1750,9 @@ public:
 		return (storage) ? sentinel{storage->entityIDs.data() + storage->entityIDs.size()} : sentinel{nullptr};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool containsEntity(EntityID id) const {
-		if (!storage) {
-			return false;
-		}
-		GREM_ASSERT(storage->indices.size() == slots.size());
-		return isValidEntity(id) && storage->indices[id.getIndex()] != EntityID::INVALID_INDEX;
-	}
-
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr reference operator[](EntityID id) const {
 		GREM_ASSERT(storage);
-		GREM_ASSERT(containsEntity(id));
+		GREM_ASSERT(has(id));
 		if constexpr (detail::empty_component<Component>) {
 			return {id, detail::DUMMY_COMPONENT<Component>};
 		} else {
@@ -1498,6 +1760,75 @@ public:
 		}
 	}
 
+	/**
+	 * Check if the referenced pool has a component instance associated with a
+	 * specific entity.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity that has
+	 *         a component instance stored in the pool, false otherwise.
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool has(EntityID id) const {
+		if (!storage) {
+			return false;
+		}
+		GREM_ASSERT(storage->indices.size() == slots.size());
+		return isValidEntity(id) && storage->indices[id.getIndex()] != EntityID::INVALID_INDEX;
+	}
+
+	/**
+	 * Get the component instance associated with a specific entity.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a reference to the component instance associated with the
+	 *         specified entity.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity that has a component instance stored in the pool.
+	 */
+	GREM_ALWAYS_INLINE Component& get(EntityID id) const {
+		Component* const result = find(id);
+		if (!result) {
+			throw std::out_of_range{("Component \"" + meta::unqualified_type_name_v<std::remove_const_t<Component>> + "\" not found for the specified entity.").c_str()};
+		}
+		return *result;
+	}
+
+	/**
+	 * Get the component instance associated with a specific entity, or a
+	 * default value in case the entity doesn't exist or doesn't have an
+	 * associated component instance.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 * \param defaultValue default value to return in case the given handle does
+	 *        not correspond to a valid entity with an associated component
+	 *        instance.
+	 *
+	 * \return a copy of the component instance associated with the specified
+	 *         entity, or the specified default value if the given handle does
+	 *         not correspond to a valid entity that has a component instance
+	 *         stored in the pool.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE Component getOr(EntityID id, U&& defaultValue) const {
+		Component* const result = find(id);
+		if (!result) {
+			return std::forward<U>(defaultValue);
+		}
+		return *result;
+	}
+
+	/**
+	 * Try to get the component instance associated with a specific entity.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a pointer to the associated component of the specified entity, or
+	 *         nullptr if the given handle does not correspond to a valid entity
+	 *         that has a component instance stored in the pool.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE Component* find(EntityID id) const {
 		if (!storage) {
 			return nullptr;
@@ -1516,6 +1847,24 @@ public:
 		return nullptr;
 	}
 
+	/**
+	 * Add a component instance associated with a specific entity.
+	 *
+	 * \param id entity handle of the entity to add the component to.
+	 * \param args arguments to forward to the component constructor.
+	 *
+	 * \return a reference to the newly created component instance.
+	 *
+	 * \throws std::logic_error if this component pool reference is invalid, or
+	 *         if the pool already contains a component instance associated with
+	 *         the specified entity.
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the component constructor.
+	 */
 	template <typename... Args>
 	GREM_ALWAYS_INLINE Component& add(EntityID id, Args&&... args) requires(!std::is_const_v<Component>) {
 		if (!storage) {
@@ -1527,6 +1876,25 @@ public:
 		return storage->template add<Component>(id, std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Add a component instance associated with a specific entity if it doesn't
+	 * already have one.
+	 *
+	 * \param id entity handle of the entity to add the component to.
+	 * \param args arguments to forward to the component constructor.
+	 *
+	 * \return a pointer to the newly created component instance, or nullptr if
+	 *         the pool already contains a component instance associated with
+	 *         the specified entity.
+	 *
+	 * \throws std::logic_error if this component pool reference is invalid.
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the component constructor.
+	 */
 	template <typename... Args>
 	GREM_ALWAYS_INLINE Component* addIfMissing(EntityID id, Args&&... args) requires(!std::is_const_v<Component>) {
 		if (!storage) {
@@ -1538,6 +1906,26 @@ public:
 		return storage->template addIfMissing<Component>(id, std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Add a component instance associated with a specific entity, or assign to
+	 * it if it already has one.
+	 *
+	 * \param id entity handle of the entity to assign the component to.
+	 * \param value component value to add or assign.
+	 *
+	 * \return a reference to the newly created component instance, or to the
+	 *         existing component instance associated with the specified entity
+	 *         if it already had one.
+	 *
+	 * \throws std::logic_error if this component pool reference is invalid.
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the move constructor or move assignment
+	 *         operator of the component type.
+	 */
 	GREM_ALWAYS_INLINE Component& addOrAssign(EntityID id, Component&& value) requires(!std::is_const_v<Component>) {
 		if (Component* const result = find(id)) {
 			return *result = std::move(value);
@@ -1545,6 +1933,26 @@ public:
 		return add(id, std::move(value));
 	}
 
+	/**
+	 * Add a component instance associated with a specific entity, or assign to
+	 * it if it already has one.
+	 *
+	 * \param id entity handle of the entity to assign the component to.
+	 * \param value component value to add or assign.
+	 *
+	 * \return a reference to the newly created component instance, or to the
+	 *         existing component instance associated with the specified entity
+	 *         if it already had one.
+	 *
+	 * \throws std::logic_error if this component pool reference is invalid.
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the copy constructor or copy assignment
+	 *         operator of the component type.
+	 */
 	GREM_ALWAYS_INLINE Component& addOrAssign(EntityID id, const Component& value) requires(!std::is_const_v<Component>) {
 		if (Component* const result = find(id)) {
 			return *result = value;
@@ -1552,23 +1960,30 @@ public:
 		return add(id, value);
 	}
 
-	GREM_ALWAYS_INLINE Component& get(EntityID id) const {
-		Component* const result = find(id);
-		if (!result) {
-			throw std::out_of_range{("Component \"" + meta::unqualified_type_name_v<std::remove_const_t<Component>> + "\" not found for the specified entity.").c_str()};
-		}
-		return *result;
-	}
-
-	GREM_ALWAYS_INLINE bool remove(EntityID id) requires(!std::is_const_v<Component>) {
-		if (!containsEntity(id)) {
+	/**
+	 * Erase the component instance associated with a specific entity.
+	 *
+	 * \param id entity handle of the entity to remove the component from.
+	 *
+	 * \return true if the entity handle corresponded to a valid entity with an
+	 *         associated component instance in the referenced pool that was
+	 *         successfully removed, false otherwise.
+	 */
+	GREM_ALWAYS_INLINE bool remove(EntityID id) noexcept requires(!std::is_const_v<Component>) {
+		if (!has(id)) {
 			return false;
 		}
 		storage->remove(id.getIndex());
 		return true;
 	}
 
-	GREM_ALWAYS_INLINE size_type removeFromAllEntities() requires(!std::is_const_v<Component>) {
+	/**
+	 * Erase all associated component instances.
+	 *
+	 * \return the number of component instances in the referenced pool that
+	 *         were successfully removed.
+	 */
+	GREM_ALWAYS_INLINE size_type removeFromAllEntities() noexcept requires(!std::is_const_v<Component>) {
 		if (storage) {
 			const size_type result = storage->entityIDs.size();
 			storage->clear();
@@ -1606,68 +2021,273 @@ private:
 #endif
 };
 
+/**
+ * Temporary reference to an incomplete entity that is currently being built
+ * inside of an EntityRegistry and will be automatically destroyed and cleaned
+ * up if EntityBuilder::build() is not successfully called by the end of the
+ * scope.
+ *
+ * \tparam EntReg concrete specialization of EntityRegistry being referenced.
+ */
 template <typename EntReg>
 class EntityBuilder {
 public:
+	/**
+	 * Construct an entity builder.
+	 *
+	 * \param registry entity registry containing the entity being built.
+	 * \param entityID entity handle of the entity being built.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr EntityBuilder(EntReg& registry, EntityID entityID) noexcept
 		: registry(registry)
 		, entityID(entityID) {}
 
+	/** Destructor. */
 	~EntityBuilder();
 
+	/** Copying an entity builder is not allowed. */
 	EntityBuilder(const EntityBuilder&) = delete;
+
+	/** Move constructor. */
 	EntityBuilder(EntityBuilder&&) = default;
 
+	/** Copying an entity builder is not allowed. */
 	EntityBuilder& operator=(const EntityBuilder&) = delete;
+
+	/** Relocating an entity builder is not allowed. */
 	EntityBuilder& operator=(EntityBuilder&&) = delete;
 
+	/**
+	 * Update the flags embedded in the entity's handle.
+	 *
+	 * \param newFlags new flags to set.
+	 *
+	 * \return the new entity handle with the updated flags, or an invalid
+	 *         default-constructed handle if the internal entity handle was not
+	 *         valid.
+	 */
 	EntityID setEntityFlags(EntityID::Flags newFlags);
 
+	/**
+	 * Get the underlying entity registry containing the entity being built.
+	 *
+	 * \return a reference to the underlying entity registry.
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE EntReg& getRegistry() noexcept {
+		return registry;
+	}
+
+	/**
+	 * Get the underlying entity registry containing the entity being built.
+	 *
+	 * \return a read-only reference to the underlying entity registry.
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE const EntReg& getRegistry() const noexcept {
+		return registry;
+	}
+
+	/**
+	 * Get the entity handle of the entity being built.
+	 *
+	 * \return the underlying entity handle.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE EntityID getEntityID() const noexcept {
 		return entityID;
 	}
 
+	/**
+	 * Add a component to the entity being built.
+	 *
+	 * \tparam T component type to add.
+	 *
+	 * \param args arguments to forward to the component constructor.
+	 *
+	 * \return a reference to the newly created component.
+	 *
+	 * \throws std::logic_error if the entity already has the specified
+	 *         component.
+	 * \throws std::out_of_range if the underlying handle does not correspond to
+	 *         a valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the component constructor.
+	 */
 	template <component T, typename... Args>
 	T& addComponent(Args&&... args);
 
+	/**
+	 * Add a component to the entity being built if it doesn't already have it.
+	 *
+	 * \tparam T component type to add.
+	 *
+	 * \param args arguments to forward to the component constructor.
+	 *
+	 * \return a pointer to the newly created component, or nullptr if the
+	 *         entity already has the specified component.
+	 *
+	 * \throws std::out_of_range if the underlying handle does not correspond to
+	 *         a valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the component constructor.
+	 */
 	template <component T, typename... Args>
 	T* addComponentIfMissing(Args&&... args);
 
+	/**
+	 * Add a component to the entity being built, or assign to it if it already
+	 * has one.
+	 *
+	 * \tparam T component type to add or assign.
+	 *
+	 * \param value component value to add or assign.
+	 *
+	 * \return a reference to the newly created component, or to the existing
+	 *         component if the entity already had one.
+	 *
+	 * \throws std::out_of_range if the underlying handle does not correspond to
+	 *         a valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the move constructor or move assignment
+	 *         operator of the component type.
+	 */
 	template <component T>
 	T& addOrAssignComponent(T&& value);
 
+	/**
+	 * Add a component to the entity being built, or assign to it if it already
+	 * has one.
+	 *
+	 * \tparam T component type to add or assign.
+	 *
+	 * \param value component value to add or assign.
+	 *
+	 * \return a reference to the newly created component, or to the existing
+	 *         component if the entity already had one.
+	 *
+	 * \throws std::out_of_range if the underlying handle does not correspond to
+	 *         a valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the copy constructor or copy assignment
+	 *         operator of the component type.
+	 */
 	template <component T>
 	T& addOrAssignComponent(const T& value);
 
+	/**
+	 * Erase a component from the entity being built.
+	 *
+	 * \tparam T component type to remove.
+	 *
+	 * \return true if the underlying entity handle corresponded to a valid
+	 *         entity with the specified component that was successfully
+	 *         removed, false otherwise.
+	 */
 	template <component T>
 	bool removeComponent() noexcept;
 
+	/**
+	 * Erase all components from the entity being built.
+	 *
+	 * \return true if the underlying entity handle corresponded to a valid
+	 *         entity, false otherwise.
+	 */
 	bool removeAllComponents() noexcept;
 
+	/**
+	 * Check if the entity being built has a specific component.
+	 *
+	 * \tparam T component type to check for.
+	 *
+	 * \return true if the underlying entity handle corresponds to a valid
+	 *         entity with the specified component, false otherwise.
+	 */
 	template <component T>
 	[[nodiscard]] bool hasComponent() const noexcept;
 
+	/**
+	 * Get a specific component of the entity being built.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \return a reference to the specified component.
+	 *
+	 * \throws std::out_of_range if the underlying entity handle does not
+	 *         correspond to a valid entity with the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] T& getComponent();
 
+	/**
+	 * Get a specific component of the entity being built.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \return a read-only reference to the specified component.
+	 *
+	 * \throws std::out_of_range if the underlying entity handle does not
+	 *         correspond to a valid entity with the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] const T& getComponent() const;
 
+	/**
+	 * Get a specific component of the entity being built, or a default value in
+	 * case the entity doesn't exist or doesn't have the specified component.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param defaultValue default value to return in case the underlying entity
+	 *        handle does not correspond to a valid entity with the specified
+	 *        component.
+	 *
+	 * \return a copy of the specified component, or the specified default value
+	 *         if the underlying entity handle does not correspond to a valid
+	 *         entity with the specified component.
+	 */
 	template <component T, typename U>
 	[[nodiscard]] T getComponentOr(U&& defaultValue) const;
 
+	/**
+	 * Try to get a specific component of the entity being built.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \return a pointer to the specified component, or nullptr if the
+	 *         underlying entity handle does not correspond to a valid entity
+	 *         with the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] T* findComponent() noexcept;
 
+	/**
+	 * Try to get a specific component of the entity being built.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \return a read-only pointer to the specified component, or nullptr if the
+	 *         underlying entity handle does not correspond to a valid entity
+	 *         with the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] const T* findComponent() const noexcept;
 
-	template <typename Callback, typename... Args>
-	GREM_ALWAYS_INLINE EntityBuilder& extend(Callback&& callback, Args&&... args) { // NOLINT(cppcoreguidelines-missing-std-forward)
-		callback(registry, EntityID{entityID}, std::forward<Args>(args)...);
-		return *this;
-	}
-
+	/**
+	 * Finish building the entity, allowing it to persist.
+	 *
+	 * This will set the entity builder's underlying entity handle to an invalid
+	 * default-constructed handle, meaning the entity builder can no longer be
+	 * used, and the entity will no longer get destroyed and cleaned up when the
+	 * entity builder goes out of scope.
+	 *
+	 * \return the entity handle of the completed entity that was built.
+	 */
 	GREM_ALWAYS_INLINE EntityID build() {
 		return std::exchange(entityID, EntityID{});
 	}
@@ -1677,9 +2297,26 @@ private:
 	EntityID entityID;
 };
 
+// Deduction guide for EntityBuilder.
 template <typename Registry>
 EntityBuilder(Registry&, EntityID) -> EntityBuilder<Registry>;
 
+/**
+ * Dynamic container of entities with stable EntityID handles and associated
+ * component instances, available to tasks defined through a Scheduler.
+ *
+ * This container supports extending the set of possible component types
+ * dynamically at runtime.
+ *
+ * \tparam KnownComponents compile-time-known set of possible component types,
+ *         which are given dedicated storage slots in the entity registry to
+ *         speed up access to them. Any unknown component types that are not in
+ *         this list will be stored in a dynamic associative container keyed by
+ *         the component's typeid, which is looked up at runtime, incurring some
+ *         performance overhead.
+ *
+ * \sa EntityTable
+ */
 template <typename... KnownComponents>
 class EntityRegistry {
 private:
@@ -1698,24 +2335,30 @@ public:
 	using iterator = typename Buffer<EntityID>::iterator;
 	using const_iterator = typename Buffer<EntityID>::const_iterator;
 
+	/** Construct an empty entity registry. */
 	EntityRegistry() noexcept = default;
 
 #if !defined(NDEBUG) || defined(GREM_USE_RELEASE_ASSERTIONS)
+	/** Destructor. */
 	~EntityRegistry() {
 		currentIteratorGeneration->fetch_add(1);
 	}
 #else
+	/** Destructor. */
 	~EntityRegistry() = default;
 #endif
 
+	/** Copy constructor. */
 	EntityRegistry(const EntityRegistry& other) {
 		*this = other;
 	}
 
+	/** Move constructor. */
 	EntityRegistry(EntityRegistry&& other) noexcept {
 		*this = std::move(other);
 	}
 
+	/** Copy assignment. */
 	EntityRegistry& operator=(const EntityRegistry& other) {
 		if (this == &other) {
 			return *this;
@@ -1757,6 +2400,7 @@ public:
 		return *this;
 	}
 
+	/** Move assignment. */
 	EntityRegistry& operator=(EntityRegistry&& other) noexcept {
 		if (this == &other) {
 			return *this;
@@ -1773,6 +2417,10 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Destroy all entities and erase all of their associated components from
+	 * the registry.
+	 */
 	void clear() noexcept {
 		entityIDs.clear();
 
@@ -1803,6 +2451,20 @@ public:
 #endif
 	}
 
+	/**
+	 * Create a new entity.
+	 *
+	 * \param flags flags to embed in the entity handle of the new entity.
+	 *
+	 * \return an entity builder for building the new entity. To finish creating
+	 *         the entity, call EntityBuilder::build().
+	 *
+	 * \throws std::logic_error if an entity with the given handle already
+	 *         exists in the registry.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] EntityBuilder<EntityRegistry> createEntity(EntityID::Flags flags = {}) {
 		if (size() >= max_size()) {
 			throw std::length_error{"Maximum entity count exceeded."};
@@ -1866,6 +2528,24 @@ public:
 		return EntityBuilder{*this, id};
 	}
 
+	/**
+	 * Create a new entity with a specific entity handle.
+	 *
+	 * \param id entity handle containing the slot index, generation counter and
+	 *        flags of the new entity.
+	 *
+	 * \return an entity builder for building the new entity. To finish creating
+	 *         the entity, call EntityBuilder::build().
+	 *
+	 * \throws std::invalid_argument if the given entity handle cannot be used
+	 *         to represent a valid entity because its slot index is
+	 *         EntityID::INVALID_INDEX or its generation counter value is even.
+	 * \throws std::logic_error if an entity with the given handle already
+	 *         exists in the registry.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	[[nodiscard]] EntityBuilder<EntityRegistry> createEntityAtID(EntityID id) {
 		if (id.getIndex() == EntityID::INVALID_INDEX || (id.getGeneration() & 1) == 0) {
 			throw std::invalid_argument{"Invalid entity handle."};
@@ -1955,6 +2635,16 @@ public:
 		return EntityBuilder{*this, id};
 	}
 
+	/**
+	 * Update the flags embedded in an entity's handle.
+	 *
+	 * \param id entity handle of the entity to update the flags of.
+	 * \param newFlags new flags to set.
+	 *
+	 * \return the new entity handle with the updated flags, or an invalid
+	 *         default-constructed handle if the given entity handle does not
+	 *         correspond to a valid entity.
+	 */
 	EntityID setEntityFlags(EntityID id, EntityID::Flags newFlags) {
 		const EntityID::Index slotIndex = id.getIndex();
 		if (slotIndex < slots.size() && (id.getGeneration() & 1) != 0) {
@@ -1996,6 +2686,14 @@ public:
 		return {};
 	}
 
+	/**
+	 * Destroy an entity and all of its associated components.
+	 *
+	 * \param id entity handle of the entity to destroy.
+	 *
+	 * \return true if the entity handle corresponded to a valid entity that was
+	 *         successfully destroyed, false otherwise.
+	 */
 	GREM_ALWAYS_INLINE bool destroyEntity(EntityID id) noexcept {
 		if (!containsEntity(id)) {
 			return false;
@@ -2005,6 +2703,16 @@ public:
 		return result;
 	}
 
+	/**
+	 * Destroy the entity in a specific slot and all of its associated
+	 * components.
+	 *
+	 * \param slotIndex index of the entity slot containing the entity to
+	 *        destroy.
+	 *
+	 * \return true if the slot corresponded to a valid entity that was
+	 *         successfully destroyed, false otherwise.
+	 */
 	bool destroyEntityAtIndex(EntityID::Index slotIndex) noexcept {
 		if (!containsEntityAtIndex(slotIndex)) {
 			return false;
@@ -2067,52 +2775,201 @@ public:
 		return end();
 	}
 
+	/**
+	 * Check if the registry contains a specific entity.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity in this
+	 *         registry, false otherwise.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE bool containsEntity(EntityID id) const noexcept {
 		const EntityID::Index slotIndex = id.getIndex();
 		return slotIndex < slots.size() && (id.getGeneration() & 1) != 0 && slots[slotIndex].generation == id.getGeneration();
 	}
 
+	/**
+	 * Check if the registry contains an entity in a specific slot.
+	 *
+	 * \param slotIndex index of the entity slot to check.
+	 *
+	 * \return true if the given slot contains a valid entity in this registry,
+	 *         false otherwise.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE bool containsEntityAtIndex(EntityID::Index slotIndex) const {
 		return slotIndex < slots.size() && (slots[slotIndex].generation & 1) != 0;
 	}
 
+	/**
+	 * Get the number of valid entity handles currently in the registry.
+	 *
+	 * \return the number of entities.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE size_type size() const noexcept {
 		return entityIDs.size();
 	}
 
+	/**
+	 * Check if the registry is empty.
+	 *
+	 * \return true if the registry does not contain any valid entity handles,
+	 *         false otherwise.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE bool empty() const noexcept {
 		return entityIDs.empty();
 	}
 
+	/**
+	 * Get the maximum number of simultaneous valid entity handles that the
+	 * registry can contain.
+	 *
+	 * \return the maximum entity count.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE size_type max_size() const noexcept {
-		return static_cast<size_type>(EntityID::MAX_INDEX) + 1;
+		return std::min({
+			static_cast<size_type>(slots.max_size()),
+			static_cast<size_type>(entityIDs.max_size()),
+			size_type{static_cast<size_type>(EntityID::MAX_INDEX) + 1},
+		});
 	}
 
+	/**
+	 * Add a component to an entity.
+	 *
+	 * \tparam T component type to add.
+	 *
+	 * \param id entity handle of the entity to add the component to.
+	 * \param args arguments to forward to the component constructor.
+	 *
+	 * \return a reference to the newly created component.
+	 *
+	 * \throws std::logic_error if the given entity already has the specified
+	 *         component.
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the component constructor.
+	 *
+	 * \note The component pool for the specified component type will be created
+	 *       if it doesn't already exist.
+	 */
 	template <component T, typename... Args>
 	GREM_ALWAYS_INLINE T& addComponent(EntityID id, Args&&... args) {
 		return createComponentPool<T>().add(id, std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Add a component to an entity if it doesn't already have it.
+	 *
+	 * \tparam T component type to add.
+	 *
+	 * \param id entity handle of the entity to add the component to.
+	 * \param args arguments to forward to the component constructor.
+	 *
+	 * \return a pointer to the newly created component, or nullptr if the
+	 *         entity already has the specified component.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the component constructor.
+	 *
+	 * \note The component pool for the specified component type will be created
+	 *       if it doesn't already exist.
+	 */
 	template <component T, typename... Args>
 	GREM_ALWAYS_INLINE T* addComponentIfMissing(EntityID id, Args&&... args) {
 		return createComponentPool<T>().addIfMissing(id, std::forward<Args>(args)...);
 	}
 
+	/**
+	 * Add a component to an entity, or assign to it if it already has one.
+	 *
+	 * \tparam T component type to add or assign.
+	 *
+	 * \param id entity handle of the entity to add or assign the component to.
+	 * \param value component value to add or assign.
+	 *
+	 * \return a reference to the newly created component, or to the existing
+	 *         component if the entity already had one.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the move constructor or move assignment
+	 *         operator of the component type.
+	 *
+	 * \note The component pool for the specified component type will be created
+	 *       if it doesn't already exist.
+	 */
 	template <component T>
 	GREM_ALWAYS_INLINE T& addOrAssignComponent(EntityID id, T&& value) {
 		return createComponentPool<std::decay_t<T>>().addOrAssign(id, std::forward<T>(value));
 	}
 
+	/**
+	 * Add a component to an entity, or assign to it if it already has one.
+	 *
+	 * \tparam T component type to add or assign.
+	 *
+	 * \param id entity handle of the entity to add or assign the component to.
+	 * \param value component value to add or assign.
+	 *
+	 * \return a reference to the newly created component, or to the existing
+	 *         component if the entity already had one.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the copy constructor or copy assignment
+	 *         operator of the component type.
+	 *
+	 * \note The component pool for the specified component type will be created
+	 *       if it doesn't already exist.
+	 */
 	template <component T>
 	GREM_ALWAYS_INLINE T& addOrAssignComponent(EntityID id, const T& value) {
 		return createComponentPool<T>().addOrAssign(id, value);
 	}
 
+	/**
+	 * Erase a component from an entity.
+	 *
+	 * \tparam T component type to remove.
+	 *
+	 * \param id entity handle of the entity to remove the component from.
+	 *
+	 * \return true if the given handle corresponded to a valid entity with the
+	 *         specified component that was successfully removed, false
+	 *         otherwise.
+	 *
+	 * \note If the specified entity does not exist, this function has no
+	 *       effect, and will NOT create any missing component pools.
+	 */
 	template <component T>
 	GREM_ALWAYS_INLINE bool removeComponent(EntityID id) noexcept {
 		return getComponentPool<T>().remove(id);
 	}
 
+	/**
+	 * Erase all components from an entity.
+	 *
+	 * \param id entity handle of the entity to remove all components from.
+	 *
+	 * \return true if the given handle corresponded to a valid entity, false
+	 *         otherwise.
+	 *
+	 * \note If the specified entity does not exist, this function has no
+	 *       effect, and will NOT create any missing component pools.
+	 */
 	GREM_ALWAYS_INLINE bool removeAllComponents(EntityID id) noexcept {
 		if (!containsEntity(id)) {
 			return false;
@@ -2128,16 +2985,49 @@ public:
 		return true;
 	}
 
+	/**
+	 * Erase a specific component from all entities.
+	 *
+	 * \tparam T component type to remove.
+	 *
+	 * \return the number of entities that had the specified component before it
+	 *         was removed.
+	 *
+	 * \note If no entities have the specified component, this function has no
+	 *       effect, and will NOT create any missing component pools.
+	 */
 	template <component T>
 	size_type GREM_ALWAYS_INLINE removeComponentFromAllEntities() noexcept {
 		return getComponentPool<T>().removeFromAllEntities();
 	}
 
+	/**
+	 * Check if an entity has a specific component.
+	 *
+	 * \tparam T component type to check for.
+	 *
+	 * \param id entity handle to check.
+	 *
+	 * \return true if the given handle corresponds to a valid entity with the
+	 *         specified component, false otherwise.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE bool hasComponent(EntityID id) const noexcept {
 		return findComponent<T>(id) != nullptr;
 	}
 
+	/**
+	 * Get a specific component of an entity.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a reference to the specified component.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity with the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE T& getComponent(EntityID id) {
 		T* const result = findComponent<T>(id);
@@ -2147,6 +3037,18 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Get a specific component of an entity.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a read-only reference to the specified component.
+	 *
+	 * \throws std::out_of_range if the given handle does not correspond to a
+	 *         valid entity with the specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE const T& getComponent(EntityID id) const {
 		const T* const result = findComponent<T>(id);
@@ -2156,6 +3058,20 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Get a specific component of an entity, or a default value in case the
+	 * entity doesn't exist or doesn't have the specified component.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 * \param defaultValue default value to return in case the given handle does
+	 *        not correspond to a valid entity with the specified component.
+	 *
+	 * \return a copy of the specified component, or the specified default value
+	 *         if the given handle does not correspond to a valid entity with
+	 *         the specified component.
+	 */
 	template <component T, typename U>
 	[[nodiscard]] GREM_ALWAYS_INLINE T getComponentOr(EntityID id, U&& defaultValue) const {
 		const T* const result = findComponent<T>(id);
@@ -2165,6 +3081,17 @@ public:
 		return *result;
 	}
 
+	/**
+	 * Try to get a specific component of an entity.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a pointer to the specified component, or nullptr if the given
+	 *         handle does not correspond to a valid entity with the specified
+	 *         component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE T* findComponent(EntityID id) noexcept {
 		if (containsEntity(id)) {
@@ -2198,6 +3125,17 @@ public:
 		return nullptr;
 	}
 
+	/**
+	 * Try to get a specific component of an entity.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param id entity handle of the entity to get the component from.
+	 *
+	 * \return a read-only pointer to the specified component, or nullptr if the
+	 *         given handle does not correspond to a valid entity with the
+	 *         specified component.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE const T* findComponent(EntityID id) const noexcept {
 		if (containsEntity(id)) {
@@ -2231,11 +3169,37 @@ public:
 		return nullptr;
 	}
 
+	/**
+	 * Get the entity handle of the entity in a specific slot.
+	 *
+	 * \param slotIndex index of the entity slot to get the entity handle of.
+	 *        Must be a valid slot index corresponding to an entity that is
+	 *        currently valid, e.g. the result of a previous call to
+	 *        `id.getIndex()` on a valid entity handle `id` that has not since
+	 *        been invalidated.
+	 *
+	 * \return the entity handle of the entity in the specified slot.
+	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE EntityID getEntityIDAtEntityIndexUnsafe(EntityID::Index slotIndex) const {
 		GREM_ASSERT((slots[slotIndex].generation & 1) != 0);
 		return EntityID{slotIndex, slots[slotIndex].generation, slots[slotIndex].active.flags};
 	}
 
+	/**
+	 * Get a specific component of the entity in a specific slot.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param slotIndex index of the entity slot to get the entity handle of.
+	 *        Must be a valid slot index corresponding to an entity that is
+	 *        currently valid and has the specified component, e.g. the result
+	 *        of a previous call to `id.getIndex()` on a valid entity handle
+	 *        `id` that is known to have the specified component, and has not
+	 *        since been invalidated.
+	 *
+	 * \return a reference to the specified component of the entity in the
+	 *         specified slot.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE T& getComponentAtEntityIndexUnsafe(EntityID::Index slotIndex) {
 		if constexpr (detail::empty_component<T>) {
@@ -2257,6 +3221,21 @@ public:
 		}
 	}
 
+	/**
+	 * Get a specific component of the entity in a specific slot.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param slotIndex index of the entity slot to get the entity handle of.
+	 *        Must be a valid slot index corresponding to an entity that is
+	 *        currently valid and has the specified component, e.g. the result
+	 *        of a previous call to `id.getIndex()` on a valid entity handle
+	 *        `id` that is known to have the specified component, and has not
+	 *        since been invalidated.
+	 *
+	 * \return a read-only reference to the specified component of the entity in
+	 *         the specified slot.
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE const T& getComponentAtEntityIndexUnsafe(EntityID::Index slotIndex) const {
 		if constexpr (detail::empty_component<T>) {
@@ -2278,6 +3257,27 @@ public:
 		}
 	}
 
+	/**
+	 * Get a view of all entites in the registry that have all of the required
+	 * components and none of the excluded components specified in a list of
+	 * types.
+	 *
+	 * \tparam ComponentsAndExclusions component and component exclusion types
+	 *         (e.g. Exclude<Component>) that specify which entities are part of
+	 *         the range.
+	 *
+	 * \return the specified entity range, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by potentially read-only
+	 *         references to all required components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         for (auto&& [entityID, a, b] : registry.getEntities<A, const B, Exclude<C>>()) {
+	 *             // ...
+	 *         }
+	 *         ```
+	 */
 	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE Entities<ComponentsAndExclusions...> getEntities() noexcept
 		requires(!meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
@@ -2285,6 +3285,27 @@ public:
 		return getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{}, typename EntityRange::ExcludedComponents{});
 	}
 
+	/**
+	 * Get a view of all entites in the registry that have all of the required
+	 * components and none of the excluded components specified in a list of
+	 * types.
+	 *
+	 * \tparam ComponentsAndExclusions component and component exclusion types
+	 *         (e.g. Exclude<Component>) that specify which entities are part of
+	 *         the range.
+	 *
+	 * \return the specified entity range, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by read-only references
+	 *         to all required components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         for (auto&& [entityID, a, b] : registry.getEntities<const A, const B, Exclude<C>>()) {
+	 *             // ...
+	 *         }
+	 *         ```
+	 */
 	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE Entities<ComponentsAndExclusions...> getEntities() const noexcept
 		requires(meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
@@ -2292,18 +3313,60 @@ public:
 		return const_cast<EntityRegistry*>(this)->getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{}, typename EntityRange::ExcludedComponents{});
 	}
 
+	/**
+	 * Implicitly convert the registry to an entity range.
+	 *
+	 * \return the entity range.
+	 *
+	 * \sa getEntities()
+	 */
 	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE operator Entities<ComponentsAndExclusions...>() noexcept
 		requires(!meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
 		return getEntities<ComponentsAndExclusions...>();
 	}
 
+	/**
+	 * Implicitly convert the registry to an entity range.
+	 *
+	 * \return the entity range.
+	 *
+	 * \sa getEntities()
+	 */
 	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE operator Entities<ComponentsAndExclusions...>() const noexcept
 		requires(meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
 		return getEntities<ComponentsAndExclusions...>();
 	}
 
+	/**
+	 * Get a specific chunk of the entites in the registry that have all of the
+	 * required components and none of the excluded components specified in a
+	 * list of types.
+	 *
+	 * \tparam ComponentsAndExclusions component and component exclusion types
+	 *         (e.g. Exclude<Component>) that specify which entities are part of
+	 *         the range.
+	 *
+	 * \param chunkIndex index of the specific chunk to get. Must be less than
+	 *        `chunkCount`.
+	 * \param chunkCount number of chunks that the entity range is divided into.
+	 *        Must be positive, and greater than chunkIndex.
+	 *
+	 * \return the specified entity range chunk, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by potentially read-only
+	 *         references to all required components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         myParallelFor(chunkCount, [&](size_t chunkIndex) {
+	 *             for (auto&& [entityID, a, b] : registry.getEntitiesChunk<A, const B, Exclude<C>>(chunkIndex, chunkCount)) {
+	 *                 // ...
+	 *             }
+	 *         });
+	 *         ```
+	 */
 	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE Entities<ComponentsAndExclusions...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) noexcept
 		requires(!meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
@@ -2311,6 +3374,34 @@ public:
 		return getEntitiesChunkImplementation<EntityRange>(chunkIndex, chunkCount, typename EntityRange::IncludedComponents{}, typename EntityRange::ExcludedComponents{});
 	}
 
+	/**
+	 * Get a specific chunk of the entites in the registry that have all of the
+	 * required components and none of the excluded components specified in a
+	 * list of types.
+	 *
+	 * \tparam ComponentsAndExclusions component and component exclusion types
+	 *         (e.g. Exclude<Component>) that specify which entities are part of
+	 *         the range.
+	 *
+	 * \param chunkIndex index of the specific chunk to get. Must be less than
+	 *        `chunkCount`.
+	 * \param chunkCount number of chunks that the entity range is divided into.
+	 *        Must be positive, and greater than chunkIndex.
+	 *
+	 * \return the specified entity range chunk, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by read-only references
+	 *         to all required components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         myParallelFor(chunkCount, [&](size_t chunkIndex) {
+	 *             for (auto&& [entityID, a, b] : registry.getEntitiesChunk<const A, const B, Exclude<C>>(chunkIndex, chunkCount)) {
+	 *                 // ...
+	 *             }
+	 *         });
+	 *         ```
+	 */
 	template <typename... ComponentsAndExclusions>
 	[[nodiscard]] GREM_ALWAYS_INLINE Entities<ComponentsAndExclusions...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) const noexcept
 		requires(meta::type_list_empty_v<typename Entities<ComponentsAndExclusions...>::MutableComponents>) {
@@ -2319,6 +3410,21 @@ public:
 			typename EntityRange::ExcludedComponents{});
 	}
 
+	/**
+	 * Ensure that the component pool for a specific component type has been
+	 * created, and get a reference to it.
+	 *
+	 * \tparam T component type of the pool to create.
+	 *
+	 * \return a valid reference to the specified component pool, which is
+	 *         created if it didn't already exist.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa getComponentPool()
+	 */
 	template <component T>
 	GREM_ALWAYS_INLINE ComponentPool<T> createComponentPool() {
 		if constexpr (meta::type_list_contains_v<KnownComponentTypeList, T>) {
@@ -2333,6 +3439,21 @@ public:
 		}
 	}
 
+	/**
+	 * Get a reference to a specific component pool if it exists.
+	 *
+	 * \tparam T component type of the pool to get.
+	 *
+	 * \return a reference to the specified component pool, or an invalid
+	 *         component pool reference if the component pool hasn't been
+	 *         created yet.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa createComponentPool()
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE ComponentPool<T> getComponentPool() noexcept {
 		if constexpr (meta::type_list_contains_v<KnownComponentTypeList, T>) {
@@ -2348,6 +3469,21 @@ public:
 		}
 	}
 
+	/**
+	 * Get a reference to a specific component pool if it exists.
+	 *
+	 * \tparam T component type of the pool to get.
+	 *
+	 * \return a reference to the specified component pool, or an invalid
+	 *         component pool reference if the component pool hasn't been
+	 *         created yet.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \sa createComponentPool()
+	 */
 	template <component T>
 	[[nodiscard]] GREM_ALWAYS_INLINE ComponentPool<const T> getComponentPool() const noexcept {
 		if constexpr (meta::type_list_contains_v<KnownComponentTypeList, T>) {
@@ -2363,6 +3499,14 @@ public:
 		}
 	}
 
+	/**
+	 * Destroy all entities that have all of the required components and none of
+	 * the excluded components, and erase all of those entities' associated
+	 * components from the registry.
+	 *
+	 * \tparam ComponentsAndExclusions component and component exclusion types
+	 *         (e.g. Exclude<Component>) that specify which entities to destroy.
+	 */
 	template <typename... ComponentsAndExclusions>
 	size_type destroyEntities() noexcept {
 		size_type result = 0;
@@ -2379,6 +3523,19 @@ public:
 		return result;
 	}
 
+	/**
+	 * Destroy all entities in an entity registry whose entity handles match a
+	 * predicate, and erase all of those entities' associated components from
+	 * the registry.
+	 *
+	 * \param c entity registry to erase from.
+	 * \param predicate condition to check.
+	 *
+	 * \return the number of entities that matched the predicate and were
+	 *         subsequently erased.
+	 *
+	 * \throws any exception thrown by the predicate function.
+	 */
 	template <typename Predicate>
 	friend size_type erase_if(EntityRegistry& c, Predicate predicate) {
 		size_type result = 0;

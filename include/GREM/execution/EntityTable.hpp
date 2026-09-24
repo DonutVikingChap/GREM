@@ -29,6 +29,7 @@ class EntityTable; // Forward declaration.
 template <typename... Components>
 class Columns; // Forward declaration.
 
+/// \cond
 template <typename... Components>
 struct is_entity_range<Columns<Components...>> : std::true_type {};
 
@@ -36,6 +37,7 @@ template <typename... Components>
 struct entity_range_components_and_exclusions<Columns<Components...>> {
 	using type = meta::TypeList<Components...>;
 };
+/// \endcond
 
 namespace detail {
 
@@ -164,19 +166,46 @@ private:
 
 } // namespace detail
 
+/**
+ * View of the rows in a specific set of columns in an EntityTable.
+ *
+ * \tparam Components component types of the columns to reference.
+ */
 template <typename... Components>
 class Columns {
 public:
+	/** List of non-const components required by the range, provided as a meta::TypeList. */
 	using MutableComponents = meta::type_list_concat_t<typename detail::columns_extract_components<Components>::MutableComponents...>;
+
+	/** List of const components required by the range, provided as a meta::TypeList. */
 	using ImmutableComponents = meta::type_list_concat_t<typename detail::columns_extract_components<Components>::ImmutableComponents...>;
+
+	/** List of components required by the range, provided as a meta::TypeList. */
 	using IncludedComponents = meta::type_list_concat_t<typename detail::columns_extract_components<Components>::IncludedComponents...>;
+
+	/** List of components excluded by the range, provided as a meta::TypeList. */
 	using ExcludedComponents = meta::type_list_concat_t<typename detail::columns_extract_components<Components>::ExcludedComponents...>;
 
 	using iterator = detail::ColumnsIterator<IncludedComponents>;
 	using sentinel = detail::ColumnsSentinel;
+	using value_type = typename iterator::value_type;
+	using reference = typename iterator::reference;
+	using size_type = size_t;
+	using difference_type = ptrdiff_t;
 
+	/**
+	 * Construct an empty entity range.
+	 */
 	constexpr Columns() noexcept = default;
 
+	/**
+	 * Construct an entity subrange from an iterator pair.
+	 *
+	 * \param first begin iterator of the subrange.
+	 * \param last past-the-end iterator of the subrange.
+	 *
+	 * \warning The subrange `[first, last)` must form a valid range.
+	 */
 	constexpr Columns(const iterator& first, const iterator& last) noexcept
 		: rowIndex(first.rowIndex)
 		, rowsEnd(last.rowIndex)
@@ -190,7 +219,34 @@ public:
 		return sentinel{rowsEnd};
 	}
 
-	[[nodiscard]] constexpr size_t getCandidateCount() const noexcept {
+	/**
+	 * Get the number of rows in the range.
+	 *
+	 * \return the number of rows spanned by the range.
+	 */
+	[[nodiscard]] constexpr size_type size() const noexcept {
+		return rowsEnd - rowIndex;
+	}
+
+	/**
+	 * Check if the range is empty.
+	 *
+	 * \return true if the range spans 0 rows, false otherwise.
+	 */
+	[[nodiscard]] constexpr bool empty() const noexcept {
+		return rowIndex == rowsEnd;
+	}
+
+	/**
+	 * Get an upper bound estimate on the number of rows in the range, which is
+	 * equal to the exact number of rows.
+	 *
+	 * \return `size()`.
+	 *
+	 * \note This function is provided for API compatibility with Entities in
+	 *       generic code.
+	 */
+	[[nodiscard]] constexpr size_type getCandidateCount() const noexcept {
 		return rowsEnd - rowIndex;
 	}
 
@@ -198,16 +254,29 @@ private:
 	template <typename Row, typename Allocator>
 	friend class EntityTable;
 
-	constexpr Columns(size_t rowIndex, size_t rowsEnd, const Array<void*, meta::type_list_size_v<IncludedComponents>>& componentArrays) noexcept
+	constexpr Columns(size_type rowIndex, size_type rowsEnd, const Array<void*, meta::type_list_size_v<IncludedComponents>>& componentArrays) noexcept
 		: rowIndex(rowIndex)
 		, rowsEnd(rowsEnd)
 		, componentArrays(componentArrays) {}
 
-	size_t rowIndex = 0;
-	size_t rowsEnd = 0;
+	size_type rowIndex = 0;
+	size_type rowsEnd = 0;
 	Array<void*, meta::type_list_size_v<IncludedComponents>> componentArrays{};
 };
 
+/**
+ * Column-major Structure-of-Arrays-style table container of rows of a specific
+ * tuple of component types, available to tasks defined through a Scheduler.
+ *
+ * This container can be used as a simpler and more performant alternative to
+ * EntityRegistry when the full set of component types is known at compile time
+ * and fixed to be the same for all entities, and stable EntityID handles are
+ * not needed.
+ *
+ * \tparam Components component types of the columns in the table.
+ *
+ * \sa EntityRegistry
+ */
 template <typename... Components, typename Allocator>
 class EntityTable<Tuple<Components...>, Allocator> : private Table<Tuple<Components...>> {
 private:
@@ -257,6 +326,17 @@ public:
 	using ComponentTable::size;
 	using ComponentTable::swap;
 
+	/**
+	 * Get a specific component of a row in the table.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param rowIndex index of the row to get the component from.
+	 *
+	 * \return a reference to the specified component.
+	 *
+	 * \throws std::out_of_range if `rowIndex >= size()`.
+	 */
 	template <component T>
 	[[nodiscard]] T& getComponent(size_t rowIndex) {
 		if (rowIndex >= size()) {
@@ -265,6 +345,17 @@ public:
 		return this->template get<T>(rowIndex);
 	}
 
+	/**
+	 * Get a specific component of a row in the table.
+	 *
+	 * \tparam T component type to get.
+	 *
+	 * \param rowIndex index of the row to get the component from.
+	 *
+	 * \return a read-only reference to the specified component.
+	 *
+	 * \throws std::out_of_range if `rowIndex >= size()`.
+	 */
 	template <component T>
 	[[nodiscard]] const T& getComponent(size_t rowIndex) const {
 		if (rowIndex >= size()) {
@@ -273,34 +364,132 @@ public:
 		return this->template get<T>(rowIndex);
 	}
 
+	/**
+	 * Get a view of all rows of a specific set of columns in the table.
+	 *
+	 * \tparam Cs component types to get the columns of.
+	 *
+	 * \return the specified entity range, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by potentially read-only
+	 *         references to all of the specified components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         for (auto&& [entityID, a, b] : registry.getEntities<A, const B>()) {
+	 *             // ...
+	 *         }
+	 *         ```
+	 */
 	template <typename... Cs>
 	[[nodiscard]] Columns<Cs...> getEntities() noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		using EntityRange = Columns<Cs...>;
 		return getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{});
 	}
 
+	/**
+	 * Get a view of all rows of a specific set of columns in the table.
+	 *
+	 * \tparam Cs component types to get the columns of.
+	 *
+	 * \return the specified entity range, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by read-only references
+	 *         to all of the specified components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         for (auto&& [entityID, a, b] : registry.getEntities<const A, const B>()) {
+	 *             // ...
+	 *         }
+	 *         ```
+	 */
 	template <typename... Cs>
 	[[nodiscard]] Columns<Cs...> getEntities() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		using EntityRange = Columns<Cs...>;
 		return const_cast<EntityTable*>(this)->getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{});
 	}
 
+	/**
+	 * Implicitly convert the table to an entity range.
+	 *
+	 * \return the entity range.
+	 *
+	 * \sa getEntities()
+	 */
 	template <typename... Cs>
 	[[nodiscard]] operator Columns<Cs...>() noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		return getEntities<Cs...>();
 	}
 
+	/**
+	 * Implicitly convert the table to an entity range.
+	 *
+	 * \return the entity range.
+	 *
+	 * \sa getEntities()
+	 */
 	template <typename... Cs>
 	[[nodiscard]] operator Columns<Cs...>() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		return getEntities<Cs...>();
 	}
 
+	/**
+	 * Get a specific chunk of the rows of a specific set of columns in the
+	 * table.
+	 *
+	 * \tparam Cs component types to get the columns of.
+	 *
+	 * \param chunkIndex index of the specific chunk to get. Must be less than
+	 *        `chunkCount`.
+	 * \param chunkCount number of chunks that the entity range is divided into.
+	 *        Must be positive, and greater than chunkIndex.
+	 *
+	 * \return the specified entity range chunk, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by potentially read-only
+	 *         references to all of the specified components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         myParallelFor(chunkCount, [&](size_t chunkIndex) {
+	 *             for (auto&& [entityID, a, b] : registry.getEntitiesChunk<A, const B, Exclude<C>>(chunkIndex, chunkCount)) {
+	 *                 // ...
+	 *             }
+	 *         });
+	 *         ```
+	 */
 	template <typename... Cs>
 	[[nodiscard]] Columns<Cs...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
 		using EntityRange = Columns<Cs...>;
 		return getEntitiesChunkImplementation<EntityRange>(chunkIndex, chunkCount, typename EntityRange::IncludedComponents{});
 	}
 
+	/**
+	 * Get a specific chunk of the rows of a specific set of columns in the
+	 * table.
+	 *
+	 * \tparam Cs component types to get the columns of.
+	 *
+	 * \param chunkIndex index of the specific chunk to get. Must be less than
+	 *        `chunkCount`.
+	 * \param chunkCount number of chunks that the entity range is divided into.
+	 *        Must be positive, and greater than chunkIndex.
+	 *
+	 * \return the specified entity range chunk, whose reference type can be
+	 *         destructured into a structured binding containing a read-only
+	 *         reference to the entity handle followed by read-only references
+	 *         to all of the specified components.
+	 *
+	 * \remark Example usage:
+	 *         ```cpp
+	 *         myParallelFor(chunkCount, [&](size_t chunkIndex) {
+	 *             for (auto&& [entityID, a, b] : registry.getEntitiesChunk<const A, const B, Exclude<C>>(chunkIndex, chunkCount)) {
+	 *                 // ...
+	 *             }
+	 *         });
+	 *         ```
+	 */
 	template <typename... Cs>
 	[[nodiscard]] Columns<Cs...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>)
 	{
@@ -364,101 +553,6 @@ template <std::size_t ColumnIndex, typename Row, typename Allocator>
 [[nodiscard]] constexpr auto column(const EntityTable<Row, Allocator>& t) {
 	return t.template column<ColumnIndex>();
 }
-
-template <typename Row>
-class EntityTableReference;
-
-template <typename... Components>
-class EntityTableReference<Tuple<Components...>> {
-public:
-	static_assert((component<Components> && ...));
-
-	constexpr explicit EntityTableReference(size_t rowCount, Components*... columns)
-		: columns(columns...)
-		, rowCount(rowCount) {}
-
-	template <typename Allocator>
-	constexpr EntityTableReference(EntityTable<Tuple<Components...>, Allocator>& table)
-		: columns(column<Components>(table).data()...)
-		, rowCount(table.size()) {}
-
-	[[nodiscard]] constexpr bool empty() const noexcept {
-		return rowCount == 0;
-	}
-
-	[[nodiscard]] constexpr size_t size() const noexcept {
-		return rowCount;
-	}
-
-	template <component T>
-	[[nodiscard]] constexpr T& getComponent(size_t rowIndex) {
-		if (rowIndex >= size()) {
-			throw std::out_of_range{"Component not found for entity."};
-		}
-		return get<T*>(columns)[rowIndex];
-	}
-
-	template <component T>
-	[[nodiscard]] const T& getComponent(size_t rowIndex) const {
-		if (rowIndex >= size()) {
-			throw std::out_of_range{"Component not found for entity."};
-		}
-		return get<T*>(columns)[rowIndex];
-	}
-
-	template <typename... Cs>
-	[[nodiscard]] Columns<Cs...> getEntities() noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
-		using EntityRange = Columns<Cs...>;
-		return getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{});
-	}
-
-	template <typename... Cs>
-	[[nodiscard]] Columns<Cs...> getEntities() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
-		using EntityRange = Columns<Cs...>;
-		return const_cast<EntityTableReference*>(this)->getEntitiesImplementation<EntityRange>(typename EntityRange::IncludedComponents{});
-	}
-
-	template <typename... Cs>
-	[[nodiscard]] operator Columns<Cs...>() noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
-		return getEntities<Cs...>();
-	}
-
-	template <typename... Cs>
-	[[nodiscard]] operator Columns<Cs...>() const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
-		return getEntities<Cs...>();
-	}
-
-	template <typename... Cs>
-	[[nodiscard]] Columns<Cs...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) noexcept requires(!meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>) {
-		using EntityRange = Columns<Cs...>;
-		return getEntitiesChunkImplementation<EntityRange>(chunkIndex, chunkCount, typename EntityRange::IncludedComponents{});
-	}
-
-	template <typename... Cs>
-	[[nodiscard]] Columns<Cs...> getEntitiesChunk(size_t chunkIndex, size_t chunkCount) const noexcept requires(meta::type_list_empty_v<typename Columns<Cs...>::MutableComponents>)
-	{
-		using EntityRange = Columns<Cs...>;
-		return const_cast<EntityTableReference*>(this)->getEntitiesChunkImplementation<EntityRange>(chunkIndex, chunkCount, typename EntityRange::IncludedComponents{});
-	}
-
-private:
-	template <typename EntityRange, typename... IncludedComponents>
-	[[nodiscard]] EntityRange getEntitiesImplementation(meta::TypeList<IncludedComponents...>) noexcept {
-		return EntityRange{0, rowCount, Array<void*, sizeof...(IncludedComponents)>{get<IncludedComponents*>(columns)...}};
-	}
-
-	template <typename EntityRange, typename... IncludedComponents>
-	[[nodiscard]] EntityRange getEntitiesChunkImplementation(size_t chunkIndex, size_t chunkCount, meta::TypeList<IncludedComponents...>) noexcept {
-		GREM_ASSERT(chunkIndex < chunkCount);
-		const size_t chunkSize = (size() + chunkCount - 1) / chunkCount;
-		const size_t chunkBegin = min(chunkIndex * chunkSize, size());
-		const size_t chunkEnd = min(chunkBegin + chunkSize, size());
-		return EntityRange{chunkBegin, chunkEnd, Array<void*, sizeof...(IncludedComponents)>{get<IncludedComponents*>(columns)...}};
-	}
-
-	Tuple<Components*...> columns;
-	size_t rowCount;
-};
 
 } // namespace grem::execution
 

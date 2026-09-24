@@ -10,6 +10,13 @@
 
 namespace grem::execution {
 
+/**
+ * Concept that checks if a given type is a valid component type that can be
+ * stored and associated with an entity in e.g.\ an EntityRegistry or
+ * EntityTable.
+ *
+ * \tparam T the type to check.
+ */
 template <typename T>
 concept component = !std::is_const_v<T> && !std::is_reference_v<T> && !std::is_array_v<T> && std::is_nothrow_move_assignable_v<T>;
 

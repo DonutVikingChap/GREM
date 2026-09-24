@@ -8,6 +8,7 @@
 #include <GREM/core/data/ArrayList.hpp>
 #include <GREM/core/data/HashMap.hpp>
 #include <GREM/core/data/Span.hpp>
+#include <GREM/core/data/String.hpp>
 #include <GREM/core/extents.hpp>
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/execution/Executor.hpp>
@@ -30,7 +31,7 @@ class GameState {
 public:
 	using StackIndex = uint32_t;
 
-	FPS_SHARED_API GameState(AssetCache& assetCache, Audio* audio, Graphics* graphics, const GameSystems& gameSystems, exec::Executor& executor);
+	FPS_SHARED_API GameState(AssetCache& assetCache, Audio* audio, Graphics* graphics, const GameSystems& gameSystems, exec::Executor& executor, String name);
 	FPS_SHARED_API ~GameState();
 
 	GameState(const GameState&) = delete;
@@ -181,6 +182,7 @@ private:
 	Graphics* systemGraphics;
 	const GameSystems& gameSystems;
 	exec::Executor& executor;
+	String name;
 	EntityRegistry registry{};
 	ResourceRegistry resources{};
 	ArrayList<SystemsLayerStackEntry> systemsLayerStack{};

@@ -331,9 +331,64 @@ struct Accessor {
 
 } // namespace detail
 
+/**
+ * Statically scheduled task graph builder.
+ *
+ * This class is intended to be used at application startup to automatically
+ * determine the data dependencies between a dynamic list of ordered tasks
+ * (which can e.g. be loaded by dynamically linked plugins) and generate a
+ * static execution graph in the form of a Schedule that specifies which tasks
+ * are able to be run independently in parallel, such that they can be
+ * efficiently executed by a multithreaded Executor any number of times.
+ *
+ * There are four kinds of tasks that can be scheduled, using the following
+ * categories of functions:
+ * - `addTask()`: For basic tasks that perform some self-contained unit of work,
+ *   with arbitrary read/write access to any entities, component pools or
+ *   resources needed by the task. These tasks can be run in parallel with other
+ *   tasks that don't have overlapping access to the same mutable
+ *   components/resources.
+ * - `addParallelTask()`: For tasks that perform a chunked operation over a
+ *   specific resource, with read-only access to all other data. These tasks are
+ *   split into per-chunk sub-tasks that can be run in parallel with each other,
+ *   as well as with any other tasks that don't have overlapping access to the
+ *   same mutable components/resources.
+ * - `addParallelTransformationTask()`: For tasks that perform a chunked
+ *   transformation over a specific entity range, with read-only access to all
+ *   other data. These tasks are split into per-chunk sub-tasks that can be run
+ *   in parallel with each other, as well as with any other tasks that don't
+ *   have overlapping access to the same mutable components/resources.
+ * - `addParallelReductionTask()`: For tasks that perform a chunked reduction
+ *   operation (e.g. a sum or min/max) over a specific entity range and output
+ *   the result to a specific resource, with read-only access to all other
+ *   data. These tasks are split into per-chunk sub-tasks that can be run
+ *   in parallel with each other, as well as with any other tasks that don't
+ *   have overlapping access to the same mutable components/resources, followed
+ *   by a single task that combines all of the intermediate per-chunk results
+ *   and writes the final output to the resource.
+ *
+ * The parallel task types also have "unsafe" variants, e.g.
+ * `addUnsafeParallelTask()`, that don't enforce read-only access to the
+ * non-chunked data. These can be useful when doing manual
+ * synchronization/separation of the shared data, separate from the scheduling
+ * system.
+ *
+ * Each task type also has a corresponding "optional" variant, e.g.
+ * `addOptionalTask()`, that does not throw an exception when there are missing
+ * task arguments, and simply skips the task instead in that case.
+ *
+ * \tparam EntReg concrete entity registry type used by the scheduled tasks,
+ *         e.g. some specialization of EntityRegistry or EntityTable.
+ * \tparam ResReg concrete resource registry type used by the scheduled tasks,
+ *         e.g. some specialization of ResourceRegistry or ResourceTable.
+ */
 template <typename EntReg, typename ResReg>
 class Scheduler {
 public:
+	/**
+	 * Erase all tasks from the task list and reset the scheduler to an empty
+	 * state.
+	 */
 	void clear() noexcept {
 		tasks.clear();
 		componentAccesses.clear();
@@ -344,6 +399,36 @@ public:
 		barrier = false;
 	}
 
+	/**
+	 * Append a basic task to the task list.
+	 *
+	 * \tparam TaskFunction contextless function object that executes the task.
+	 *         The task function should return void and may accept the following
+	 *         kinds of parameters:
+	 *         - `T&`: Mutable access to a singleton #resource of type `T` from
+	 *           the resource registry that is provided on execution of the
+	 *           schedule.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *         - A component pool reference type, such as ComponentPool, from
+	 *           the entity registry that is provided on execution of the
+	 *           schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and throws an
+	 *         execution::Error if any of the task function's parameters are
+	 *         missing from the provided registries when the task is executed.
+	 *
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addTask(String name = {}) {
 		return addTaskImplementation<TaskFunction, []<typename... Args>(TaskContext& taskContext, meta::TypeList<Args...> argumentTypes) -> void {
@@ -354,6 +439,36 @@ public:
 		}>(std::move(name));
 	}
 
+	/**
+	 * Append an optional basic task to the task list.
+	 *
+	 * \tparam TaskFunction contextless function object that executes the task.
+	 *         The task function should return void and may accept the following
+	 *         kinds of parameters:
+	 *         - `T&`: Mutable access to a singleton #resource of type `T` from
+	 *           the resource registry that is provided on execution of the
+	 *           schedule.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *         - A component pool reference type, such as ComponentPool, from
+	 *           the entity registry that is provided on execution of the
+	 *           schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and skips the task if
+	 *         any of the task function's parameters are missing from the
+	 *         provided registries when the task is executed.
+	 *
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addOptionalTask(String name = {}) {
 		return addTaskImplementation<TaskFunction, []<typename... Args>(TaskContext& taskContext, meta::TypeList<Args...> argumentTypes) -> void {
@@ -362,6 +477,47 @@ public:
 		}>(std::move(name));
 	}
 
+	/**
+	 * Append a data-parallel task to the task list that performs a chunked
+	 * operation over a specific #resource.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - A read-only entity range type, such as Entities or Columns,
+	 *           from the entity registry that is provided on execution of the
+	 *           schedule.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and throws an
+	 *         execution::Error if any of the task function's parameters are
+	 *         missing from the provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addParallelTask(Task::ParallelCount parallelism, String name = {}) {
 		return addParallelTaskImplementation<TaskFunction,
@@ -373,6 +529,47 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append an optional data-parallel task to the task list that performs a
+	 * chunked operation over a specific #resource.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - A read-only entity range type, such as Entities or Columns,
+	 *           from the entity registry that is provided on execution of the
+	 *           schedule.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and skips the task if
+	 *         any of the task function's parameters are missing from the
+	 *         provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addOptionalParallelTask(Task::ParallelCount parallelism, String name = {}) {
 		return addParallelTaskImplementation<TaskFunction,
@@ -383,6 +580,49 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append a data-parallel task to the task list that performs a chunked
+	 * operation over a specific #resource, without any of the compile-time
+	 * safety checks that prevent sub-tasks from accidentally mutating shared
+	 * data.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - A read-only entity range type, such as Entities or Columns,
+	 *           from the entity registry that is provided on execution of the
+	 *           schedule.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and throws an
+	 *         execution::Error if any of the task function's parameters are
+	 *         missing from the provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addUnsafeParallelTask(Task::ParallelCount parallelism, String name = {}) {
 		return addUnsafeParallelTaskImplementation<TaskFunction,
@@ -394,6 +634,49 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append an optional data-parallel task to the task list that performs a
+	 * chunked operation over a specific #resource, without any of the
+	 * compile-time safety checks that prevent sub-tasks from accidentally
+	 * mutating shared data.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
+	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           function will be provided a distinct non-overlapping subrange
+	 *           of the full resource, such that the full range is covered.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - A read-only entity range type, such as Entities or Columns,
+	 *           from the entity registry that is provided on execution of the
+	 *           schedule.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and skips the task if
+	 *         any of the task function's parameters are missing from the
+	 *         provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addOptionalUnsafeParallelTask(Task::ParallelCount parallelism, String name = {}) {
 		return addUnsafeParallelTaskImplementation<TaskFunction,
@@ -404,6 +687,41 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append a data-parallel task to the task list that performs a chunked
+	 * transformation over a specific entity range.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *           Each parallel invocation of the task function will be provided
+	 *           a distinct non-overlapping subrange of the full entity range,
+	 *           such that the full range is covered.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and throws an
+	 *         execution::Error if any of the task function's parameters are
+	 *         missing from the provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addParallelTransformationTask(Task::ParallelCount parallelism, String name = {}) {
 		return addParallelTransformationTaskImplementation<TaskFunction,
@@ -415,6 +733,41 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append an optional data-parallel task to the task list that performs a
+	 * chunked transformation over a specific entity range.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *           Each parallel invocation of the task function will be provided
+	 *           a distinct non-overlapping subrange of the full entity range,
+	 *           such that the full range is covered.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and skips the task if
+	 *         any of the task function's parameters are missing from the
+	 *         provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addOptionalParallelTransformationTask(Task::ParallelCount parallelism, String name = {}) {
 		return addParallelTransformationTaskImplementation<TaskFunction,
@@ -425,6 +778,43 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append a data-parallel task to the task list that performs a chunked
+	 * transformation over a specific entity range, without any of the
+	 * compile-time safety checks that prevent sub-tasks from accidentally
+	 * mutating shared data.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *           Each parallel invocation of the task function will be provided
+	 *           a distinct non-overlapping subrange of the full entity range,
+	 *           such that the full range is covered.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and throws an
+	 *         execution::Error if any of the task function's parameters are
+	 *         missing from the provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addUnsafeParallelTransformationTask(Task::ParallelCount parallelism, String name = {}) {
 		return addUnsafeParallelTransformationTaskImplementation<TaskFunction,
@@ -436,6 +826,43 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append an optional data-parallel task to the task list that performs a
+	 * chunked transformation over a specific entity range, without any of the
+	 * compile-time safety checks that prevent sub-tasks from accidentally
+	 * mutating shared data.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *           Each parallel invocation of the task function will be provided
+	 *           a distinct non-overlapping subrange of the full entity range,
+	 *           such that the full range is covered.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and skips the task if
+	 *         any of the task function's parameters are missing from the
+	 *         provided registries when the task is executed.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction>
 	Scheduler& addOptionalUnsafeParallelTransformationTask(Task::ParallelCount parallelism, String name = {}) {
 		return addUnsafeParallelTransformationTaskImplementation<TaskFunction,
@@ -446,6 +873,52 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append a data-parallel task to the task list that performs a chunked
+	 * reduction operation over a specific entity range and outputs the result
+	 * to a specific #resource.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `T&`: Mutable access to a singleton #resource of type `T` to
+	 *           write the result of the reduction operation to.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *           Each parallel invocation of the task function will be provided
+	 *           a distinct non-overlapping subrange of the full entity range,
+	 *           such that the full range is covered.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and throws an
+	 *         execution::Error if any of the task function's parameters are
+	 *         missing from the provided registries when the task is executed.
+	 * \tparam ReductionFunction contextless function object that takes two
+	 *         instances of the resource type output by `TaskFunction` and
+	 *         reduces them into one, returning the result. This reduction
+	 *         function is used to combine the intermediate results produced by
+	 *         the main task function for each chunk. It may also, in addition
+	 *         to the two resource instances, accept the same kinds of read-only
+	 *         parameters as the main task function at the end of the parameter
+	 *         list.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction, auto ReductionFunction>
 	Scheduler& addParallelReductionTask(Task::ParallelCount parallelism, String name = {}) {
 		return addParallelReductionTaskImplementation<TaskFunction, ReductionFunction,
@@ -478,6 +951,52 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append an optional data-parallel task to the task list that performs a
+	 * chunked reduction operation over a specific entity range and outputs the
+	 * result to a specific #resource.
+	 *
+	 * \tparam TaskFunction contextless function object that executes one chunk
+	 *         of the task. The task function should return void and may accept
+	 *         the following kinds of parameters:
+	 *         - `T&`: Mutable access to a singleton #resource of type `T` to
+	 *           write the result of the reduction operation to.
+	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *           type `T` from the resource registry that is provided on
+	 *           execution of the schedule.
+	 *         - An entity range type, such as Entities or Columns, from the
+	 *           entity registry that is provided on execution of the schedule.
+	 *           Each parallel invocation of the task function will be provided
+	 *           a distinct non-overlapping subrange of the full entity range,
+	 *           such that the full range is covered.
+	 *         - A read-only component pool reference type, such as
+	 *           ComponentPool, from the entity registry that is provided on
+	 *           execution of the schedule.
+	 *         The task function will be wrapped in a thunk that retrieves the
+	 *         required arguments from the task context and skips the task if
+	 *         any of the task function's parameters are missing from the
+	 *         provided registries when the task is executed.
+	 * \tparam ReductionFunction contextless function object that takes two
+	 *         instances of the resource type output by `TaskFunction` and
+	 *         reduces them into one, returning the result. This reduction
+	 *         function is used to combine the intermediate results produced by
+	 *         the main task function for each chunk. It may also, in addition
+	 *         to the two resource instances, accept the same kinds of read-only
+	 *         parameters as the main task function at the end of the parameter
+	 *         list.
+	 *
+	 * \param parallelism number of parallel chunks to split the task into.
+	 *        Should typically be less than or equal to the
+	 *        `executor.getMaxParallelism()` value of the executor that the
+	 *        schedule will be executed on.
+	 * \param name optional UTF-8-encoded human-readable name of the task.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
 	template <auto TaskFunction, auto ReductionFunction>
 	Scheduler& addOptionalParallelReductionTask(Task::ParallelCount parallelism, String name = {}) {
 		return addParallelReductionTaskImplementation<TaskFunction, ReductionFunction,
@@ -508,15 +1027,43 @@ public:
 			}>(parallelism, std::move(name));
 	}
 
+	/**
+	 * Append a full synchronization barrier to the task list.
+	 * 
+	 * This causes all subsequent tasks added to the task list to
+	 * unconditionally synchronize with all tasks that were added before the
+	 * barrier, preventing them from running in parallel with those tasks.
+	 *
+	 * This may be useful for synchronizing tasks that have global data
+	 * dependencies, unknown to the scheduling system.
+	 *
+	 * \return `*this`, for chaining.
+	 */
 	Scheduler& addBarrier() {
 		barrier = true;
 		return *this;
 	}
 
-	[[nodiscard]] Schedule<EntReg, ResReg> buildSchedule() {
-		Schedule<EntReg, ResReg> result{};
-		result.requiredSharedMemorySize = requiredSharedMemorySize;
-		result.tasks = detail::buildSchedule(tasks, componentAccesses, resourceAccesses, entityRegistryAccesses, resourceRegistryAccesses);
+	/**
+	 * Consume the current task list, calculate the dependencies between the
+	 * tasks and schedule the final execution graph.
+	 *
+	 * \param name optional UTF-8-encoded human-readable name of the schedule.
+	 *
+	 * \return the final task schedule built by the scheduler.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \note This function resets the scheduler to an empty state.
+	 */
+	[[nodiscard]] Schedule<EntReg, ResReg> buildSchedule(String name = {}) {
+		Schedule<EntReg, ResReg> result{
+			detail::buildSchedule(tasks, componentAccesses, resourceAccesses, entityRegistryAccesses, resourceRegistryAccesses),
+			requiredSharedMemorySize,
+			std::move(name),
+		};
 		clear();
 		return result;
 	}
@@ -1309,25 +1856,25 @@ private:
 		}
 
 		static constexpr size_t SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET = max(sizeof(Task::ParallelCount), alignof(Resource));
-		const size_t sharedMemorySize = SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET + sizeof(Resource) * size_t{parallelism};
-		if (sharedMemorySize > static_cast<size_t>(Limits<Task::SharedMemorySize>::MAX) ||
-			static_cast<size_t>(requiredSharedMemorySize) > static_cast<size_t>(Limits<Task::SharedMemorySize>::MAX) - sharedMemorySize) {
+		const size_t taskRequiredSharedMemorySize = SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET + sizeof(Resource) * size_t{parallelism};
+		if (taskRequiredSharedMemorySize > static_cast<size_t>(Limits<Task::SharedMemorySize>::MAX) ||
+			static_cast<size_t>(requiredSharedMemorySize) > static_cast<size_t>(Limits<Task::SharedMemorySize>::MAX) - taskRequiredSharedMemorySize) {
 			throw std::length_error{"Maximum shared memory size exceeded."};
 		}
 		const Task::SharedMemoryOffset sharedMemoryOffset = requiredSharedMemorySize;
-		requiredSharedMemorySize += static_cast<Task::SharedMemorySize>(sharedMemorySize);
+		requiredSharedMemorySize += static_cast<Task::SharedMemorySize>(taskRequiredSharedMemorySize);
 
-		const Task::Function function = [](void* context, byte* sharedMemory, Task::ParallelIndex parallelIndex, Task::ParallelCount parallelism) -> void {
+		const Task::Function function = [](void* context, byte* taskSharedMemory, Task::ParallelIndex parallelIndex, Task::ParallelCount parallelism) -> void {
 			TaskContext& taskContext = *static_cast<TaskContext*>(context);
 			const EntityRange chunk = getEntitiesChunk(taskContext.entities, parallelIndex, parallelism, entity_range_components_and_exclusions_t<EntityRange>{});
 
 			if (parallelIndex == 0) {
-				memcpy(sharedMemory, &parallelism, sizeof(parallelism));
+				memcpy(taskSharedMemory, &parallelism, sizeof(parallelism));
 			}
 
 			Resource* localResource = nullptr;
 			if (const Resource* const resource = taskContext.resources.template findResource<Resource>()) {
-				byte* const localResourceMemory = sharedMemory + SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET + parallelIndex * sizeof(Resource);
+				byte* const localResourceMemory = taskSharedMemory + SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET + parallelIndex * sizeof(Resource);
 				memcpy(localResourceMemory, resource, sizeof(Resource));
 				localResource = std::launder(reinterpret_cast<Resource*>(localResourceMemory));
 			}
@@ -1353,11 +1900,11 @@ private:
 			typename AccessTraits::MutableResources{},     //
 			typename ReductionFunctionAccessTraits::ImmutableResources{});
 		tasks.push_back(detail::UnscheduledTask{
-			.function = [](void* context, byte* sharedMemory, Task::ParallelIndex, Task::ParallelCount) -> void {
+			.function = [](void* context, byte* taskSharedMemory, Task::ParallelIndex, Task::ParallelCount) -> void {
 				TaskContext& taskContext = *static_cast<TaskContext*>(context);
 				Resource* const output = taskContext.resources.template findResource<Resource>();
-				const Resource* const inputs = (output) ? std::launder(reinterpret_cast<Resource*>(sharedMemory + SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET)) : nullptr;
-				const Task::ParallelCount parallelism = *std::launder(reinterpret_cast<Task::ParallelCount*>(sharedMemory));
+				const Resource* const inputs = (output) ? std::launder(reinterpret_cast<Resource*>(taskSharedMemory + SHARED_MEMORY_INTERMEDIATE_RESOURCES_OFFSET)) : nullptr;
+				const Task::ParallelCount parallelism = *std::launder(reinterpret_cast<Task::ParallelCount*>(taskSharedMemory));
 				ExecuteReduction(taskContext, output, inputs, parallelism, typename AccessTraits::Arguments{}, typename ReductionFunctionAccessTraits::Arguments{});
 			},
 			.sharedMemoryOffset = sharedMemoryOffset,

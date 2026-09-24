@@ -29,6 +29,7 @@
 
 #include <cstdio>    // stderr, std::fprintf
 #include <exception> // std::exception, std::exception_ptr, std::current_exception, std::rethrow_exception
+#include <utility>   // std::exchange
 #endif
 
 namespace grem::execution {
@@ -56,7 +57,7 @@ public:
 
 	~ThreadPoolExecutor() override {
 		if (!workerThreads.empty()) {
-			tasks = {};
+			taskGraphTasks = {};
 			readyFlag.test_and_set();
 			readyFlag.notify_all();
 			for (Thread& workerThread : workerThreads) {
@@ -70,13 +71,13 @@ public:
 	ThreadPoolExecutor& operator=(const ThreadPoolExecutor&) = delete;
 	ThreadPoolExecutor& operator=(ThreadPoolExecutor&&) = delete;
 
-	void executeTaskGraph(Span<const Task> tasks, void* context, Task::SharedMemorySize requiredSharedMemorySize, Statistics* statistics) override {
+	void executeTaskGraph(Span<const Task> tasks, void* context, Task::SharedMemorySize requiredSharedMemorySize, CStringView name, Statistics* statistics) override {
 		GREM_ASSERT(!workerThreads.empty());
 		if (tasks.size() < workerThreads.size() || tasks.size() > Task::MAX_GRAPH_SIZE) {
 			if (requiredSharedMemorySize > sharedMemory.size()) {
 				sharedMemory.resize(static_cast<size_t>(requiredSharedMemorySize));
 			}
-			executeTaskGraphSequentially(tasks, context, sharedMemory.data(), statistics);
+			executeTaskGraphSequentially(tasks, context, sharedMemory.data(), name, statistics);
 			return;
 		}
 
@@ -84,10 +85,15 @@ public:
 			const TimePoint startTime = Clock::now();
 			statistics->startTime = startTime;
 			statistics->endTime = startTime;
-			statistics->workers.resize(workerThreads.size(), Statistics::Worker{.startTime = startTime, .endTime = startTime, .tasks{}});
-			this->statistics = statistics->workers.data();
+			statistics->workers.resize(workerThreads.size());
+			for (Statistics::Worker& worker : statistics->workers) {
+				worker.startTime = startTime;
+				worker.endTime = startTime;
+				worker.tasks.clear();
+			}
+			taskGraphStatistics = statistics->workers.data();
 		} else {
-			this->statistics = nullptr;
+			taskGraphStatistics = nullptr;
 		}
 
 		if (tasks.empty()) {
@@ -99,7 +105,8 @@ public:
 		}
 
 		taskGraphContext = context;
-		this->tasks = tasks;
+		taskGraphName = name;
+		taskGraphTasks = tasks;
 		for (size_t i = 0; i < tasks.size(); ++i) {
 			tasksDone[i].flag.clear(MemoryOrder::RELAXED);
 		}
@@ -116,10 +123,10 @@ public:
 			statistics->endTime = Clock::now();
 		}
 
-		rethrowParallelException(taskGraphContext);
+		rethrowParallelException();
 	}
 
-	void executeParallelTasks(void* subTaskContext, Task::ParallelCount subTaskCount, ParallelTask subTask, Task::SharedMemorySize requiredSharedMemorySize,
+	void executeParallelTasks(void* subTaskContext, Task::ParallelCount subTaskCount, ParallelTask subTask, Task::SharedMemorySize taskRequiredSharedMemorySize,
 		Statistics* statistics) override {
 		struct TaskContext {
 			ParallelTask subTask;
@@ -129,14 +136,19 @@ public:
 		SmallArrayList<Task, 32> tasks{};
 		tasks.reserve(subTaskCount);
 		for (Task::ParallelIndex subTaskIndex = 0; subTaskIndex < subTaskCount; ++subTaskIndex) {
-			const Task::Function function = [](void* context, byte* sharedMemory, Task::ParallelIndex parallelIndex, Task::ParallelCount parallelism) -> void {
+			const Task::Function function = [](void* context, byte* taskSharedMemory, Task::ParallelIndex parallelIndex, Task::ParallelCount parallelism) -> void {
 				TaskContext& taskContext = *static_cast<TaskContext*>(context);
-				taskContext.subTask.execute(taskContext.subTaskContext, sharedMemory, parallelIndex, parallelism);
+				taskContext.subTask.execute(taskContext.subTaskContext, taskSharedMemory, parallelIndex, parallelism);
 			};
 			tasks.emplace_back(function, 0, subTaskIndex, subTaskCount, Task::DependencyIndices{}, UniquePointer<char[]>{});
 		}
 
-		executeTaskGraph(tasks, &taskContext, requiredSharedMemorySize, statistics);
+		try {
+			executeTaskGraph(tasks, &taskContext, taskRequiredSharedMemorySize, {}, statistics);
+		} catch (const execution::Error& e) {
+			std::rethrow_if_nested(e);
+			throw;
+		}
 	}
 
 	[[nodiscard]] Task::ParallelCount getMaxParallelism() const noexcept override {
@@ -163,12 +175,12 @@ private:
 				workFinishedFlag.notify_all();
 			}
 			readyFlag.wait(false);
-			if (tasks.empty()) {
+			if (taskGraphTasks.empty()) {
 				break;
 			}
 
-			if (statistics) {
-				Statistics::Worker& worker = statistics[workerThreadIndex];
+			if (taskGraphStatistics) {
+				Statistics::Worker& worker = taskGraphStatistics[workerThreadIndex];
 				const TimePoint startTime = Clock::now();
 				worker.startTime = startTime;
 				worker.endTime = startTime;
@@ -177,10 +189,10 @@ private:
 
 			while (true) {
 				const size_t taskIndex = nextTaskIndex.fetch_add(1, MemoryOrder::RELAXED);
-				if (taskIndex >= tasks.size()) {
+				if (taskIndex >= taskGraphTasks.size()) {
 					break;
 				}
-				const Task& task = tasks[taskIndex];
+				const Task& task = taskGraphTasks[taskIndex];
 				const Span<const Task::GraphIndex> dependencyIndices = task.getDependencyIndices();
 				if (!dependencyIndices.empty()) {
 					// Reduce read contention by starting at an offset correlated with our task index.
@@ -208,22 +220,22 @@ private:
 						}
 						const TimePoint endTime = Clock::now();
 
-						if (statistics) {
-							statistics[workerThreadIndex].tasks.push_back(Statistics::Worker::Task{
+						if (taskGraphStatistics) {
+							taskGraphStatistics[workerThreadIndex].tasks.push_back(Statistics::Worker::Task{
 								.taskIndex = taskIndex,
 								.startTime = startTime,
 								.endTime = endTime,
 							});
 						}
 					} catch (...) {
-						handleCurrentException(taskGraphContext, task.getName());
+						handleCurrentException(task.getName());
 					}
 				}
 				tasksDone[taskIndex].flag.test_and_set(MemoryOrder::RELEASE);
 			}
 
-			if (statistics) {
-				statistics[workerThreadIndex].endTime = Clock::now();
+			if (taskGraphStatistics) {
+				taskGraphStatistics[workerThreadIndex].endTime = Clock::now();
 			}
 
 			if (workingCount.fetch_sub(1) == 1) {
@@ -236,14 +248,27 @@ private:
 		}
 	}
 
-	void handleCurrentException(void* context, CStringView taskName) {
+	void handleCurrentException(CStringView taskName) {
 		try {
-			Error::throwWithNested((taskName.empty()) ? Error{"Error in task."} : Error{String{"Error in task \""} + taskName.c_str() + "\"."});
+			String message{"Error in task"};
+			if (!taskName.empty()) {
+				message.append(" \"");
+				message.append(taskName);
+				message.push_back('\"');
+			}
+			if (!taskGraphName.empty()) {
+				message.append(" while executing \"");
+				message.append(taskGraphName);
+				message.push_back('\"');
+			}
+			message.push_back('.');
+			Error::throwWithNested(execution::Error{message});
 		} catch (...) {
 			bool handled = false;
 			{
 				ScopedLock lock{errorMutex};
-				if (errorMap.try_emplace(context, std::current_exception()).second) {
+				if (!errorPointer) {
+					errorPointer = std::current_exception();
 					errorFlag.test_and_set(MemoryOrder::RELEASE);
 					handled = true;
 				}
@@ -254,28 +279,23 @@ private:
 		}
 	}
 
-	void rethrowParallelException(void* context) {
+	void rethrowParallelException() {
 		if (errorFlag.test(MemoryOrder::ACQUIRE)) {
 			std::exception_ptr error{};
 			{
 				ScopedLock lock{errorMutex};
-				if (const auto it = errorMap.find(context); it != errorMap.end()) {
-					error = it->second;
-					errorMap.erase(it);
-					if (errorMap.empty()) {
-						errorFlag.clear(MemoryOrder::RELEASE);
-					}
-				}
+				error = std::exchange(errorPointer, {});
+				errorFlag.clear(MemoryOrder::RELEASE);
 			}
-			if (error) {
-				std::rethrow_exception(error);
-			}
+			GREM_ASSERT(error);
+			std::rethrow_exception(error);
 		}
 	}
 
 	void* taskGraphContext = nullptr;
-	Span<const Task> tasks{};
-	Statistics::Worker* statistics = nullptr;
+	CStringView taskGraphName{};
+	Span<const Task> taskGraphTasks{};
+	Statistics::Worker* taskGraphStatistics = nullptr;
 	Atomic<size_t> nextTaskIndex{};
 	Array<PaddedAtomicFlag, Task::MAX_GRAPH_SIZE> tasksDone{};
 	AtomicFlag readyFlag{};
@@ -284,17 +304,20 @@ private:
 	Allocation<Thread> workerThreads{};
 	AtomicFlag errorFlag{};
 	Mutex errorMutex{};
-	HashMap<void*, std::exception_ptr> errorMap{};
+	std::exception_ptr errorPointer{};
 	Allocation<byte> sharedMemory{};
 };
 #endif
 
-void Executor::executeTaskGraphSequentially(Span<const Task> tasks, void* context, byte* sharedMemory, Statistics* statistics) {
+void Executor::executeTaskGraphSequentially(Span<const Task> tasks, void* context, byte* sharedMemory, CStringView name, Statistics* statistics) {
 	if (statistics) {
 		const TimePoint startTime = Clock::now();
 		statistics->startTime = startTime;
 		statistics->endTime = startTime;
-		statistics->workers = {Statistics::Worker{.startTime = startTime, .endTime = startTime, .tasks{}}};
+		statistics->workers.resize(1);
+		statistics->workers.front().startTime = startTime;
+		statistics->workers.front().endTime = startTime;
+		statistics->workers.front().tasks.clear();
 	}
 
 	for (size_t taskIndex = 0; taskIndex < tasks.size(); ++taskIndex) {
@@ -315,7 +338,19 @@ void Executor::executeTaskGraphSequentially(Span<const Task> tasks, void* contex
 				});
 			}
 		} catch (...) {
-			Error::throwWithNested((task.getName().empty()) ? Error{"Error in task."} : Error{String{"Error in task \""} + task.getName().c_str() + "\"."});
+			String message{"Error in task"};
+			if (!task.getName().empty()) {
+				message.append(" \"");
+				message.append(task.getName());
+				message.push_back('\"');
+			}
+			if (!name.empty()) {
+				message.append(" while executing \"");
+				message.append(name);
+				message.push_back('\"');
+			}
+			message.push_back('.');
+			Error::throwWithNested(execution::Error{message});
 		}
 	}
 
@@ -326,32 +361,31 @@ void Executor::executeTaskGraphSequentially(Span<const Task> tasks, void* contex
 	}
 }
 
-void Executor::executeParallelTasksSequentially(void* subTaskContext, Task::ParallelCount subTaskCount, ParallelTask subTask, byte* sharedMemory, Statistics* statistics) {
+void Executor::executeParallelTasksSequentially(void* subTaskContext, Task::ParallelCount subTaskCount, ParallelTask subTask, byte* taskSharedMemory, Statistics* statistics) {
 	if (statistics) {
 		const TimePoint startTime = Clock::now();
 		statistics->startTime = startTime;
 		statistics->endTime = startTime;
-		statistics->workers = {Statistics::Worker{.startTime = startTime, .endTime = startTime, .tasks{}}};
+		statistics->workers.resize(1);
+		statistics->workers.front().startTime = startTime;
+		statistics->workers.front().endTime = startTime;
+		statistics->workers.front().tasks.clear();
 	}
 
 	for (Task::ParallelIndex subTaskIndex = 0; subTaskIndex < subTaskCount; ++subTaskIndex) {
-		try {
-			const TimePoint startTime = Clock::now();
-			{
-				GREM_PROFILE_BLOCK("Task");
-				subTask.execute(subTaskContext, sharedMemory, subTaskIndex, subTaskCount);
-			}
-			const TimePoint endTime = Clock::now();
+		const TimePoint startTime = Clock::now();
+		{
+			GREM_PROFILE_BLOCK("Parallel sub-task");
+			subTask.execute(subTaskContext, taskSharedMemory, subTaskIndex, subTaskCount);
+		}
+		const TimePoint endTime = Clock::now();
 
-			if (statistics) {
-				statistics->workers.front().tasks.push_back(Statistics::Worker::Task{
-					.taskIndex = subTaskIndex,
-					.startTime = startTime,
-					.endTime = endTime,
-				});
-			}
-		} catch (...) {
-			Error::throwWithNested(Error{"Error in task."});
+		if (statistics) {
+			statistics->workers.front().tasks.push_back(Statistics::Worker::Task{
+				.taskIndex = subTaskIndex,
+				.startTime = startTime,
+				.endTime = endTime,
+			});
 		}
 	}
 

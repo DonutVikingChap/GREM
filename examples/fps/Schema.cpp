@@ -991,9 +991,7 @@ SpawnEntityResult spawnEntity(EntityRegistry& registry, ResourceRegistry& resour
 			}
 		}
 		if (entityDescription.physicsObjectOptions) {
-			entityBuilder.extend([&](EntityRegistry& registry, EntityID entityID) -> void {
-				phys::Simulation3D::addObjectComponents(registry, resources, entityID, phys::ObjectOptions3D{*entityDescription.physicsObjectOptions});
-			});
+			phys::Simulation3D::addObjectComponents(registry, resources, entityBuilder.getEntityID(), phys::ObjectOptions3D{*entityDescription.physicsObjectOptions});
 		}
 		for (const StateComponentDescription& stateComponentDescription : entityDescription.stateComponents) {
 			stateComponentDescription.setImpliedComponents(entityBuilder, registry, resources);

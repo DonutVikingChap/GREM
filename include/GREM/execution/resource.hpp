@@ -13,6 +13,12 @@
 
 namespace grem::execution {
 
+/**
+ * Concept that checks if a given type is a valid resource type that can be
+ * stored/referenced in e.g.\ a ResourceRegistry or ResourceTable.
+ *
+ * \tparam T the type to check.
+ */
 template <typename T>
 concept resource = !std::is_const_v<T> && !std::is_reference_v<T> && !std::is_array_v<T> && !std::is_pointer_v<T> && !is_entity_range_v<T> && !is_component_pool_v<T>;
 

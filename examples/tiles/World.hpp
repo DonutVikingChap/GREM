@@ -71,7 +71,7 @@ struct World {
 		scheduler.addTask<integrateLinearKinematics>("Integrate linear kinematics");
 		scheduler.addTask<detectAndResolveCollisions>("Detect and resolve collisions");
 		scheduler.addTask<moveMapEntities>("Move map entities");
-		tickSchedule = scheduler.buildSchedule();
+		tickSchedule = scheduler.buildSchedule("Tick");
 	}
 
 	[[nodiscard]] exec::EntityID createPlayerEntity(Position position) {

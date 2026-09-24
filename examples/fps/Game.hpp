@@ -165,7 +165,7 @@ public:
 			  .targetParallelism =
 				  static_cast<exec::Task::ParallelCount>(max(static_cast<size_t>((arguments.remoteEndpoint) ? options.workerThreads : options.workerThreads / 2), size_t{4}) - 3),
 		  })
-		, gameState(assetCache, &audio, &graphics, gameSystems, executor) {
+		, clientGameState(assetCache, &audio, &graphics, gameSystems, executor, "Client") {
 		addBaseConsoleCommands();
 
 		static constexpr auto getGameSettings = [](Game& game) -> GameSettings& {
@@ -196,7 +196,8 @@ public:
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
 		// Start a client.
-		gameClient.emplace(assetCache, audio, graphics, gameSystems, executor, gameState, resolveClientEndpoint(arguments.remoteEndpoint, options.listenServerPort), options.cl);
+		gameClient.emplace(assetCache, audio, graphics, gameSystems, executor, clientGameState, resolveClientEndpoint(arguments.remoteEndpoint, options.listenServerPort),
+			options.cl);
 		static constexpr auto getClientSettings = [](Game& game) -> ClientSettings& {
 			return game.gameClient->getSettings();
 		};
@@ -353,7 +354,7 @@ private:
 					GREM_PROFILER_SET_THREAD_INFO("Server thread", 0, ThreadID{});
 
 					exec::DynamicExecutor serverExecutor{executorOptions};
-					GameState serverGameState{assetCache, nullptr, nullptr, gameSystems, serverExecutor};
+					GameState serverGameState{assetCache, nullptr, nullptr, gameSystems, serverExecutor, "Server"};
 					GameServer gameServer{assetCache, serverGameState, endpoint, std::move(schemaFilepath), std::move(mapFilepath), gameServerOptions};
 					TimePoint latestTickTime = Clock::now();
 					while (running.test()) {
@@ -407,7 +408,7 @@ private:
 		ServerThread(AssetCache& assetCache, const GameSystems& gameSystems, const net::Endpoint& endpoint, String schemaFilepath, String mapFilepath,
 			const exec::DynamicExecutorOptions& executorOptions, const GameServerOptions& gameServerOptions)
 			: serverExecutor(executorOptions)
-			, serverGameState(assetCache, nullptr, nullptr, gameSystems, serverExecutor)
+			, serverGameState(assetCache, nullptr, nullptr, gameSystems, serverExecutor, "Server")
 			, gameServer(assetCache, serverGameState, endpoint, std::move(schemaFilepath), std::move(mapFilepath), gameServerOptions) {}
 #endif
 
@@ -954,7 +955,7 @@ private:
 	Graphics graphics;
 	GameSystems gameSystems;
 	exec::DynamicExecutor executor;
-	GameState gameState;
+	GameState clientGameState;
 	Optional<GameClient> gameClient{};
 	Optional<ServerDebugVisualization> serverDebugVisualization{};
 	Optional<phys::DebugVisualization3D> clientPhysicsDebugVisualization{};

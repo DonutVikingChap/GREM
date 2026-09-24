@@ -2114,7 +2114,7 @@ private:
 
 		Scheduler broadphaseUpdateScheduler{};
 		phys::Simulation3D::scheduleBroadphaseUpdate(broadphaseUpdateScheduler, gameState.getResources().getResource<phys::SimulationOptions3D>());
-		broadphaseUpdateSchedule = broadphaseUpdateScheduler.buildSchedule();
+		broadphaseUpdateSchedule = broadphaseUpdateScheduler.buildSchedule("Update broadphase");
 
 		state = ClientState::JOINING_GAME;
 		addLocalPlayer({});
