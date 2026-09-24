@@ -1799,7 +1799,7 @@ public:
 	/**
 	 * Check if this value is of type Array and has an item at the given index.
 	 *
-	 * \param item array index of the item to check for.
+	 * \param index array index of the item to check for.
 	 *
 	 * \return true if this value is an array that has an item at the given
 	 *         index, false otherwise.
