@@ -1617,8 +1617,6 @@ public:
 	 * \param bytes data to write.
 	 * \param flags bitmask of `MSG_...` flags to pass to `sendto()`, or 0 for
 	 *        no flags.
-	 * \param errorCode error code that is filled in on failure to send data, or
-	 *        cleared on success.
 	 *
 	 * \return the number of bytes that were successfully written, or an empty
 	 *         optional on timeout.
