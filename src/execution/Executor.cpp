@@ -44,7 +44,7 @@ public:
 			try {
 				workerThreads[workerThreadIndex] = Thread{&ThreadPoolExecutor::work, this, workerThreadIndex, ThreadID::getCurrent()};
 			} catch (...) {
-				GREM_ASSERT(tasks.empty());
+				GREM_ASSERT(taskGraphTasks.empty());
 				readyFlag.test_and_set();
 				readyFlag.notify_all();
 				while (workerThreadIndex-- > 0) {
