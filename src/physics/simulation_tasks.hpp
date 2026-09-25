@@ -79,13 +79,10 @@ struct ContactManifoldInvalidation {
 		ContactIndex contactIndex;
 		uint32_t manifoldIndex;
 		InplaceArrayList<Position<N>, 2> featurePoints;
-		uint32_t facePointOffset;
-		uint32_t facePointCount;
 		Length1D largestPenetrationDepth;
 	};
 
 	ArrayList<Position<N>> voidedPoints{};
-	ArrayList<Position<N>> facePoints{};
 	ArrayList<DelayedContactManifold> delayedContactManifolds{};
 	ArrayList<ContactIndex> affectedContacts{};
 };

@@ -587,7 +587,6 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 
 	for (auto&& [objectID, collider, position, orientation, scale, objectContacts, activeTag] : activeObjectEntities) {
 		contactManifoldInvalidation.voidedPoints.clear();
-		contactManifoldInvalidation.facePoints.clear();
 		contactManifoldInvalidation.delayedContactManifolds.clear();
 		contactManifoldInvalidation.affectedContacts.clear();
 
@@ -620,7 +619,6 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 				}
 				averageContactPoint *= 1.0f / static_cast<float>(manifold.points.size());
 
-				const size_t facePointOffset = contactManifoldInvalidation.facePoints.size();
 				InplaceArrayList<Position<N>, 2> featurePoints{};
 				const ContactFeatureType otherContactFeatureType = (objectID == objectIDs.first) ? manifold.featureTypes.second : manifold.featureTypes.first;
 				switch (otherContactFeatureType) {
@@ -634,15 +632,19 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 						const Direction<N> otherLocalDirection = tryNormalize(otherLocalOffset).value_or(otherLocalNormal);
 						const ConvexPolytopeShapeView<N> otherConvexPolytopeShape{otherCollider.shape};
 						const ConvexPolytopeFaceIndex otherFaceIndex = otherConvexPolytopeShape.getFaceIndexWithMostFittingLocalNormal(otherLocalDirection, 0);
+						const size_t voidedPointOffset = contactManifoldInvalidation.voidedPoints.size();
 						forEachVertexIndexInFace(otherConvexPolytopeShape, otherFaceIndex, [&](ConvexPolytopeVertexIndex otherVertexIndex) -> void { //
-							contactManifoldInvalidation.facePoints.push_back(otherTransformation(otherConvexPolytopeShape.getLocalVertexOffset(otherVertexIndex)));
+							contactManifoldInvalidation.voidedPoints.push_back(otherTransformation(otherConvexPolytopeShape.getLocalVertexOffset(otherVertexIndex)));
 						});
 						if constexpr (N == 3) {
-							if (abs(dot(otherLocalNormal, otherConvexPolytopeShape.getLocalFaceNormal(otherFaceIndex))) < cos(1.0f * DEGREES)) {
-								featurePoints = findClosestFeaturePoints<3>(Span{contactManifoldInvalidation.facePoints}.subspan(facePointOffset), averageContactPoint);
+							if (abs(dot(otherLocalNormal, otherConvexPolytopeShape.getLocalFaceNormal(otherFaceIndex))) < cos(22.5f * DEGREES)) {
+								featurePoints = findClosestFeaturePoints<3>(Span{contactManifoldInvalidation.voidedPoints}.subspan(voidedPointOffset), averageContactPoint);
 							}
 						} else {
-							featurePoints = findClosestFeaturePoints<2>(Span{contactManifoldInvalidation.facePoints}.subspan(facePointOffset), averageContactPoint);
+							featurePoints = findClosestFeaturePoints<2>(Span{contactManifoldInvalidation.voidedPoints}.subspan(voidedPointOffset), averageContactPoint);
+						}
+						if (!featurePoints.empty()) {
+							contactManifoldInvalidation.voidedPoints.resize(voidedPointOffset);
 						}
 						break;
 					}
@@ -670,15 +672,17 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 							const Length<N> ab = otherTrianglePoints[1] - otherTrianglePoints[0];
 							const Length<N> ac = otherTrianglePoints[2] - otherTrianglePoints[0];
 							const Direction<N> normal = normalize(cross(ab, ac));
-							if (abs(dot(manifold.normal, normal)) < cos(1.0f * DEGREES)) {
+							if (abs(dot(manifold.normal, normal)) < cos(22.5f * DEGREES)) {
 								featurePoints = findClosestFeaturePoints<3>(otherTrianglePoints, averageContactPoint);
 							}
 						} else {
 							featurePoints = findClosestFeaturePoints<2>(otherTrianglePoints, averageContactPoint);
 						}
 
-						for (const Position<N>& otherPoint : otherTrianglePoints) {
-							contactManifoldInvalidation.facePoints.push_back(otherPoint);
+						if (featurePoints.empty()) {
+							for (const Position<N>& otherPoint : otherTrianglePoints) {
+								contactManifoldInvalidation.voidedPoints.push_back(otherPoint);
+							}
 						}
 						break;
 					}
@@ -704,28 +708,17 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 							} else {
 								featurePoints = {otherEdgeOrigin, otherEdgeTarget};
 							}
-
-							for (size_t i = 0; i < 3; ++i) {
-								const Length<N> otherLocalPointOffset = otherVertices[otherIndices[otherIndexOffset + i]] * Length<N>::UNIT;
-								contactManifoldInvalidation.facePoints.push_back(otherTransformation(otherLocalPointOffset));
-							}
 						} else {
 							unreachable();
 						}
 						break;
 				}
 
-				if (featurePoints.empty()) {
-					for (const Position<N>& point : Span{contactManifoldInvalidation.facePoints}.subspan(facePointOffset)) {
-						contactManifoldInvalidation.voidedPoints.push_back(point);
-					}
-				} else {
+				if (!featurePoints.empty()) {
 					contactManifoldInvalidation.delayedContactManifolds.push_back(DelayedContactManifold{
 						.contactIndex = contactIndex,
 						.manifoldIndex = static_cast<uint32_t>(manifoldIndex),
 						.featurePoints = featurePoints,
-						.facePointOffset = static_cast<uint32_t>(facePointOffset),
-						.facePointCount = static_cast<uint32_t>(contactManifoldInvalidation.facePoints.size() - facePointOffset),
 						.largestPenetrationDepth = largestPenetrationDepth,
 					});
 				}
@@ -749,10 +742,10 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 					manifold.points.clear();
 					contactManifoldInvalidation.affectedContacts.push_back(delayedContactManifold.contactIndex);
 				}
-			}
-
-			for (const Position<N>& point : Span{contactManifoldInvalidation.facePoints}.subspan(delayedContactManifold.facePointOffset, delayedContactManifold.facePointCount)) {
-				contactManifoldInvalidation.voidedPoints.push_back(point);
+			} else {
+				for (const Position<N>& point : delayedContactManifold.featurePoints) {
+					contactManifoldInvalidation.voidedPoints.push_back(point);
+				}
 			}
 		}
 
