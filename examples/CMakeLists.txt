@@ -68,6 +68,7 @@ if(EMSCRIPTEN)
 		"--shell-file=${CMAKE_SOURCE_DIR}/template/emscripten-shell.html"
 		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/shared_2d@data/shared_2d"
 		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/shared_3d@data/shared_3d"
+		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/shared_3d_advanced@data/shared_3d_advanced"
 		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/fps@data/fps")
 endif()
 
@@ -94,6 +95,23 @@ if(EMSCRIPTEN)
 		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/physics@data/physics")
 endif()
 
+add_executable(GREM-examples-platformer
+	"platformer/systems/collectible.cpp"
+	"platformer/systems/level.cpp"
+	"platformer/systems/object.cpp"
+	"platformer/systems/player.cpp"
+	"platformer/main.cpp")
+GREM_configure_example(GREM-examples-platformer)
+if(EMSCRIPTEN)
+	set_target_properties(GREM-examples-platformer PROPERTIES SUFFIX ".html")
+	target_link_options(GREM-examples-platformer PRIVATE
+		"--shell-file=${CMAKE_SOURCE_DIR}/template/emscripten-shell.html"
+		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/shared_2d@data/shared_2d"
+		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/shared_3d@data/shared_3d"
+		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/shared_3d_advanced@data/shared_3d_advanced"
+		"--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/data/platformer@data/platformer")
+endif()
+
 add_executable(GREM-examples-rectangle
 	"rectangle/main.cpp")
 GREM_configure_example(GREM-examples-rectangle)
@@ -118,6 +136,7 @@ set(GREM_EXAMPLES
 	GREM-examples-fps
 	GREM-examples-test_game
 	GREM-examples-physics
+	GREM-examples-platformer
 	GREM-examples-rectangle
 	GREM-examples-tiles)
 
@@ -152,6 +171,9 @@ if(GREM_GRAPHICS_BACKEND STREQUAL "Vulkan" AND GREM_GRAPHICS_VULKAN_USE_GLSL_COM
 
 	add_executable(GREM-examples-fps-shader-compiler "fps/shader_compiler.cpp")
 	GREM_configure_example_shader_compiler(GREM-examples-fps-shader-compiler GREM-examples-fps-compile-shaders "${CMAKE_CURRENT_SOURCE_DIR}/data/fps/shaders")
+
+	add_executable(GREM-examples-platformer-shader-compiler "platformer/shader_compiler.cpp")
+	GREM_configure_example_shader_compiler(GREM-examples-platformer-shader-compiler GREM-examples-platformer-compile-shaders "${CMAKE_CURRENT_SOURCE_DIR}/data/platformer/shaders")
 
 	add_executable(GREM-examples-test_game-shader-compiler "test_game/shader_compiler.cpp")
 	GREM_configure_example_shader_compiler(GREM-examples-test_game-shader-compiler GREM-examples-test_game-compile-shaders "${CMAKE_CURRENT_SOURCE_DIR}/data/test_game/shaders")

@@ -47,7 +47,7 @@ public:
 		if (localPlayerPerspectiveCount >= 2) {
 			audio.soundStage.update({});
 		} else {
-			const phys::OrthonormalBasis3D cameraBasis = rotate(phys::PitchYawRoll{localPlayerPerspective.aimAngles, 0_radians});
+			const phys::OrthonormalBasis3D cameraBasis = rotate(localPlayerPerspective.aimAngles);
 			audio.soundStage.update({
 				.position = localPlayerPerspective.viewPosition.in(phys::METERS),
 				.velocity = localPlayerPerspective.linearVelocity.in(phys::METERS_PER_SECOND),

@@ -159,6 +159,14 @@ struct InputManagerPreferences {
 	float touchPressureUpperDeadzone = 0.9f;
 
 	/**
+	 * Pinch fingers sensitivity coefficient.
+	 *
+	 * The influence of pinch movement on its bound output values will be
+	 * multiplied by this value before being applied.
+	 */
+	float pinchSensitivity = 1.0f;
+
+	/**
 	 * Controller left analog stick inner deadzone fraction.
 	 *
 	 * When the stick is at a position whose fractional distance from the center
@@ -1582,6 +1590,44 @@ public:
 	[[nodiscard]] GREM_ALWAYS_INLINE bool touchJustChangedPressure() const noexcept {
 		return relativeState.transientInputPresses[getInputIndex(Input::TOUCH_FINGER_PRESSURE)] || //
 		       relativeState.transientInputReleases[getInputIndex(Input::TOUCH_FINGER_PRESSURE)];
+	}
+
+	/**
+	 * Get the relative scale performed by finger pinch in the last frame
+	 * processed by the input manager.
+	 *
+	 * \return a relative scale that represents how much the fingers were
+	 *         pinched (<1 for "zoom out", >1 for "zoom in").
+	 *
+	 * \note Instead of reading the state of the pinch directly, prefer to use
+	 *       the getCurrentState() function with an abstract output number or
+	 *       action enum whenever possible, since this can allow the user to
+	 *       bind a different form of input, such as a joystick, to the control
+	 *       instead, according to their preferences.
+	 *
+	 * \sa pinchJustScaled()
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE float getRelativePinchScale() const noexcept {
+		return relativeState.transientPinchScale;
+	}
+
+	/**
+	 * Check if finger pinch was just performed on the current frame.
+	 *
+	 * \return true if any pinch motion was processed in the current frame,
+	 *         false otherwise.
+	 *
+	 * \note Instead of reading the state of the pinch directly, prefer to use
+	 *       the isPressed(), justPressed() and justReleased() functions with an
+	 *       abstract output number or action enum whenever possible, since this
+	 *       can allow the user to bind a different form of input, such as a
+	 *       button, to the control instead, according to their preferences.
+	 *
+	 * \sa getRelativePinchScale()
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE bool pinchJustScaled() const noexcept {
+		return relativeState.transientInputPresses[getInputIndex(Input::PINCH_FINGERS_MOTION_TOGETHER)] || //
+		       relativeState.transientInputPresses[getInputIndex(Input::PINCH_FINGERS_MOTION_TOGETHER)];
 	}
 
 	/**
@@ -3200,6 +3246,7 @@ private:
 
 	struct RelativeState {
 		vec2 transientMouseWheelScroll{};
+		float transientPinchScale = 1.0f;
 		Array<ControlDelta, INPUT_COUNT> inputDeltas{};
 		Array<ControlDelta, OUTPUT_COUNT> outputExternalDeltas{};
 		BitArray<INPUT_COUNT> transientInputPresses{};
@@ -3230,6 +3277,8 @@ private:
 	}
 
 	GREM_API(events) void setTouchPressure(TimePoint timestamp, float newPressure);
+
+	GREM_API(events) void pinchFingers(TimePoint timestamp, float scale);
 
 	GREM_API(events)
 	void setControllerStickPosition(TimePoint timestamp, Optional<i16vec2>& position, i16vec2 newPosition, vec2 sensitivity, float curveExponent, float innerDeadzone,

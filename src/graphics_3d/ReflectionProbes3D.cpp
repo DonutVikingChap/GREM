@@ -29,7 +29,7 @@ ReflectionProbes3D::ReflectionProbes3D(Device& device, Texture reflectionMaps, A
 	GREM_ASSERT(!this->reflectionMaps || (this->reflectionMaps.getType() == TextureType::TEXTURE_CUBE_ARRAY && this->reflectionMaps.getSamplerOptions()));
 	GREM_ASSERT(isPowerOf2(options.reflectionMapResolution));
 
-	if (probeOptions.size() > size_t{Limits<uint32_t>::MAX}) {
+	if (this->probeOptions.size() > size_t{Limits<uint32_t>::MAX}) {
 		throw std::length_error{"Maximum reflection probe count exceeded."};
 	}
 }

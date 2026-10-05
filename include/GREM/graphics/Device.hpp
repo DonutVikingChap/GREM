@@ -6,7 +6,7 @@
 
 #include <GREM/build_config.hpp>
 
-#include <GREM/core/data/CStringView.hpp>
+#include <GREM/core/data/String.hpp>
 #include <GREM/core/data/UniquePointer.hpp>
 #include <GREM/core/extents.hpp>
 #include <GREM/core/system/Clock.hpp>
@@ -43,7 +43,7 @@ struct DeviceOptions {
 	 *
 	 * \note This option only applies to certain graphics backends.
 	 */
-	CStringView shaderCacheInputFilepath = "shader_cache.dat";
+	String shaderCacheInputFilepath = "shader_cache.dat";
 
 	/**
 	 * Virtual output filepath to save the shader cache to when the rendering
@@ -54,7 +54,7 @@ struct DeviceOptions {
 	 * \note When saving, any parent directories of the specified output
 	 *       filepath will be created if they don't already exist.
 	 */
-	CStringView shaderCacheOutputFilepath = shaderCacheInputFilepath;
+	String shaderCacheOutputFilepath = shaderCacheInputFilepath;
 };
 
 /**
@@ -297,7 +297,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] DeviceImplementation* get() const noexcept {
+	[[nodiscard]] DeviceImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const DeviceImplementation* get() const noexcept {
 		return implementation.get();
 	}
 

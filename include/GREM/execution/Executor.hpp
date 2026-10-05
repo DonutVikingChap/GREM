@@ -1084,7 +1084,7 @@ struct DynamicExecutorOptions {
 	 * multiple executors running simultaneously, or if the system has other
 	 * resource-intensive programs running that are contending for CPU time.
 	 */
-	Task::ParallelCount targetParallelism = static_cast<Task::ParallelCount>(clamp(Thread::hardware_concurrency(), 2u, 32u) - 1);
+	Task::ParallelCount targetParallelism = static_cast<Task::ParallelCount>(clamp(Thread::hardware_concurrency(), 2u, 16u) - 1);
 
 	/**
 	 * Compare these options to another set of options for equality.

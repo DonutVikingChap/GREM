@@ -265,11 +265,13 @@ public:
 						if (hasOldLayer && hasNewLayer) {
 							const ModelPose::AnimationLayer& oldAnimationLayer = oldModelPose.animationLayers[animationLayerIndex];
 							const ModelPose::AnimationLayer& newAnimationLayer = newModelPose.animationLayers[animationLayerIndex];
-							pose.applyAnimation({
-								.animation = model.getAnimationAtIndex(oldAnimationLayer.animationIndex),
-								.time = oldModelPose.animationTime * oldWeight + newModelPose.animationTime * newWeight,
-								.blendWeight = oldAnimationLayer.blendWeight * oldWeight + newAnimationLayer.blendWeight * newWeight,
-							});
+							if (newAnimationLayer.animationIndex == oldAnimationLayer.animationIndex) {
+								pose.applyAnimation({
+									.animation = model.getAnimationAtIndex(newAnimationLayer.animationIndex),
+									.time = oldModelPose.animationTime * oldWeight + newModelPose.animationTime * newWeight,
+									.blendWeight = oldAnimationLayer.blendWeight * oldWeight + newAnimationLayer.blendWeight * newWeight,
+								});
+							}
 						}
 						if (!hasOldLayer && !hasNewLayer) {
 							break;
@@ -605,7 +607,7 @@ private:
 			if (!shape) {
 				return {};
 			}
-			ConvexPolytope3D* convexPolytope = nullptr;
+			const ConvexPolytope3D* convexPolytope = nullptr;
 			if (const phys::LocallyTransformedShape3D* const locallyTransformedShape = shape->get_if<phys::LocallyTransformedShape3D>()) {
 				if (const phys::ConvexPolytopeShape3D* const convexPolytopeShape = locallyTransformedShape->shape->get_if<phys::ConvexPolytopeShape3D>()) {
 					convexPolytope = convexPolytopeShape->getConvexPolytope().get();
@@ -621,7 +623,7 @@ private:
 			const Span<const ConvexPolytopeVertex3D> vertices = convexPolytope->getVertices();
 			const Span<const ConvexPolytopeEdge3D> edges = convexPolytope->getEdges();
 			const phys::InverseLocalTransformation3D inverseRootTransformation =
-				inverse(translateRotateScale(modelDescription.options.rootTranslation * phys::METERS, modelDescription.options.rootRotation, modelDescription.options.rootScale));
+				inverseTranslateRotateScale(modelDescription.options.rootTranslation * phys::METERS, modelDescription.options.rootRotation, modelDescription.options.rootScale);
 			GREM_ASSERT(edges.size() % 2 == 0);
 			Buffer<HullVertex> hullWireframeVertices{};
 			for (const ConvexPolytope3D::Edge& edge : edges) {
@@ -837,7 +839,7 @@ private:
 			if (!shape) {
 				return {};
 			}
-			ConvexPolytope3D* convexPolytope = nullptr;
+			const ConvexPolytope3D* convexPolytope = nullptr;
 			if (const phys::LocallyTransformedShape3D* const locallyTransformedShape = shape->get_if<phys::LocallyTransformedShape3D>()) {
 				if (const phys::ConvexPolytopeShape3D* const convexPolytopeShape = locallyTransformedShape->shape->get_if<phys::ConvexPolytopeShape3D>()) {
 					convexPolytope = convexPolytopeShape->getConvexPolytope().get();
@@ -851,7 +853,7 @@ private:
 				return {};
 			}
 			const phys::InverseLocalTransformation3D inverseRootTransformation =
-				inverse(translateRotateScale(modelDescription.options.rootTranslation * phys::METERS, modelDescription.options.rootRotation, modelDescription.options.rootScale));
+				inverseTranslateRotateScale(modelDescription.options.rootTranslation * phys::METERS, modelDescription.options.rootRotation, modelDescription.options.rootScale);
 			return SharedPointer<gfx::Model3D>::create(device, renderer3D,
 				res::Model{*convexPolytope, inverseRootTransformation * phys::LocalTransformation3D{scale(phys::Scale3D{0.95f})}});
 		}

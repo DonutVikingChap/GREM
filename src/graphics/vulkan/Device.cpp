@@ -253,7 +253,7 @@ constexpr size_t MAX_SIMULTANEOUS_RENDER_PASSES_IN_FLIGHT = 128;
 }
 
 [[nodiscard]] VkInstance getInstance(const Window& window) {
-	const SDL_PropertiesID properties = SDL_GetWindowProperties(static_cast<SDL_Window*>(window.get()));
+	const SDL_PropertiesID properties = SDL_GetWindowProperties(static_cast<SDL_Window*>(const_cast<void*>(window.get())));
 	if (properties == 0) {
 		throw graphics::Error{String{"Failed to get window properties:\n"} + SDL_GetError()};
 	}
@@ -638,7 +638,7 @@ constexpr size_t MAX_SIMULTANEOUS_RENDER_PASSES_IN_FLIGHT = 128;
 		(physicalDevice.supportedFeatures.supportsAwaitPresentation) ? static_cast<void*>(&presentWaitFeatures) : static_cast<void*>(&separateDepthStencilLayoutsFeatures);
 
 	const Array<float, 1> queuePriorities{{1.0f}};
-	InplaceBuffer<VkDeviceQueueCreateInfo, 2> queueCreateInfos{{
+	InplaceBuffer<VkDeviceQueueCreateInfo, 2> queueCreateInfos{
 		VkDeviceQueueCreateInfo{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 			.pNext = nullptr,
@@ -647,7 +647,7 @@ constexpr size_t MAX_SIMULTANEOUS_RENDER_PASSES_IN_FLIGHT = 128;
 			.queueCount = static_cast<uint32_t>(queuePriorities.size()),
 			.pQueuePriorities = queuePriorities.data(),
 		},
-	}};
+	};
 	if (physicalDevice.presentQueueFamilyIndex != physicalDevice.graphicsQueueFamilyIndex) {
 		queueCreateInfos.push_back(VkDeviceQueueCreateInfo{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -1178,13 +1178,15 @@ void saveShaderCache(Filesystem& filesystem, CStringView outputFilepath, VkDevic
 [[nodiscard]] detail::VulkanDescriptorSetLayout createInstanceOrDrawCommandBufferDescriptorSetLayout(VkDevice device) {
 	GREM_PROFILE_FUNCTION();
 
-	const Array bindings{VkDescriptorSetLayoutBinding{
-		.binding = 0,
-		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = 1,
-		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-		.pImmutableSamplers = nullptr,
-	}};
+	const Array bindings{
+		VkDescriptorSetLayoutBinding{
+			.binding = 0,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = 1,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = nullptr,
+		},
+	};
 	const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		.pNext = nullptr,
@@ -1287,11 +1289,9 @@ void pushRenderPassCommands(DeviceImplementation& device, VkCommandBuffer comman
 					.clearValue{.depthStencil{.depth = command.values.depth, .stencil = command.values.stencil}},
 				});
 			}
-			const Array rects{VkClearRect{
-				.rect = command.targetRegion,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			}};
+			const Array rects{
+				VkClearRect{.rect = command.targetRegion, .baseArrayLayer = 0, .layerCount = 1},
+			};
 			vkCmdClearAttachments(commandBuffer, static_cast<uint32_t>(clearAttachments.size()), clearAttachments.data(), static_cast<uint32_t>(rects.size()), rects.data());
 		},
 		[&](const RenderPassImplementation::CommandUsePipeline& command) -> void { //
@@ -1751,11 +1751,11 @@ DeviceImplementation::RenderPassContext::RenderPassContext(DeviceImplementation&
 			.format = key.colorFormat,
 			.samples = static_cast<VkSampleCountFlagBits>(key.sampleCount),
 			.loadOp = ((key.flags & RENDER_PASS_CLEAR_COLOR) == 0)              ? VK_ATTACHMENT_LOAD_OP_LOAD
-		              : ((key.flags & RENDER_PASS_CLEAR_UNDEFINED_VALUES) != 0) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE
-		                                                                        : VK_ATTACHMENT_LOAD_OP_CLEAR,
+			          : ((key.flags & RENDER_PASS_CLEAR_UNDEFINED_VALUES) != 0) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE
+			                                                                    : VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = ((key.flags & (RENDER_PASS_HAS_RESOLVE_TARGET | RENDER_PASS_STORE_INTERMEDIATE_COLOR)) != RENDER_PASS_HAS_RESOLVE_TARGET)
-		                   ? VK_ATTACHMENT_STORE_OP_STORE
-		                   : VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			               ? VK_ATTACHMENT_STORE_OP_STORE
+			               : VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			.initialLayout = initialColorLayout,
@@ -1792,19 +1792,19 @@ DeviceImplementation::RenderPassContext::RenderPassContext(DeviceImplementation&
 			.format = key.depthStencilFormat,
 			.samples = static_cast<VkSampleCountFlagBits>(key.sampleCount),
 			.loadOp = (hasDepth) ? (((key.flags & RENDER_PASS_CLEAR_DEPTH) == 0)                 ? VK_ATTACHMENT_LOAD_OP_LOAD
-									   : ((key.flags & RENDER_PASS_CLEAR_UNDEFINED_VALUES) != 0) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE
-																								 : VK_ATTACHMENT_LOAD_OP_CLEAR)
-		                         : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			                           : ((key.flags & RENDER_PASS_CLEAR_UNDEFINED_VALUES) != 0) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE
+			                                                                                     : VK_ATTACHMENT_LOAD_OP_CLEAR)
+			                     : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.storeOp = (hasDepth && ((key.flags & (RENDER_PASS_HAS_RESOLVE_TARGET | RENDER_PASS_STORE_INTERMEDIATE_DEPTH)) != RENDER_PASS_HAS_RESOLVE_TARGET))
-		                   ? VK_ATTACHMENT_STORE_OP_STORE
-		                   : VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			               ? VK_ATTACHMENT_STORE_OP_STORE
+			               : VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			.stencilLoadOp = (hasStencil) ? (((key.flags & RENDER_PASS_CLEAR_STENCIL) == 0)               ? VK_ATTACHMENT_LOAD_OP_LOAD
-												: ((key.flags & RENDER_PASS_CLEAR_UNDEFINED_VALUES) != 0) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE
-																										  : VK_ATTACHMENT_LOAD_OP_CLEAR)
-		                                  : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			                                    : ((key.flags & RENDER_PASS_CLEAR_UNDEFINED_VALUES) != 0) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE
+			                                                                                              : VK_ATTACHMENT_LOAD_OP_CLEAR)
+			                              : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.stencilStoreOp = (hasStencil && ((key.flags & (RENDER_PASS_HAS_RESOLVE_TARGET | RENDER_PASS_STORE_INTERMEDIATE_STENCIL)) != RENDER_PASS_HAS_RESOLVE_TARGET))
-		                          ? VK_ATTACHMENT_STORE_OP_STORE
-		                          : VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			                      ? VK_ATTACHMENT_STORE_OP_STORE
+			                      : VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			.initialLayout = initialDepthStencilLayout,
 			.finalLayout = finalDepthStencilLayout,
 		});
@@ -1830,8 +1830,8 @@ DeviceImplementation::RenderPassContext::RenderPassContext(DeviceImplementation&
 		finalResolveLayout =
 			((key.flags & RENDER_PASS_RESOLVE_TARGET_IS_SWAPCHAIN) != 0) ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 			: ((key.flags & RENDER_PASS_RESOLVE_TARGET_IS_SAMPLED) != 0)
-				? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-				: VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		        ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		        : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		resolveAttachments.push_back(VkAttachmentReference{
 			.attachment = static_cast<uint32_t>(attachments.size()),
 			.layout = initialResolveLayout,
@@ -1863,18 +1863,20 @@ DeviceImplementation::RenderPassContext::RenderPassContext(DeviceImplementation&
 		subpass0ToExternalDependency.dstAccessMask |= VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
 	}
 
-	const Array subpasses{VkSubpassDescription{
-		.flags = VkSubpassDescriptionFlags{},
-		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.inputAttachmentCount = 0,
-		.pInputAttachments = nullptr,
-		.colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
-		.pColorAttachments = colorAttachments.data(),
-		.pResolveAttachments = (resolveAttachments.empty()) ? nullptr : resolveAttachments.data(),
-		.pDepthStencilAttachment = (depthStencilAttachment) ? &*depthStencilAttachment : nullptr,
-		.preserveAttachmentCount = 0,
-		.pPreserveAttachments = nullptr,
-	}};
+	const Array subpasses{
+		VkSubpassDescription{
+			.flags = VkSubpassDescriptionFlags{},
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount = 0,
+			.pInputAttachments = nullptr,
+			.colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
+			.pColorAttachments = colorAttachments.data(),
+			.pResolveAttachments = (resolveAttachments.empty()) ? nullptr : resolveAttachments.data(),
+			.pDepthStencilAttachment = (depthStencilAttachment) ? &*depthStencilAttachment : nullptr,
+			.preserveAttachmentCount = 0,
+			.pPreserveAttachments = nullptr,
+		},
+	};
 	const Array dependencies{externalToSubpass0Dependency, subpass0ToExternalDependency};
 	GREM_ASSERT(externalToSubpass0Dependency.srcStageMask != VK_PIPELINE_STAGE_NONE && externalToSubpass0Dependency.dstStageMask != VK_PIPELINE_STAGE_NONE);
 	GREM_ASSERT(externalToSubpass0Dependency.srcAccessMask != VK_ACCESS_NONE && externalToSubpass0Dependency.dstAccessMask != VK_ACCESS_NONE);
@@ -2141,7 +2143,7 @@ DeviceImplementation::Pipeline::Pipeline(DeviceImplementation& device, const Pip
 	const Span<const byte> vertexShaderConstantData = key.shaderPipelineHandle->vertexShaderConstantData;
 	const Span<const byte> fragmentShaderConstantData = key.shaderPipelineHandle->fragmentShaderConstantData;
 	const ShaderPipelineOptions shaderPipelineOptions = key.shaderPipelineHandle->shaderPipelineOptions;
-	RenderPassContext& renderPassContext = device.getRenderPassContext(key.renderPassContextKey);
+	const VkRenderPass renderPass = device.getRenderPassContext(key.renderPassContextKey).renderPass.get();
 
 	SmallBuffer<VkDescriptorSetLayout, 8> descriptorSetLayouts{};
 	if (!vertexShader.instanceAttributeDescriptions.empty() || !vertexShader.parameterDescriptions.empty()) {
@@ -2342,16 +2344,18 @@ DeviceImplementation::Pipeline::Pipeline(DeviceImplementation& device, const Pip
 		.minDepthBounds = 0.0f,
 		.maxDepthBounds = 1.0f,
 	};
-	const Array attachments{VkPipelineColorBlendAttachmentState{
-		.blendEnable = (shaderPipelineOptions.blendState) ? VK_TRUE : VK_FALSE,
-		.srcColorBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->sourceColorBlendFactor) : VK_BLEND_FACTOR_ONE,
-		.dstColorBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->destinationColorBlendFactor) : VK_BLEND_FACTOR_ZERO,
-		.colorBlendOp = (shaderPipelineOptions.blendState) ? translateBlendOperation(shaderPipelineOptions.blendState->colorBlendOperation) : VK_BLEND_OP_ADD,
-		.srcAlphaBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->sourceAlphaBlendFactor) : VK_BLEND_FACTOR_ONE,
-		.dstAlphaBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->destinationAlphaBlendFactor) : VK_BLEND_FACTOR_ZERO,
-		.alphaBlendOp = (shaderPipelineOptions.blendState) ? translateBlendOperation(shaderPipelineOptions.blendState->alphaBlendOperation) : VK_BLEND_OP_ADD,
-		.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-	}};
+	const Array attachments{
+		VkPipelineColorBlendAttachmentState{
+			.blendEnable = (shaderPipelineOptions.blendState) ? VK_TRUE : VK_FALSE,
+			.srcColorBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->sourceColorBlendFactor) : VK_BLEND_FACTOR_ONE,
+			.dstColorBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->destinationColorBlendFactor) : VK_BLEND_FACTOR_ZERO,
+			.colorBlendOp = (shaderPipelineOptions.blendState) ? translateBlendOperation(shaderPipelineOptions.blendState->colorBlendOperation) : VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->sourceAlphaBlendFactor) : VK_BLEND_FACTOR_ONE,
+			.dstAlphaBlendFactor = (shaderPipelineOptions.blendState) ? translateBlendFactor(shaderPipelineOptions.blendState->destinationAlphaBlendFactor) : VK_BLEND_FACTOR_ZERO,
+			.alphaBlendOp = (shaderPipelineOptions.blendState) ? translateBlendOperation(shaderPipelineOptions.blendState->alphaBlendOperation) : VK_BLEND_OP_ADD,
+			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		},
+	};
 	const vec4 blendConstants = (shaderPipelineOptions.blendState) ? shaderPipelineOptions.blendState->blendConstants.toLinearRGBA() : vec4{1.0f, 1.0f, 1.0f, 1.0f};
 	const VkPipelineColorBlendStateCreateInfo colorBlendState{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -2390,7 +2394,7 @@ DeviceImplementation::Pipeline::Pipeline(DeviceImplementation& device, const Pip
 		.pColorBlendState = &colorBlendState,
 		.pDynamicState = &dynamicState,
 		.layout = pipelineLayoutHandle,
-		.renderPass = renderPassContext.renderPass.get(),
+		.renderPass = renderPass,
 		.subpass = 0,
 		.basePipelineHandle = VK_NULL_HANDLE,
 		.basePipelineIndex = -1,
@@ -2435,7 +2439,7 @@ void DeviceImplementation::ensureExclusiveUncompressedTextureAccess(Texture& tex
 		if (Texture::getFormatAspects(internalFormat) == TextureAspect::COLOR) {
 			const size_t sizeInBytes = resource::Image::getSizeInBytes(Texture::getImageFormat(internalFormat), texture.getSize3D(), texture.getMipLevelCount());
 			if (sizeInBytes >= size_t{1073741824}) {
-				if (detail::TextureResources* const resources = texture.implementation->object.get_if<detail::TextureResources>()) {
+				if (const detail::TextureResources* const resources = texture.implementation->object.get_if<detail::TextureResources>()) {
 					resources->device.get()->submitAndAwaitGraphicsCommands();
 				}
 			}
@@ -2446,7 +2450,7 @@ void DeviceImplementation::ensureExclusiveUncompressedTextureAccess(Texture& tex
 		texture.implementation,
 		[&]() -> SharedPointer<TextureImplementation> {
 			return (uninitialized) ? TextureImplementation::cloneUncompressedUninitialized(*texture.implementation)
-		                           : TextureImplementation::cloneUncompressed(*texture.implementation);
+			                       : TextureImplementation::cloneUncompressed(*texture.implementation);
 		},
 		[&](TextureImplementation& oldTexture) -> void {
 			if (!uninitialized) {
@@ -2480,18 +2484,20 @@ void DeviceImplementation::submitGraphicsCommands(VkSemaphore signalSemaphore) {
 	GREM_PROFILE_FUNCTION();
 
 	endGraphicsQueueSubmission();
-	GraphicsQueueSubmission& submission = graphicsQueueSubmissions.back();
-	const Array submits{VkSubmitInfo{
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.pNext = nullptr,
-		.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
-		.pWaitSemaphores = waitSemaphores.data(),
-		.pWaitDstStageMask = waitDestinationPipelineStages.data(),
-		.commandBufferCount = 1,
-		.pCommandBuffers = &submission.commandBuffer,
-		.signalSemaphoreCount = (signalSemaphore) ? uint32_t{1} : uint32_t{0},
-		.pSignalSemaphores = &signalSemaphore,
-	}};
+	const GraphicsQueueSubmission& submission = graphicsQueueSubmissions.back();
+	const Array submits{
+		VkSubmitInfo{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
+			.pWaitSemaphores = waitSemaphores.data(),
+			.pWaitDstStageMask = waitDestinationPipelineStages.data(),
+			.commandBufferCount = 1,
+			.pCommandBuffers = &submission.commandBuffer,
+			.signalSemaphoreCount = (signalSemaphore) ? uint32_t{1} : uint32_t{0},
+			.pSignalSemaphores = &signalSemaphore,
+		},
+	};
 	if (const VkResult result = vkQueueSubmit(graphicsQueue, static_cast<uint32_t>(submits.size()), submits.data(), submission.fence.get()); result != VK_SUCCESS) {
 		throw detail::VulkanError{"vkQueueSubmit", result};
 	}
@@ -2504,18 +2510,20 @@ void DeviceImplementation::submitAndAwaitGraphicsCommands() {
 	GREM_PROFILE_FUNCTION();
 
 	endGraphicsQueueSubmission();
-	GraphicsQueueSubmission& submission = graphicsQueueSubmissions.back();
-	const Array submits{VkSubmitInfo{
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.pNext = nullptr,
-		.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
-		.pWaitSemaphores = waitSemaphores.data(),
-		.pWaitDstStageMask = waitDestinationPipelineStages.data(),
-		.commandBufferCount = 1,
-		.pCommandBuffers = &submission.commandBuffer,
-		.signalSemaphoreCount = 0,
-		.pSignalSemaphores = nullptr,
-	}};
+	const GraphicsQueueSubmission& submission = graphicsQueueSubmissions.back();
+	const Array submits{
+		VkSubmitInfo{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
+			.pWaitSemaphores = waitSemaphores.data(),
+			.pWaitDstStageMask = waitDestinationPipelineStages.data(),
+			.commandBufferCount = 1,
+			.pCommandBuffers = &submission.commandBuffer,
+			.signalSemaphoreCount = 0,
+			.pSignalSemaphores = nullptr,
+		},
+	};
 	if (const VkResult result = vkQueueSubmit(graphicsQueue, static_cast<uint32_t>(submits.size()), submits.data(), submission.fence.get()); result != VK_SUCCESS) {
 		throw detail::VulkanError{"vkQueueSubmit", result};
 	}
@@ -2582,7 +2590,7 @@ Texture& DeviceImplementation::acquireSwapchainImage(TextureImplementation& swap
 		GREM_ASSERT(!graphicsQueueSubmissions.empty());
 		while (swapchainImplementation.imagePresentationSubmissions.size() >= maxFramesInFlight) {
 			if (graphicsQueueSubmissions.size() >= 2) {
-				DeviceImplementation::GraphicsQueueSubmission& submission = graphicsQueueSubmissions.front();
+				const DeviceImplementation::GraphicsQueueSubmission& submission = graphicsQueueSubmissions.front();
 				const GraphicsQueueSubmissionGenerationIndex generationIndex = submission.generationIndex;
 				const Array fences{submission.fence.get()};
 				const TimePoint waitStartTime = Clock::now();
@@ -2915,7 +2923,7 @@ void DeviceImplementation::beginGraphicsQueueSubmission() {
 	GREM_PROFILE_FUNCTION();
 
 	while (graphicsQueueSubmissions.size() >= 2) {
-		GraphicsQueueSubmission& submission = graphicsQueueSubmissions.front();
+		const GraphicsQueueSubmission& submission = graphicsQueueSubmissions.front();
 		bool fenceIsSignaled = false;
 		const Array fences{submission.fence.get()};
 		const uint64_t timeout = (graphicsQueueSubmissions.size() >= MAX_SIMULTANEOUS_GRAPHICS_QUEUE_SUBMISSION_COUNT) ? Limits<uint64_t>::MAX : 0;
@@ -3001,7 +3009,7 @@ void DeviceImplementation::beginGraphicsQueueSubmission() {
 void DeviceImplementation::endGraphicsQueueSubmission() {
 	GREM_PROFILE_FUNCTION();
 
-	GraphicsQueueSubmission& submission = graphicsQueueSubmissions.back();
+	const GraphicsQueueSubmission& submission = graphicsQueueSubmissions.back();
 	if (const VkResult result = vkEndCommandBuffer(submission.commandBuffer); result != VK_SUCCESS) {
 		throw detail::VulkanError{"vkEndCommandBuffer", result};
 	}
@@ -3039,7 +3047,7 @@ void Device::blit(TextureRegion2DReference renderTarget, TextureRegion2DConstRef
 		}
 	}
 
-	TextureImplementation* sourceTexture = renderSource.texture->get();
+	TextureImplementation* sourceTexture = const_cast<TextureImplementation*>(renderSource.texture->get());
 	if (sourceTexture->type == TextureType::SWAPCHAIN) {
 		sourceTexture = implementation->acquireSwapchainImage(*sourceTexture).get();
 		GREM_ASSERT(sourceTexture);
@@ -3068,40 +3076,46 @@ void Device::blit(TextureRegion2DReference renderTarget, TextureRegion2DConstRef
 	}
 	targetTexture->transitionToTransferDestinationLayout();
 	sourceTexture->transitionToTransferSourceLayout();
-	const Array regions{VkImageBlit{
-		.srcSubresource{
-			.aspectMask = aspectMask,
-			.mipLevel = renderSource.region.mipLevel,
-			.baseArrayLayer = static_cast<uint32_t>(renderSource.region.offset.z),
-			.layerCount = 1,
+	const Array regions{
+		VkImageBlit{
+			.srcSubresource{
+				.aspectMask = aspectMask,
+				.mipLevel = renderSource.region.mipLevel,
+				.baseArrayLayer = static_cast<uint32_t>(renderSource.region.offset.z),
+				.layerCount = 1,
+			},
+			.srcOffsets{
+				TextureImplementation::translateOffset(Offset3D{
+					.x = renderSource.region.offset.x,
+					.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y - static_cast<int32_t>(renderSource.region.size.height),
+					.z = 0,
+				}),
+				TextureImplementation::translateOffset(Offset3D{
+					.x = renderSource.region.offset.x + static_cast<int32_t>(renderSource.region.size.width),
+					.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y,
+					.z = 1,
+				}),
+			},
+			.dstSubresource{
+				.aspectMask = aspectMask,
+				.mipLevel = renderTarget.region.mipLevel,
+				.baseArrayLayer = static_cast<uint32_t>(renderTarget.region.offset.z),
+				.layerCount = 1,
+			},
+			.dstOffsets{
+				TextureImplementation::translateOffset(Offset3D{
+					.x = renderTarget.region.offset.x,
+					.y = static_cast<int32_t>(targetTexture->size.height) - renderTarget.region.offset.y - static_cast<int32_t>(renderTarget.region.size.height),
+					.z = 0,
+				}),
+				TextureImplementation::translateOffset(Offset3D{
+					.x = renderTarget.region.offset.x + static_cast<int32_t>(renderTarget.region.size.width),
+					.y = static_cast<int32_t>(targetTexture->size.height) - renderTarget.region.offset.y,
+					.z = 1,
+				}),
+			},
 		},
-		.srcOffsets{
-			TextureImplementation::translateOffset(Offset3D{.x = renderSource.region.offset.x,
-				.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y - static_cast<int32_t>(renderSource.region.size.height),
-				.z = 0}),
-			TextureImplementation::translateOffset(Offset3D{
-				.x = renderSource.region.offset.x + static_cast<int32_t>(renderSource.region.size.width),
-				.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y,
-				.z = 1,
-			}),
-		},
-		.dstSubresource{
-			.aspectMask = aspectMask,
-			.mipLevel = renderTarget.region.mipLevel,
-			.baseArrayLayer = static_cast<uint32_t>(renderTarget.region.offset.z),
-			.layerCount = 1,
-		},
-		.dstOffsets{
-			TextureImplementation::translateOffset(Offset3D{.x = renderTarget.region.offset.x,
-				.y = static_cast<int32_t>(targetTexture->size.height) - renderTarget.region.offset.y - static_cast<int32_t>(renderTarget.region.size.height),
-				.z = 0}),
-			TextureImplementation::translateOffset(Offset3D{
-				.x = renderTarget.region.offset.x + static_cast<int32_t>(renderTarget.region.size.width),
-				.y = static_cast<int32_t>(targetTexture->size.height) - renderTarget.region.offset.y,
-				.z = 1,
-			}),
-		},
-	}};
+	};
 	vkCmdBlitImage(implementation->getGraphicsCommandBuffer(), sourceTexture->object.get<detail::TextureResources>().image, sourceTexture->imageLayout,
 		targetTexture->object.get<detail::TextureResources>().image, targetTexture->imageLayout, static_cast<uint32_t>(regions.size()), regions.data(),
 		TextureImplementation::translateFilter(filter));
@@ -3134,7 +3148,7 @@ void Device::blit(TextureSubresourceReference renderTarget, Offset2D targetOffse
 		}
 	}
 
-	TextureImplementation* sourceTexture = renderSource.texture->get();
+	TextureImplementation* sourceTexture = const_cast<TextureImplementation*>(renderSource.texture->get());
 	if (sourceTexture->type == TextureType::SWAPCHAIN) {
 		sourceTexture = implementation->acquireSwapchainImage(*sourceTexture).get();
 		GREM_ASSERT(sourceTexture);
@@ -3164,64 +3178,76 @@ void Device::blit(TextureSubresourceReference renderTarget, Offset2D targetOffse
 	targetTexture->transitionToTransferDestinationLayout();
 	sourceTexture->transitionToTransferSourceLayout();
 	if (targetTexture->sampleCount == VK_SAMPLE_COUNT_1_BIT && sourceTexture->sampleCount != VK_SAMPLE_COUNT_1_BIT) {
-		const Array regions{VkImageResolve{
-			.srcSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = renderSource.region.mipLevel,
-				.baseArrayLayer = static_cast<uint32_t>(renderSource.region.offset.z),
-				.layerCount = 1,
+		const Array regions{
+			VkImageResolve{
+				.srcSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = renderSource.region.mipLevel,
+					.baseArrayLayer = static_cast<uint32_t>(renderSource.region.offset.z),
+					.layerCount = 1,
+				},
+				.srcOffset = TextureImplementation::translateOffset(Offset3D{
+					.x = renderSource.region.offset.x,
+					.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y - static_cast<int32_t>(renderSource.region.size.height),
+					.z = 0,
+				}),
+				.dstSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = renderTarget.subresource.mipLevel,
+					.baseArrayLayer = renderTarget.subresource.layer,
+					.layerCount = 1,
+				},
+				.dstOffset = TextureImplementation::translateOffset(Offset3D{
+					.x = targetOffset.x,
+					.y = static_cast<int32_t>(targetTexture->size.height) - targetOffset.y - static_cast<int32_t>(renderSource.region.size.height),
+					.z = 0,
+				}),
+				.extent = TextureImplementation::translateExtent(static_cast<Extent3D>(renderSource.region.size)),
 			},
-			.srcOffset = TextureImplementation::translateOffset(Offset3D{.x = renderSource.region.offset.x,
-				.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y - static_cast<int32_t>(renderSource.region.size.height),
-				.z = 0}),
-			.dstSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = renderTarget.subresource.mipLevel,
-				.baseArrayLayer = renderTarget.subresource.layer,
-				.layerCount = 1,
-			},
-			.dstOffset = TextureImplementation::translateOffset(Offset3D{.x = targetOffset.x,
-				.y = static_cast<int32_t>(targetTexture->size.height) - targetOffset.y - static_cast<int32_t>(renderSource.region.size.height),
-				.z = 0}),
-			.extent = TextureImplementation::translateExtent(static_cast<Extent3D>(renderSource.region.size)),
-		}};
+		};
 		vkCmdResolveImage(implementation->getGraphicsCommandBuffer(), sourceTexture->object.get<detail::TextureResources>().image, sourceTexture->imageLayout,
 			targetTexture->object.get<detail::TextureResources>().image, targetTexture->imageLayout, static_cast<uint32_t>(regions.size()), regions.data());
 	} else {
-		const Array regions{VkImageBlit{
-			.srcSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = renderSource.region.mipLevel,
-				.baseArrayLayer = static_cast<uint32_t>(renderSource.region.offset.z),
-				.layerCount = 1,
+		const Array regions{
+			VkImageBlit{
+				.srcSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = renderSource.region.mipLevel,
+					.baseArrayLayer = static_cast<uint32_t>(renderSource.region.offset.z),
+					.layerCount = 1,
+				},
+				.srcOffsets{
+					TextureImplementation::translateOffset(Offset3D{
+						.x = renderSource.region.offset.x,
+						.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y - static_cast<int32_t>(renderSource.region.size.height),
+						.z = 0,
+					}),
+					TextureImplementation::translateOffset(Offset3D{
+						.x = renderSource.region.offset.x + static_cast<int32_t>(renderSource.region.size.width),
+						.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y,
+						.z = 1,
+					}),
+				},
+				.dstSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = renderTarget.subresource.mipLevel,
+					.baseArrayLayer = renderTarget.subresource.layer,
+					.layerCount = 1,
+				},
+				.dstOffsets{
+					TextureImplementation::translateOffset(Offset3D{
+						.x = targetOffset.x,
+						.y = static_cast<int32_t>(targetTexture->size.height) - targetOffset.y - static_cast<int32_t>(renderSource.region.size.height),
+						.z = 0,
+					}),
+					TextureImplementation::translateOffset(Offset3D{
+						.x = targetOffset.x + static_cast<int32_t>(renderSource.region.size.width),
+						.y = static_cast<int32_t>(targetTexture->size.height) - targetOffset.y,
+						.z = 1,
+					}),
+				},
 			},
-			.srcOffsets{
-				TextureImplementation::translateOffset(Offset3D{.x = renderSource.region.offset.x,
-					.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y - static_cast<int32_t>(renderSource.region.size.height),
-					.z = 0}),
-				TextureImplementation::translateOffset(Offset3D{
-					.x = renderSource.region.offset.x + static_cast<int32_t>(renderSource.region.size.width),
-					.y = static_cast<int32_t>(sourceTexture->size.height) - renderSource.region.offset.y,
-					.z = 1,
-				}),
-			},
-			.dstSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = renderTarget.subresource.mipLevel,
-				.baseArrayLayer = renderTarget.subresource.layer,
-				.layerCount = 1,
-			},
-			.dstOffsets{
-				TextureImplementation::translateOffset(Offset3D{.x = targetOffset.x,
-					.y = static_cast<int32_t>(targetTexture->size.height) - targetOffset.y - static_cast<int32_t>(renderSource.region.size.height),
-					.z = 0}),
-				TextureImplementation::translateOffset(Offset3D{
-					.x = targetOffset.x + static_cast<int32_t>(renderSource.region.size.width),
-					.y = static_cast<int32_t>(targetTexture->size.height) - targetOffset.y,
-					.z = 1,
-				}),
-			},
-		}};
+		};
 		GREM_ASSERT(targetTexture->sampleCount == sourceTexture->sampleCount);
 		vkCmdBlitImage(implementation->getGraphicsCommandBuffer(), sourceTexture->object.get<detail::TextureResources>().image, sourceTexture->imageLayout,
 			targetTexture->object.get<detail::TextureResources>().image, targetTexture->imageLayout, static_cast<uint32_t>(regions.size()), regions.data(), VK_FILTER_NEAREST);

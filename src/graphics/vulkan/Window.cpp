@@ -66,7 +66,7 @@ struct VolkInitializer {
 			if (!getInstanceProcAddr) {
 				throw graphics::Error{String{"Failed to get the Vulkan vkGetInstanceProcAddr function from SDL:\n"} + SDL_GetError()};
 			}
-			volkInitializeCustom((PFN_vkGetInstanceProcAddr)getInstanceProcAddr); // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+			volkInitializeCustom(reinterpret_cast<PFN_vkGetInstanceProcAddr>(getInstanceProcAddr));
 		}
 	}
 
@@ -83,7 +83,7 @@ struct VolkInitializer {
 };
 
 struct InstanceInitializer {
-	[[nodiscard]] InstanceInitializer(SDL_Window* window) {
+	[[nodiscard]] explicit InstanceInitializer(SDL_Window* window) {
 		if (windowCount == 0) {
 			GREM_PROFILE_BLOCK("Create Vulkan instance");
 

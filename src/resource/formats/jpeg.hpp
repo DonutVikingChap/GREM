@@ -43,7 +43,7 @@ inline constexpr Array<char, 2> JPEG_IDENTIFIER{'\xFF', '\xD8'};
 	struct jpeg_error_mgr jerr{};
 
 	std::jmp_buf onError{};
-	if (setjmp(onError) != 0) {
+	if (setjmp(onError) != 0) { // NOLINT(modernize-avoid-setjmp-longjmp)
 		jpeg_destroy_decompress(&cinfo);
 		Array<char, JMSG_LENGTH_MAX> message{};
 		jerr.format_message(reinterpret_cast<j_common_ptr>(&cinfo), message.data());
@@ -54,7 +54,7 @@ inline constexpr Array<char, 2> JPEG_IDENTIFIER{'\xFF', '\xD8'};
 	cinfo.err = jpeg_std_error(&jerr);
 	jerr.error_exit = [](j_common_ptr cinfo) -> void {
 		std::jmp_buf& onError = *static_cast<std::jmp_buf*>(cinfo->client_data);
-		std::longjmp(onError, 1);
+		std::longjmp(onError, 1); // NOLINT(modernize-avoid-setjmp-longjmp)
 	};
 
 	jpeg_create_decompress(&cinfo);
@@ -177,7 +177,7 @@ inline constexpr Array<char, 2> JPEG_IDENTIFIER{'\xFF', '\xD8'};
 	struct jpeg_error_mgr jerr{};
 
 	std::jmp_buf errorJumpState{};
-	if (setjmp(errorJumpState) != 0) {
+	if (setjmp(errorJumpState) != 0) { // NOLINT(modernize-avoid-setjmp-longjmp)
 		jpeg_destroy_compress(&cinfo);
 		Array<char, JMSG_LENGTH_MAX> message{};
 		jerr.format_message(reinterpret_cast<j_common_ptr>(&cinfo), message.data());
@@ -188,7 +188,7 @@ inline constexpr Array<char, 2> JPEG_IDENTIFIER{'\xFF', '\xD8'};
 	cinfo.err = jpeg_std_error(&jerr);
 	jerr.error_exit = [](j_common_ptr cinfo) -> void {
 		std::jmp_buf& onError = *static_cast<std::jmp_buf*>(cinfo->client_data);
-		std::longjmp(onError, 1);
+		std::longjmp(onError, 1); // NOLINT(modernize-avoid-setjmp-longjmp)
 	};
 
 	jpeg_create_compress(&cinfo);

@@ -59,7 +59,7 @@ void SoundStage::update(const Listener& listener) {
 
 SoundInstanceID SoundStage::playSound(const Sound& sound, float volume, Panning panning) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	const SoLoud::handle result = soloud.play(*static_cast<SoLoud::AudioSource*>(sound.get()), volume, 0.0f, true);
+	const SoLoud::handle result = soloud.play(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume, 0.0f, true);
 	soloud.setPanAbsolute(result, panning.leftVolume, panning.rightVolume);
 	soloud.setPause(result, false);
 	return SoundInstanceID{result};
@@ -67,46 +67,52 @@ SoundInstanceID SoundStage::playSound(const Sound& sound, float volume, Panning 
 
 SoundInstanceID SoundStage::play3DSound(const Sound& sound, vec3 position, vec3 velocity, float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	return SoundInstanceID{soloud.play3d(*static_cast<SoLoud::AudioSource*>(sound.get()), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume)};
+	const SoLoud::handle result =
+		soloud.play3d(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundStage::playSoundInBackground(const Sound& sound, float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	const SoLoud::handle result = soloud.playBackground(*static_cast<SoLoud::AudioSource*>(sound.get()), volume);
+	const SoLoud::handle result = soloud.playBackground(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume);
 	soloud.setProtectVoice(result, true);
 	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundStage::createPausedSound(const Sound& sound, float volume, Panning panning) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	const SoLoud::handle result = soloud.play(*static_cast<SoLoud::AudioSource*>(sound.get()), volume, 0.0f, true);
+	const SoLoud::handle result = soloud.play(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume, 0.0f, true);
 	soloud.setPanAbsolute(result, panning.leftVolume, panning.rightVolume);
 	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundStage::createPaused3DSound(const Sound& sound, vec3 position, vec3 velocity, float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	return SoundInstanceID{soloud.play3d(*static_cast<SoLoud::AudioSource*>(sound.get()), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume, true)};
+	const SoLoud::handle result =
+		soloud.play3d(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume, true);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundStage::createPausedSoundInBackground(const Sound& sound, float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	const SoLoud::handle result = soloud.playBackground(*static_cast<SoLoud::AudioSource*>(sound.get()), volume, true);
+	const SoLoud::handle result = soloud.playBackground(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume, true);
 	soloud.setProtectVoice(result, true);
 	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundStage::playSoundClocked(Duration time, const Sound& sound, float volume, Panning panning) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	const SoLoud::handle result = soloud.playClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(sound.get()), volume);
+	const SoLoud::handle result =
+		soloud.playClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume);
 	soloud.setPanAbsolute(result, panning.leftVolume, panning.rightVolume);
 	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundStage::play3DSoundClocked(Duration time, const Sound& sound, vec3 position, vec3 velocity, float volume) {
 	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
-	return SoundInstanceID{soloud.play3dClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(sound.get()), position.x, position.y,
-		position.z, velocity.x, velocity.y, velocity.z, volume)};
+	const SoLoud::handle result = soloud.play3dClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())),
+		position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume);
+	return SoundInstanceID{result};
 }
 
 bool SoundStage::isSoundPaused(SoundInstanceID id) const noexcept {
@@ -254,7 +260,7 @@ vec3 SoundStage::getOutputChannelSpeakerPosition(size_t outputChannelIndex) cons
 }
 
 float SoundStage::getOutputVolume() const noexcept {
-	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	const SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	return soloud.getGlobalVolume();
 }
 
@@ -264,7 +270,7 @@ float SoundStage::getSpeedOfSound() const noexcept {
 }
 
 size_t SoundStage::getMaxSimultaneousSounds() const noexcept {
-	SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
+	const SoLoud::Soloud& soloud = *static_cast<SoLoud::Soloud*>(engine.get());
 	return static_cast<size_t>(soloud.getMaxActiveVoiceCount());
 }
 

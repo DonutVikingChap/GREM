@@ -134,10 +134,13 @@ public:
 
 		graphics.instances2D.clear();
 
-		vec2 position{u32vec2{graphics.renderSize.width / 2, graphics.renderSize.height / 2 + graphics.renderSize.height / 4}};
+		Offset2D position{
+			static_cast<int32_t>(graphics.renderSize.width / 2),
+			static_cast<int32_t>(graphics.renderSize.height / 2 + graphics.renderSize.height / 4),
+		};
 
 		graphics.put2DText(position, Color::WHITE, title, 3.0f, gfx::TextAlign::CENTER);
-		position.y -= 100.0f;
+		position.y -= 100;
 
 		for (size_t itemIndex = 0; itemIndex < items.size(); ++itemIndex) {
 			const Item& item = items[itemIndex];
@@ -149,7 +152,7 @@ public:
 				label = labelWithValue;
 			}
 			itemBoundingBoxes[itemIndex] = graphics.put2DText(position, color, label, 2.0f, gfx::TextAlign::CENTER);
-			position.y -= 40.0f;
+			position.y -= 40;
 		}
 
 		graphics.renderer2D.drawFrame(renderPass, {graphics.instances2D}, graphics.camera2D);

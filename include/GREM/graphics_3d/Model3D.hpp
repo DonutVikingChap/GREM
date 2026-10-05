@@ -754,12 +754,12 @@ public:
 	 *        valid node index.
 	 * \param newParameters new parameter values to set.
 	 *
-	 * \throws graphics::Error on failure to create the model.
+	 * \throws graphics::Error on failure to set the parameters.
 	 * \throws std::length_error if an internal size limit was exceeded.
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \note The shape of the new parameters will also affect the mesh
+	 * \note The shape of the new parameters will also affect the node's shader
 	 *       configuration.
 	 *
 	 * \warning The given morph target parameters must be valid for the model
@@ -819,6 +819,82 @@ public:
 		} else {
 			node.shaderConfiguration.fragmentFlags &= ~resource::Model::FRAGMENT_EMISSIVE_MAPPED_ON_CHANNEL_0;
 			node.shaderConfiguration.fragmentFlags &= ~resource::Model::FRAGMENT_EMISSIVE_MAPPED_ON_CHANNEL_1;
+		}
+	}
+
+	/**
+	 * Set how to interpret the material parameters of a node in the model when
+	 * shading.
+	 *
+	 * \param nodeIndex index of the node to update. Must be a valid node index.
+	 * \param newMaterialType new material type to set.
+	 *
+	 * \note This affects the node's shader configuration.
+	 */
+	void setNodeMaterialType(size_t nodeIndex, MaterialType newMaterialType) {
+		m.nodes[nodeIndex].shaderConfiguration.materialType = newMaterialType;
+	}
+
+	/**
+	 * Set the winding order of the front-facing faces of a node in the model.
+	 *
+	 * \param nodeIndex index of the node to update. Must be a valid node index.
+	 * \param newFrontFace new front face to set.
+	 *
+	 * \note This affects the node's shader configuration.
+	 */
+	void setNodeFrontFace(size_t nodeIndex, FrontFace newFrontFace) {
+		m.nodes[nodeIndex].shaderConfiguration.frontFace = newFrontFace;
+	}
+
+	/**
+	 * Set whether a node in the model is alpha masked or not.
+	 *
+	 * \param nodeIndex index of the node to update. Must be a valid node index.
+	 * \param newAlphaMasked new alpha masked state to set.
+	 *
+	 * \note This affects the fragment flags of the node's shader configuration.
+	 */
+	void setNodeAlphaMasked(size_t nodeIndex, bool newAlphaMasked) {
+		Node& node = m.nodes[nodeIndex];
+		if (newAlphaMasked) {
+			node.shaderConfiguration.fragmentFlags |= resource::Model::FRAGMENT_ALPHA_MASKED;
+		} else {
+			node.shaderConfiguration.fragmentFlags &= ~resource::Model::FRAGMENT_ALPHA_MASKED;
+		}
+	}
+
+	/**
+	 * Set whether a node in the model is alpha blended or not.
+	 *
+	 * \param nodeIndex index of the node to update. Must be a valid node index.
+	 * \param newAlphaBlended new alpha blended state to set.
+	 *
+	 * \note This affects the fragment flags of the node's shader configuration.
+	 */
+	void setNodeAlphaBlended(size_t nodeIndex, bool newAlphaBlended) {
+		Node& node = m.nodes[nodeIndex];
+		if (newAlphaBlended) {
+			node.shaderConfiguration.fragmentFlags |= resource::Model::FRAGMENT_ALPHA_BLENDED;
+		} else {
+			node.shaderConfiguration.fragmentFlags &= ~resource::Model::FRAGMENT_ALPHA_BLENDED;
+		}
+	}
+
+	/**
+	 * Set whether a node in the model is double-sided or not.
+	 *
+	 * \param nodeIndex index of the node to update. Must be a valid node index.
+	 * \param newDoubleSided new double-sided state to set.
+	 *
+	 * \note This affects the fragment flags of the node's shader configuration.
+	 */
+	void setNodeDoubleSided(size_t nodeIndex, bool newDoubleSided) {
+		Node& node = m.nodes[nodeIndex];
+		if (newDoubleSided) {
+			node.shaderConfiguration.fragmentFlags |= resource::Model::FRAGMENT_DOUBLE_SIDED;
+		} else {
+			node.shaderConfiguration.fragmentFlags &= ~resource::Model::FRAGMENT_DOUBLE_SIDED;
 		}
 	}
 
@@ -995,6 +1071,19 @@ public:
 
 	/**
 	 * Get the animation with a specific name.
+	 *
+	 * \param name name of the animation to search for.
+	 *
+	 * \return a non-owning read-only view over the given animation.
+	 *
+	 * \throws std::out_of_range if the animation was not found.
+	 */
+	[[nodiscard]] resource::Model::AnimationView getAnimation(StringView name) const {
+		return getAnimationAtIndex(getAnimationIndex(name));
+	}
+
+	/**
+	 * Try to get the animation with a specific name.
 	 *
 	 * \param name name of the animation to search for.
 	 *

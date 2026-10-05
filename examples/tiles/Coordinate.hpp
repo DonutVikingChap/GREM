@@ -172,6 +172,30 @@ struct Coordinate {
 	return result;
 }
 
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool equal(Coordinate a, Coordinate b) {
+	return a == b;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool notEqual(Coordinate a, Coordinate b) {
+	return a != b;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool lessThan(Coordinate a, Coordinate b) {
+	return a < b;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool lessThanEqual(Coordinate a, Coordinate b) {
+	return a <= b;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool greaterThan(Coordinate a, Coordinate b) {
+	return a > b;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool greaterThanEqual(Coordinate a, Coordinate b) {
+	return a >= b;
+}
+
 template <size_t N>
 using Coordinates = vec<N, Coordinate>;
 using Coordinates2D = Coordinates<2>;

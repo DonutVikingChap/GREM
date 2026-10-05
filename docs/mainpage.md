@@ -41,7 +41,7 @@ This example is ~80 lines long and implements a basic application that renders a
 This example is ~500 lines long and implements a basic 2D physics toy.
 
 <details>
-<summary>Added features</summary>
+<summary>Features added</summary>
 
 | Functionality demonstrated                                                           | Module used   | Relevant components used |
 | ------------------------------------------------------------------------------------ | ------------- | ------------------------ |
@@ -67,7 +67,7 @@ This example is ~500 lines long and implements a basic 2D physics toy.
 This example game is ~700 lines long and is used to test some basic features of the library.
 
 <details>
-<summary>Added features</summary>
+<summary>Features added</summary>
 
 | Functionality demonstrated                                                                            | Module used   | Relevant components used |
 | ----------------------------------------------------------------------------------------------------- | ------------- | ------------------------ |
@@ -90,10 +90,10 @@ This example game is ~700 lines long and is used to test some basic features of 
 
 ### examples/tiles
 
-This example is ~3500 lines split across 19 files and implements a tile-based 2D game.
+This example is ~3500 lines, split across 19 files, and implements a tile-based 2D game.
 
 <details>
-<summary>Added features</summary>
+<summary>Features added</summary>
 
 | Functionality demonstrated                        | Relevant files                                               | Module used   | Relevant components used |
 | ------------------------------------------------- | ------------------------------------------------------------ | ------------- | ------------------------ |
@@ -109,34 +109,53 @@ This example is ~3500 lines split across 19 files and implements a tile-based 2D
 
 </details>
 
+### examples/platformer
+
+This example is ~3000 lines, split across 17 files, and implements a basic third-person 3D platformer game.
+
+<details>
+<summary>Features added</summary>
+
+| Functionality demonstrated                                 | Relevant files                                                               | Module used   | Relevant components used |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------- | ------------------------ |
+| 3D physics simulation setup                                | `%Game.hpp`                                                                  | `physics`     | [phys::Simulation](@ref grem::physics::Simulation) |
+| Manual simulation step scheduling with additional tasks    | `%Game.hpp`                                                                  | `physics`     | [phys::Simulation](@ref grem::physics::Simulation), [phys::Scheduler](@ref grem::physics::Scheduler) |
+| Raycasting, shapecasting and direct collision queries      | `%systems/player.cpp`                                                        | `physics`     | [phys::Broadphase](@ref grem::physics::Broadphase) |
+| Physical units and quantities in gameplay code             | `%systems/player.cpp`                                                        | `physics`     | [phys::Quantity](@ref grem::physics::Quantity) |
+| 3D positional audio                                        | `%Game.hpp`, `%Audio.hpp`, `%systems/player.cpp`, `%systems/collectible.cpp` | `audio`       | [aud::SoundStage](@ref grem::audio::SoundStage), [aud::Sound](@ref grem::audio::Sound), [aud::Listener](@ref grem::audio::Listener) |
+| Manual instance batching and multithreaded frustum culling | `%Graphics.hpp`, `%systems/level.cpp`                                        | `graphics_3d` | [gfx::Instances3D](@ref grem::graphics::Instances3D) |
+| Sky rendering                                              | `%Graphics.hpp`, `%systems/level.cpp`                                        | `graphics_3d` | [gfx::Sky3D](@ref grem::graphics::Sky3D), [gfx::LightBaker3D](@ref grem::graphics::LightBaker3D) |
+| Custom stylized 3D model shader                            | `%Graphics.hpp`, `%shaders.hpp`                                              | `graphics_3d` | [gfx::Model3D](@ref grem::graphics::Model3D), [gfx::FragmentShader](@ref grem::graphics::FragmentShader), [gfx::UniformBuffer](@ref grem::graphics::UniformBuffer), [gfx::StorageBuffer](@ref grem::graphics::StorageBuffer) |
+| Custom JSON level format exporting and loading             | `../datasrc/scripts/export_level.py`, `%systems/level.cpp`                   | `core`        | [json](@ref grem::json) |
+
+</details>
+
 ### examples/fps
 
-This example is ~21000 lines split across 81 files and implements a basic FPS game prototype with online multiplayer support.
+This example is ~21000 lines, split across 81 files, and implements a basic FPS game prototype with online multiplayer and splitscreen support.
 
 This project is significantly more advanced than the other examples, and is meant to represent a more realistic integration of GREM in a production-quality engine. For example, it includes GREM headers on a per-file basis to improve compile times, and has a modular archtiecture that allows individual game systems to be compiled separately and loaded like plugins at runtime.
 
 <details>
-<summary>Added features</summary>
+<summary>Features added</summary>
 
-| Functionality demonstrated                                                                     | Relevant files                                                              | Module used   | Relevant components used |
-| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------- | ------------------------ |
-| Dynamically loaded shared libraries                                                            | `%GameSystems.cpp`                                                          | `core`        | [SharedLibrary](@ref grem::SharedLibrary) |
-| Manual threading and synchronization                                                           | `%Game.hpp`                                                                 | `core`        | [Thread](@ref grem::Thread), [Mutex](@ref grem::Mutex), [ScopedLock](@ref grem::ScopedLock), [Atomic](@ref grem::Atomic), [AtomicFlag](@ref grem::AtomicFlag) |
-| Persistent user settings with associated console commands                                      | `%ClientSettings.hpp`, `%GameClient.hpp`, `%GameClient.cpp`, `%Game.hpp`    | `core`        | [Filesystem](@ref grem::Filesystem), [meta](@ref grem::meta) |
-| Asset caching with parallel loading                                                            | `%AssetCache.hpp`                                                           | `core`        | [Filesystem](@ref grem::Filesystem), [HashMap](@ref grem::HashMap), [Mutex](@ref grem::Mutex), [ScopedLock](@ref grem::ScopedLock), [AtomicFlag](@ref grem::AtomicFlag) |
-| Custom binary data serialization protocol integration                                          | `%serialization.hpp`                                                        | `core`        | [Reader](@ref grem::Reader), [SpanReader](@ref grem::SpanReader), [Writer](@ref grem::Writer) |
-| UDP networking with a custom connection protocol                                               | `%Connection.hpp`, `%GameServer.cpp`, `%GameClient.cpp`                     | `networking`  | [net::UDPSocket](@ref grem::networking::UDPSocket), [net::Endpoint](@ref grem::networking::Endpoint) |
-| Advanced 3D physics simulation (using the static API with manual registry/schedule management) | `%PhysicsSimulationSystem.cpp`                                              | `physics`     | [phys::Simulation](@ref grem::physics::Simulation), [phys::Broadphase](@ref grem::physics::Broadphase), [phys::Contacts](@ref grem::physics::Contacts) |
-| Physical units and quantities in game code                                                     | `%MovementControlSystem.cpp`, etc.                                          | `physics`     | [phys::Quantity](@ref grem::physics::Quantity) |
-| Positional audio and advanced sound instance management                                        | `%SoundAudioStagingSystem.cpp`                                              | `audio`       | [aud::SoundStage](@ref grem::audio::SoundStage), [aud::Listener](@ref grem::audio::Listener) |
-| Audio statistics visualization                                                                 | `%ClientStatisticsGraphicsStagingSystem.cpp`, `%GameClient.cpp`             | `audio`       | [aud::SoundStage](@ref grem::audio::SoundStage) |
-| Sub-frame input manager output event handling                                                  | `%GameClient.cpp`                                                           | `events`      | [evt::EventPump](@ref grem::events::EventPump), [evt::InputManager](@ref grem::events::InputManager) |
-| Splitscreen input manager setup                                                                | `%GameClient.cpp`                                                           | `events`      | [evt::InputManager](@ref grem::events::InputManager) |
-| Splitscreen rendering                                                                          | `%Graphics.hpp`, `%WorldViewGraphicsRenderingSystem.cpp`, `%GameClient.cpp` | `graphics`    | [gfx::Texture](@ref grem::graphics::Texture), [gfx::Viewport](@ref grem::graphics::Viewport), [gfx::RenderPass](@ref grem::graphics::RenderPass) |
-| Manual instance batching                                                                       | `%Graphics.hpp`, `%ModelGraphicsStagingSystem.cpp`                          | `graphics_3d` | [gfx::Instances3D](@ref grem::graphics::Instances3D) |
-| Sky, fog and decal rendering                                                                   | `%Graphics.hpp`, `%DecalGraphicsStagingSystem.cpp`, `%GameClient.cpp`       | `graphics_3d` | [gfx::Sky3D](@ref grem::graphics::Sky3D), [gfx::Fog3D](@ref grem::graphics::Fog3D), [gfx::Decals3D](@ref grem::graphics::Decals3D) |
-| Light baking and global illumination                                                           | `%Graphics.hpp`, `%LightBakingSystem.cpp`, `%GameClient.cpp`                | `graphics_3d` | [gfx::Sky3D](@ref grem::graphics::Sky3D), [gfx::LightProbeVolumes3D](@ref grem::graphics::LightProbeVolumes3D), [gfx::ReflectionProbes3D](@ref grem::graphics::ReflectionProbes3D), [gfx::LightBaker3D](@ref grem::graphics::LightBaker3D) |
-| In-game debug GUI widgets, chat and developer console                                          | `%Game.hpp`, `%GameClient.cpp`, `%Console.hpp`                              | `imgui`       | [imgui::GraphicalUserInterface](@ref grem::imgui::GraphicalUserInterface) |
+| Functionality demonstrated                                                                  | Relevant files                                                              | Module used   | Relevant components used |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------- | ------------------------ |
+| Dynamically loaded shared libraries                                                         | `%GameSystems.cpp`                                                          | `core`        | [SharedLibrary](@ref grem::SharedLibrary) |
+| Manual threading and synchronization                                                        | `%Game.hpp`                                                                 | `core`        | [Thread](@ref grem::Thread), [Mutex](@ref grem::Mutex), [ScopedLock](@ref grem::ScopedLock), [Atomic](@ref grem::Atomic), [AtomicFlag](@ref grem::AtomicFlag) |
+| Persistent user settings with associated console commands                                   | `%ClientSettings.hpp`, `%GameClient.hpp`, `%GameClient.cpp`, `%Game.hpp`    | `core`        | [Filesystem](@ref grem::Filesystem), [meta](@ref grem::meta) |
+| Asset caching with parallel loading                                                         | `%AssetCache.hpp`                                                           | `core`        | [Filesystem](@ref grem::Filesystem), [HashMap](@ref grem::HashMap), [Mutex](@ref grem::Mutex), [ScopedLock](@ref grem::ScopedLock), [AtomicFlag](@ref grem::AtomicFlag) |
+| Custom binary data serialization protocol integration                                       | `%serialization.hpp`                                                        | `core`        | [Reader](@ref grem::Reader), [SpanReader](@ref grem::SpanReader), [Writer](@ref grem::Writer) |
+| UDP networking with a custom connection protocol                                            | `%Connection.hpp`, `%GameServer.cpp`, `%GameClient.cpp`                     | `networking`  | [net::UDPSocket](@ref grem::networking::UDPSocket), [net::Endpoint](@ref grem::networking::Endpoint) |
+| Sub-frame input manager output event handling                                               | `%GameClient.cpp`                                                           | `events`      | [evt::EventPump](@ref grem::events::EventPump), [evt::InputManager](@ref grem::events::InputManager) |
+| Audio statistics visualization                                                              | `%ClientStatisticsGraphicsStagingSystem.cpp`, `%GameClient.cpp`             | `audio`       | [aud::SoundStage](@ref grem::audio::SoundStage) |
+| Advanced sound instance management                                                          | `%SoundAudioStagingSystem.cpp`                                              | `audio`       | [aud::SoundStage](@ref grem::audio::SoundStage), [aud::Listener](@ref grem::audio::Listener) |
+| Advanced model instance management                                                          | `%Graphics.hpp`, `%ModelGraphicsStagingSystem.cpp`                          | `graphics_3d` | [gfx::Instances3D](@ref grem::graphics::Instances3D) |
+| Splitscreen input manager setup                                                             | `%GameClient.cpp`                                                           | `events`      | [evt::InputManager](@ref grem::events::InputManager) |
+| Splitscreen rendering                                                                       | `%Graphics.hpp`, `%WorldViewGraphicsRenderingSystem.cpp`, `%GameClient.cpp` | `graphics`    | [gfx::Texture](@ref grem::graphics::Texture), [gfx::Viewport](@ref grem::graphics::Viewport), [gfx::RenderPass](@ref grem::graphics::RenderPass) |
+| Decal rendering                                                                             | `%Graphics.hpp`, `%DecalGraphicsStagingSystem.cpp`, `%GameClient.cpp`       | `graphics_3d` | [gfx::Decals3D](@ref grem::graphics::Decals3D) |
+| Full PBR rendering with fog, light baking and global illumination                           | `%Graphics.hpp`, `%LightBakingSystem.cpp`, `%GameClient.cpp`                | `graphics_3d` | [gfx::Sky3D](@ref grem::graphics::Sky3D), [gfx::Fog3D](@ref grem::graphics::Fog3D), [gfx::LightProbeVolumes3D](@ref grem::graphics::LightProbeVolumes3D), [gfx::ReflectionProbes3D](@ref grem::graphics::ReflectionProbes3D), [gfx::LightBaker3D](@ref grem::graphics::LightBaker3D) |
+| In-game debug GUI widgets, chat and developer console                                       | `%Game.hpp`, `%GameClient.cpp`, `%Console.hpp`                              | `imgui`       | [imgui::GraphicalUserInterface](@ref grem::imgui::GraphicalUserInterface) |
 
 </details>
 

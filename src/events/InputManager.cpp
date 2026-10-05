@@ -246,6 +246,18 @@ void InputManager::handleEvent(const Event& event) {
 			setCurrentState(released.timestamp, Input::TOUCH_FINGER_TAP, ControlState{.activePresses = 0, .value = 0.0f});
 			break;
 		}
+		GREM_CASE(const PinchBeginEvent& pinchBegin) {
+			setCurrentState(pinchBegin.timestamp, Input::PINCH_FINGERS, ControlState{.activePresses = 1, .value = 1.0f});
+			break;
+		}
+		GREM_CASE(const PinchUpdateEvent& pinchUpdate) {
+			pinchFingers(pinchUpdate.timestamp, pinchUpdate.scale);
+			break;
+		}
+		GREM_CASE(const PinchEndEvent& pinchEnd) {
+			setCurrentState(pinchEnd.timestamp, Input::PINCH_FINGERS, ControlState{.activePresses = 0, .value = 0.0f});
+			break;
+		}
 		GREM_CASE_DEFAULT(const auto& other) break;
 	}
 }
@@ -502,8 +514,14 @@ void InputManager::releaseAll(TimePoint timestamp) {
 			relativeState.transientOutputReleases[outputIndex] = true;
 
 			if (options.emitOutputEvents) {
-				pendingOutputEvents.emplace_back(OutputMoved{OutputEventBase{timestamp, outputIndex, ControlState{.activePresses = 0, .value = 0.0f},
-					ControlDelta{.addedPresses = -state.activePresses, .motion = -state.value}}});
+				pendingOutputEvents.emplace_back(OutputMoved{
+					OutputEventBase{
+						timestamp,
+						outputIndex,
+						ControlState{.activePresses = 0, .value = 0.0f},
+						ControlDelta{.addedPresses = -state.activePresses, .motion = -state.value},
+					},
+				});
 				if (state.activePresses > 0) {
 					pendingOutputEvents.emplace_back(
 						OutputReleased{OutputEventBase{timestamp, outputIndex, ControlState{.activePresses = 0, .value = 0.0f}, ControlDelta{.addedPresses = 0, .motion = 0.0f}}});
@@ -622,6 +640,15 @@ void InputManager::setTouchPressure(TimePoint timestamp, float newPressure) {
 	}
 
 	setCurrentState(timestamp, Input::TOUCH_FINGER_PRESSURE, newState);
+}
+
+void InputManager::pinchFingers(TimePoint timestamp, float scale) {
+	relativeState.transientPinchScale *= scale;
+
+	const float motion = (scale - 1.0f) * options.preferences.pinchSensitivity;
+
+	addRelativeState(timestamp, Input::PINCH_FINGERS_MOTION_TOGETHER, ControlDelta{.addedPresses = (motion < 0.0f) ? 1 : -1, .motion = -motion});
+	addRelativeState(timestamp, Input::PINCH_FINGERS_MOTION_APART, ControlDelta{.addedPresses = (motion < 0.0f) ? -1 : 1, .motion = motion});
 }
 
 } // namespace grem::events

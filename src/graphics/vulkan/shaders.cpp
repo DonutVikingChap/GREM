@@ -173,7 +173,7 @@ public:
 
 		constexpr int defaultVersion = 100;
 		constexpr bool forwardCompatible = false;
-		constexpr EShMessages messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
+		constexpr EShMessages messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
 		constexpr TBuiltInResource resource{
 			.maxLights = 32,
 			.maxClipPlanes = 6,

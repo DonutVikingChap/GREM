@@ -39,13 +39,15 @@ public:
 			[&](const CollisionAlgorithmResult<N>& collision) -> void {
 				GREM_ASSERT(collision.manifold.rollingResistanceMomentum == 0);
 				GREM_ASSERT(collision.manifold.rollingResistanceImpulse == 0);
-				CollisionAlgorithmResult<N> reversedCollision{.manifold{
-					.featureTypes = reversed(collision.manifold.featureTypes),
-					.featureIndices = reversed(collision.manifold.featureIndices),
-					.points = collision.manifold.points,
-					.normal = -collision.manifold.normal,
-					.filterTestResult = collision.manifold.filterTestResult,
-				}};
+				CollisionAlgorithmResult<N> reversedCollision{
+					.manifold{
+						.featureTypes = reversed(collision.manifold.featureTypes),
+						.featureIndices = reversed(collision.manifold.featureIndices),
+						.points = collision.manifold.points,
+						.normal = -collision.manifold.normal,
+						.filterTestResult = collision.manifold.filterTestResult,
+					},
+				};
 				for (ContactPoint<N>& point : reversedCollision.manifold.points) {
 					GREM_ASSERT(point.tangent == 0);
 					GREM_ASSERT(point.relativeVelocityInTangentSpace == 0);

@@ -65,7 +65,7 @@ template <typename T>
 }
 
 using AccessFlags = uint8_t;
-enum AccessFlag : AccessFlags {
+enum AccessFlag : AccessFlags { // NOLINT(cppcoreguidelines-use-enum-class)
 	ACCESS_MUTABLE = 1 << 0,
 	ACCESS_MUTABLE_RESOURCE_REGISTRY = 1 << 1,
 	ACCESS_IMMUTABLE_RESOURCE_REGISTRY = 1 << 2,
@@ -1079,7 +1079,7 @@ private:
 						  ...),
 			"This optional task would always be executed since it does not require any resources or exclusions. Add it as a non-optional task instead.");
 		if (foundAll) {
-			return [&]<typename F, std::size_t... Indices>(F&& f, std::index_sequence<Indices...>) -> decltype(auto) {
+			return [&]<typename F, std::size_t... Indices>(F&& f, std::index_sequence<Indices...>) -> decltype(auto) { // NOLINT(cppcoreguidelines-missing-std-forward)
 				return std::forward<F>(f)(*get<Indices>(detail::moveIfNotPointer<OptionalArgs>(arguments))...);
 			}(std::forward<Function>(function), std::make_index_sequence<sizeof...(OptionalArgs)>{});
 		}

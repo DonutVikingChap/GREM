@@ -69,6 +69,7 @@ struct ApplicationOptions {
 			.controllerRightStickCurveExponent = 1.0f,
 			.touchPressureLowerDeadzone = 0.25f,
 			.touchPressureUpperDeadzone = 0.9f,
+			.pinchSensitivity = 1.0f,
 			.controllerLeftStickInnerDeadzone = 0.25f,
 			.controllerLeftStickOuterDeadzone = 0.9f,
 			.controllerRightStickInnerDeadzone = 0.25f,
@@ -208,7 +209,12 @@ int main(int argc, char* argv[]) {
 		filesystem.mountInputArchive("data");
 		filesystem.mountInputArchive(filesystem.getOutputDirectory());
 
-		ApplicationOptions applicationOptions = json::deserializeFromString<ApplicationOptions>(filesystem.readInputFileString(Application::APPLICATION_CONFIGURATION_FILEPATH));
+		ApplicationOptions applicationOptions{};
+		try {
+			json::deserializeFromString(filesystem.readInputFileString(Application::APPLICATION_CONFIGURATION_FILEPATH), applicationOptions);
+		} catch (...) {
+			Error::throwWithNestedFilepath(Application::APPLICATION_CONFIGURATION_FILEPATH);
+		}
 		try {
 			cli::parseCommandLineOptions(applicationOptions, argc, argv);
 		} catch (const cli::Error& e) {

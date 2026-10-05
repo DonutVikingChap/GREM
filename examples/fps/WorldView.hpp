@@ -418,7 +418,7 @@ private:
 		const phys::Coefficient reloadAmount2 = sin(clamp((reloadPhase - numbers::PI * 0.4_x) * 3.5_x, 0.0_x, phys::Coefficient{numbers::PI}));
 		const phys::Coefficient reloadAmount3 = sin(clamp((reloadPhase - numbers::PI * 0.45_x) * 3.0_x, 0.0_x, phys::Coefficient{numbers::PI}));
 		const phys::Coefficient drawRemainingAmount = drawTimeRemaining / weaponDescription.drawDuration;
-		const phys::OrthonormalBasis3D aimBasis = rotate(phys::PitchYawRoll{displayAimAngles, 0_radians});
+		const phys::OrthonormalBasis3D aimBasis = rotate(displayAimAngles);
 
 		if (recoilAngularRates.getX() < 0) {
 			recoilAngularRates.setX(recoilAngularRates.getX() * 0.15_x);

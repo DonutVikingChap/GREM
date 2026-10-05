@@ -99,7 +99,7 @@ struct DeviceImplementation {
 	using ShaderCache = HashMap<ShaderKey, Shader, ShaderKey::Hash>;
 
 	using RenderPassContextFlags = uint16_t;
-	enum RenderPassContextFlag : RenderPassContextFlags {
+	enum RenderPassContextFlag : RenderPassContextFlags { // NOLINT(cppcoreguidelines-use-enum-class)
 		RENDER_PASS_HAS_RESOLVE_TARGET = 1 << 0,
 		RENDER_PASS_RESOLVE_TARGET_IS_SAMPLED = 1 << 1,
 		RENDER_PASS_COLOR_TARGET_IS_SAMPLED = 1 << 2,

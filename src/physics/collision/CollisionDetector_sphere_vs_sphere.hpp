@@ -39,8 +39,8 @@ public:
 				return {};
 			}
 
-			const SphereShape<N>& sphereShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<SphereShape<N>>();
-			const SphereShape<N>& sphereShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<SphereShape<N>>();
+			const SphereShape<N>& sphereShapeA = colliderA.shape.template as<SphereShape<N>>();
+			const SphereShape<N>& sphereShapeB = colliderB.shape.template as<SphereShape<N>>();
 			const Length1D scaledRadiusA = sqrt(squaredScaleA.getX()) * sphereShapeA.radius;
 			const Length1D scaledRadiusB = sqrt(squaredScaleB.getX()) * sphereShapeB.radius;
 			const Length<N> originDifference = transformationB.getOrigin() - transformationA.getOrigin();
@@ -68,8 +68,8 @@ public:
 				return;
 			}
 
-			const SphereShape<N>& sphereShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<SphereShape<N>>();
-			const SphereShape<N>& sphereShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<SphereShape<N>>();
+			const SphereShape<N>& sphereShapeA = colliderA.shape.template as<SphereShape<N>>();
+			const SphereShape<N>& sphereShapeB = colliderB.shape.template as<SphereShape<N>>();
 			const Length1D scaledRadiusA = sqrt(squaredScaleA.getX()) * sphereShapeA.radius;
 			const Length1D scaledRadiusB = sqrt(squaredScaleB.getX()) * sphereShapeB.radius;
 			const Length<N> originDifference = transformationB.getOrigin() - transformationA.getOrigin();

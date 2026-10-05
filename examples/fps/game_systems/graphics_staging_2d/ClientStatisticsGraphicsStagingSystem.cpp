@@ -51,9 +51,9 @@ public:
 
 			if (settings.graphics.showFPS) {
 				const phys::Frequency fps = static_cast<float>(performanceStats.lastSecondFrameCount) * phys::HERTZ;
-				const vec2 fpsTextPosition{
-					static_cast<float>(viewRegion.offset.x) + 15.0f + 2.0f,
-					static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height) - 15.0f - 20.0f,
+				const Offset2D fpsTextPosition{
+					viewRegion.offset.x + 15 + 2,
+					viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) - 15 - 20,
 				};
 				graphics.put2DText(fpsTextPosition, getDurationColor(1_x / fps), formatSmallString<16>("FPS: {}", fps), 2.0f);
 			}
@@ -82,11 +82,7 @@ public:
 						return false;
 					}
 
-					const vec2 aimAnglesTextPosition{
-						static_cast<float>(viewRegion.offset.x) + 15.0f,
-						static_cast<float>(viewRegion.offset.y) + 15.0f + 120.0f,
-					};
-					graphics.put2DText(aimAnglesTextPosition, Color::WHITE,
+					graphics.put2DText({viewRegion.offset.x + 15, viewRegion.offset.y + 15 + 120}, Color::WHITE,
 						formatSmallString<256>("Angles:    {:>8.3f}\n"
 											   "Direction: {:>8.3f}\n"
 											   "Position:  {:>8.3f}\n"
@@ -99,9 +95,9 @@ public:
 		}
 
 		if (sessionState.flags.contains(SessionState::PAUSED)) {
-			const vec2 pausedTextPosition{
-				static_cast<float>(viewRegion.offset.x) + static_cast<float>(viewRegion.size.width / 2),
-				static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height) - 15.0f,
+			const Offset2D pausedTextPosition{
+				viewRegion.offset.x + static_cast<int32_t>(viewRegion.size.width / 2),
+				viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) - 15,
 			};
 			graphics.put2DText(pausedTextPosition, Color::RED, "PAUSED", 2.0f, gfx::TextAlign::CENTER_HORIZONTALLY_TOP);
 		}
@@ -111,9 +107,9 @@ public:
 		}
 
 #ifndef NDEBUG
-		const vec2 debugBuildTextPosition{
-			static_cast<float>(viewRegion.offset.x) + static_cast<float>(viewRegion.size.width) - 15.0f - 2.0f,
-			static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height) - 15.0f - 20.0f,
+		const Offset2D debugBuildTextPosition{
+			viewRegion.offset.x + static_cast<int32_t>(viewRegion.size.width) - 15 - 2,
+			viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) - 15 - 20,
 		};
 		graphics.put2DText(debugBuildTextPosition, Color::RED, "DEBUG BUILD", 2.0f, gfx::TextAlign::RIGHT);
 #endif
@@ -137,16 +133,16 @@ private:
 	static void putPerformanceStats(Graphics& graphics, Region2D viewRegion, const ClientPerformanceStats& performanceStats) {
 		GREM_PROFILE_FUNCTION();
 
-		vec2 position{
-			static_cast<float>(viewRegion.offset.x) + 15.0f + 2.0f,
-			static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height) - 15.0f - 40.0f,
+		Offset2D position{
+			viewRegion.offset.x + 15 + 2,
+			viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) - 15 - 40,
 		};
 		const Duration latestFrameTime = (performanceStats.frameTimeSampleBuffer.getSamples().empty()) ? Duration{} : performanceStats.frameTimeSampleBuffer.getSamples().back();
 		graphics.put2DText(position, getDurationColor(performanceStats.frameTimeStatistics.mean + performanceStats.frameTimeStatistics.standardDeviation),
 			formatSmallString<64>("FT: {:.2f} ms (+/- {:.2f} ms), latest: {:.2f} ms", duration_cast<FloatMilliseconds>(performanceStats.frameTimeStatistics.mean).count(),
 				duration_cast<FloatMilliseconds>(performanceStats.frameTimeStatistics.standardDeviation).count(), duration_cast<FloatMilliseconds>(latestFrameTime).count()),
 			2.0f);
-		position.y -= 20.0f;
+		position.y -= 20;
 		const TimeSampleBufferStatistics frameWaitTimeStatistics = performanceStats.frameWaitTimeSampleBuffer.getStatistics();
 		const Duration averageFrameWaitTime = frameWaitTimeStatistics.mean + frameWaitTimeStatistics.standardDeviation;
 		const Color frameWaitTimeColor =
@@ -161,18 +157,15 @@ private:
 			formatSmallString<64>("GPU wait: {:.2f} ms (+/- {:.2f} ms), latest: {:.2f} ms", duration_cast<FloatMilliseconds>(frameWaitTimeStatistics.mean).count(),
 				duration_cast<FloatMilliseconds>(frameWaitTimeStatistics.standardDeviation).count(), duration_cast<FloatMilliseconds>(frameWaitTime).count()),
 			2.0f);
-		position.y -= 20.0f;
+		position.y -= 20;
 		graphics.put2DText(position, getDurationColor(performanceStats.latestPhysicsTime),
 			formatSmallString<32>("Client physics: {:.2f} ms", duration_cast<FloatMilliseconds>(performanceStats.latestPhysicsTime).count()), 2.0f);
-		position.y -= 20.0f;
+		position.y -= 20;
 		graphics.put2DText(position, getDurationColor(performanceStats.latestServerPhysicsTime),
 			formatSmallString<32>("Server physics: {:.2f} ms", duration_cast<FloatMilliseconds>(performanceStats.latestServerPhysicsTime).count()), 2.0f);
 
-		constexpr float SAMPLE_WIDTH = 1.0f;
-		position = {
-			static_cast<float>(viewRegion.offset.x) + 15.0f,
-			static_cast<float>(viewRegion.offset.y) + 15.0f,
-		};
+		constexpr int32_t SAMPLE_WIDTH = 1;
+		position = {viewRegion.offset.x + 15, viewRegion.offset.y + 15};
 		for (const Duration frameTime : performanceStats.frameTimeSampleBuffer.getSamples()) {
 			const Color color = getDurationColor(frameTime);
 			graphics.instances2D.putRectangleInstance({
@@ -187,73 +180,73 @@ private:
 	static void putConnectionStats(Graphics& graphics, Region2D viewRegion, const ClientConnectionStats& connectionStats, Duration tickInterval) {
 		GREM_PROFILE_FUNCTION();
 
-		constexpr float ERROR_BAR_HEIGHT = 6.0f;
+		constexpr int32_t ERROR_BAR_HEIGHT = 6;
 
-		vec2 position{
-			static_cast<float>(viewRegion.offset.x) + 15.0f + 2.0f,
-			static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height) * 0.5f + 144.0f,
+		Offset2D position{
+			viewRegion.offset.x + 15 + 2,
+			viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) / 2 + 144,
 		};
 
 		graphics.put2DText(position, Color::GRAY, formatSmallString<32>("Tick interval: {:.6f} ms", duration_cast<FloatMilliseconds>(tickInterval).count()));
-		position.y -= 10.0f;
+		position.y -= 10;
 		graphics.put2DText(position, Color::WHITE,
 			formatSmallString<64>("Data in: {} B/s ({:.2f} Mbps, {} B/tick)", connectionStats.incomingDataRate,
 				static_cast<float>(connectionStats.incomingDataRate) * 8.0f / 1'000'000.0f, connectionStats.incomingDataPerTick));
-		position.y -= 10.0f;
+		position.y -= 10;
 		graphics.put2DText(position, Color::WHITE,
 			formatSmallString<64>("Data out: {} B/s ({:.2f} Mbps, {} B/tick)", connectionStats.outgoingDataRate,
 				static_cast<float>(connectionStats.outgoingDataRate) * 8.0f / 1'000'000.0f, connectionStats.outgoingDataPerTick));
-		position.y -= 10.0f;
+		position.y -= 10;
 		graphics.put2DText(position,
 			(connectionStats.recentIncomingPacketLossFraction == 0.0f && connectionStats.recentOutgoingPacketLossFraction == 0.0f) ? Color::GRAY : Color::RED,
 			formatSmallString<64>("Packet loss: in: {:.2f} %, out: {:.2f} %)", connectionStats.recentIncomingPacketLossFraction * 100.0f,
 				connectionStats.recentOutgoingPacketLossFraction * 100.0f));
 
-		position.y -= 16.0f;
+		position.y -= 16;
 		graphics.put2DText(position, Color::GRAY,
 			formatSmallString<64>("Round-trip time: {:.2f} ms (+/- {:.2f} ms)", duration_cast<FloatMilliseconds>(connectionStats.roundTripTimeStatistics.mean).count(),
 				duration_cast<FloatMilliseconds>(connectionStats.roundTripTimeStatistics.standardDeviation).count()));
-		position.y -= 10.0f;
+		position.y -= 10;
 		graphics.put2DText(position, Color::WHITE,
 			formatSmallString<64>("Prediction duration error: {:.2f} ms (+/- {:.2f} ms)",
 				duration_cast<FloatMilliseconds>(connectionStats.predictionDurationErrorStatistics.mean).count(),
 				duration_cast<FloatMilliseconds>(connectionStats.predictionDurationErrorStatistics.standardDeviation).count()));
-		position.y -= 10.0f;
+		position.y -= 10;
 		graphics.put2DText(position, getSignColor(connectionStats.remotePredictionDurationTicks),
 			formatSmallString<64>("Remote prediction duration: {:.2f} ms", duration_cast<FloatMilliseconds>(connectionStats.remotePredictionDurationTicks * tickInterval).count()));
-		position.y -= 10.0f;
+		position.y -= 10;
 		graphics.put2DText(position, getSignColor(connectionStats.predictionTimeSpeedup - 1_x),
 			formatSmallString<64>("Prediction speedup: {:.6f} x", connectionStats.predictionTimeSpeedup));
 
-		position.y -= 16.0f;
+		position.y -= 16;
 		graphics.put2DText(position, Color::WHITE, formatSmallString<48>("Position prediction error: {:.6f}", connectionStats.positionPredictionError.as(phys::MILLIMETERS)));
-		position.y -= 6.0f + ERROR_BAR_HEIGHT;
+		position.y -= 6 + ERROR_BAR_HEIGHT;
 		graphics.instances2D.putRectangleInstance({
 			.position = position,
 			.size{connectionStats.positionPredictionError * 10000_per_meter, ERROR_BAR_HEIGHT},
 			.color = Color::RED,
 		});
-		position.y -= 16.0f;
+		position.y -= 16;
 		graphics.put2DText(position, Color::WHITE,
 			formatSmallString<64>("Reload time remaining prediction error: {:+.6f}", connectionStats.reloadTimeRemainingPredictionError.as(phys::MILLISECONDS)));
-		position.y -= 6.0f + ERROR_BAR_HEIGHT;
+		position.y -= 6 + ERROR_BAR_HEIGHT;
 		graphics.instances2D.putRectangleInstance({
 			.position = position,
 			.size{abs(connectionStats.reloadTimeRemainingPredictionError) * 50000_per_second, ERROR_BAR_HEIGHT},
 			.color = getSignColor(connectionStats.reloadTimeRemainingPredictionError),
 		});
-		position.y -= 16.0f;
+		position.y -= 16;
 		graphics.put2DText(position, Color::WHITE, formatSmallString<64>("Aim angles prediction error: {:.8f} deg", connectionStats.aimAnglesPredictionError.in(phys::DEGREES)));
-		position.y -= 6.0f + ERROR_BAR_HEIGHT;
+		position.y -= 6 + ERROR_BAR_HEIGHT;
 		graphics.instances2D.putRectangleInstance({
 			.position = position,
 			.size{connectionStats.aimAnglesPredictionError * 100000_x / 1_radians, ERROR_BAR_HEIGHT},
 			.color = Color::RED,
 		});
-		position.y -= 16.0f;
+		position.y -= 16;
 		graphics.put2DText(position, Color::WHITE,
 			formatSmallString<64>("Aiming down sights prediction error: {:+.8f} %", connectionStats.aimingDownSightsPredictionError * 100_x));
-		position.y -= 6.0f + ERROR_BAR_HEIGHT;
+		position.y -= 6 + ERROR_BAR_HEIGHT;
 		graphics.instances2D.putRectangleInstance({
 			.position = position,
 			.size{abs(connectionStats.aimingDownSightsPredictionError) * 10000_x, ERROR_BAR_HEIGHT},
@@ -310,20 +303,20 @@ private:
 		constexpr float TICK_WIDTH = 18.0f;
 
 		const size_t visibleTickCount = (SNAPSHOT_BUFFER_WINDOW_SIZE + SNAPSHOT_BUFFER_WINDOW_MARGIN) / 4 + static_cast<size_t>(100_milliseconds / tickInterval) + 1;
-		const phys::Frequency timeWidthScale = TICK_WIDTH / phys::Time{tickInterval};
+		const phys::Frequency timeWidthScale = static_cast<float>(TICK_WIDTH) / phys::Time{tickInterval};
 		const TickIndex baseTickIndex = predictionInterpolationTimestamp.getTickIndex().getPrevious(visibleTickCount - 2);
 
-		vec2 position{
-			static_cast<float>(viewRegion.offset.x) + 15.0f,
-			static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height) * 0.5f - 70.0f,
+		Offset2D position{
+			viewRegion.offset.x + 15,
+			viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) / 2 - 70,
 		};
 
 		const auto getTimestampX = [&](Timestamp timestamp) -> float {
-			return position.x + getTimeBetween(Timestamp{baseTickIndex}, timestamp, tickInterval) * timeWidthScale;
+			return static_cast<float>(position.x) + getTimeBetween(Timestamp{baseTickIndex}, timestamp, tickInterval) * timeWidthScale;
 		};
 
 		const auto getTickX = [&](TickIndex tickIndex) -> float {
-			return position.x + static_cast<float>(tickIndex - baseTickIndex) * TICK_WIDTH;
+			return static_cast<float>(position.x) + static_cast<float>(tickIndex - baseTickIndex) * TICK_WIDTH;
 		};
 
 		if (const SnapshotBufferView receivedSnapshots = receivedSnapshotBuffer.getSnapshots(); !receivedSnapshots.empty()) {
@@ -333,9 +326,11 @@ private:
 				const bool isInBuffer = tickIndex >= firstReceivedSnapshotTickIndex && tickIndex <= lastReceivedSnapshotTickIndex;
 				const bool isReceived = isInBuffer && receivedSnapshotBuffer.isSnapshotReceived(tickIndex);
 				const Color color = (isReceived) ? Color::WHITE : (isInBuffer) ? Color::GRAY : Color::BLACK;
-				graphics.instances2D.putRectangleInstance({.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, position.y + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
+				graphics.instances2D.putRectangleInstance({
+					.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, static_cast<float>(position.y) + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
 					.size{TICK_MARKER_WIDTH, TICK_MARKER_HEIGHT},
-					.color = color});
+					.color = color,
+				});
 			}
 			for (TickIndex tickIndex = firstReceivedSnapshotTickIndex.getNext(); tickIndex <= lastReceivedSnapshotTickIndex; ++tickIndex) {
 				const TickIndex leftTickIndex = tickIndex.getPrevious();
@@ -343,61 +338,81 @@ private:
 				const bool isLeftReceived = receivedSnapshotBuffer.isSnapshotReceived(leftTickIndex);
 				const bool isRightReceived = receivedSnapshotBuffer.isSnapshotReceived(rightTickIndex);
 				const Color color = (isLeftReceived && isRightReceived) ? Color::GRAY : Color::DARK_GRAY;
-				graphics.instances2D.putRectangleInstance({.position{getTickX(leftTickIndex), position.y}, .size{TICK_WIDTH, HEIGHT}, .color = color});
+				graphics.instances2D.putRectangleInstance({.position{getTickX(leftTickIndex), static_cast<float>(position.y)}, .size{TICK_WIDTH, HEIGHT}, .color = color});
 			}
-			graphics.instances2D.putRectangleInstance({.position{getTickX(firstReceivedSnapshotTickIndex), position.y + INNER_HEIGHT_MARGIN},
+			graphics.instances2D.putRectangleInstance({
+				.position{getTickX(firstReceivedSnapshotTickIndex), static_cast<float>(position.y) + INNER_HEIGHT_MARGIN},
 				.size{getTimestampX(receivedInterpolationTimestamp) - getTickX(firstReceivedSnapshotTickIndex), INNER_HEIGHT},
-				.color = Color::WHITE});
-			graphics.instances2D.putRectangleInstance({.position{getTimestampX(receivedInterpolationTimestamp), position.y + INNER_HEIGHT_MARGIN},
+				.color = Color::WHITE,
+			});
+			graphics.instances2D.putRectangleInstance({
+				.position{getTimestampX(receivedInterpolationTimestamp), static_cast<float>(position.y) + INNER_HEIGHT_MARGIN},
 				.size{connectionStats.roundTripTimeStatistics.standardDeviation * timeWidthScale, INNER_HEIGHT},
-				.color = Color::DARK_GRAY});
-			graphics.instances2D.putRectangleInstance({.position{getTimestampX(receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex()), position.y + SMALL_HEIGHT_MARGIN},
+				.color = Color::DARK_GRAY,
+			});
+			graphics.instances2D.putRectangleInstance({
+				.position{getTimestampX(receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex()), static_cast<float>(position.y) + SMALL_HEIGHT_MARGIN},
 				.size{connectionStats.remotePredictionDurationTicks * tickInterval * timeWidthScale, SMALL_HEIGHT},
-				.color = (connectionStats.remotePredictionDurationTicks < 0) ? Color::RED * Color::fromLinear(0.5f) : Color::LIME * Color::fromLinear(0.5f)});
+				.color = (connectionStats.remotePredictionDurationTicks < 0) ? Color::RED * Color::fromLinear(0.5f) : Color::LIME * Color::fromLinear(0.5f),
+			});
 		} else {
 			for (TickIndex tickIndex = baseTickIndex; tickIndex <= currentTickIndex; ++tickIndex) {
-				graphics.instances2D.putRectangleInstance({.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, position.y + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
+				graphics.instances2D.putRectangleInstance({
+					.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, static_cast<float>(position.y) + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
 					.size{TICK_MARKER_WIDTH, TICK_MARKER_HEIGHT},
-					.color = Color::BLACK});
+					.color = Color::BLACK,
+				});
 			}
 		}
-		graphics.put2DText({getTickX(currentTickIndex) + 32.0f, position.y + HEIGHT * 0.5f}, Color::WHITE, "Received", 1.0f, gfx::TextAlign::CENTER_VERTICALLY);
+		graphics.put2DText({static_cast<int32_t>(getTickX(currentTickIndex)) + 32, position.y + static_cast<int32_t>(HEIGHT) / 2}, Color::WHITE, "Received", 1.0f,
+			gfx::TextAlign::CENTER_VERTICALLY);
 
-		position.y -= 10.0f + TICK_MARKER_HEIGHT;
+		position.y -= 10 + static_cast<int32_t>(TICK_MARKER_HEIGHT);
 
 		for (TickIndex tickIndex = baseTickIndex; tickIndex <= currentTickIndex; ++tickIndex) {
 			const bool isInBuffer = tickIndex >= connectionStats.firstPredictionSnapshotTickIndex && tickIndex <= connectionStats.lastPredictionSnapshotTickIndex;
 			const Color color = (isInBuffer) ? Color::WHITE : Color::BLACK;
-			graphics.instances2D.putRectangleInstance({.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, position.y + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
+			graphics.instances2D.putRectangleInstance({
+				.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, static_cast<float>(position.y) + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
 				.size{TICK_MARKER_WIDTH, TICK_MARKER_HEIGHT},
-				.color = color});
+				.color = color,
+			});
 		}
 		for (TickIndex tickIndex = connectionStats.firstPredictionSnapshotTickIndex.getNext(); tickIndex <= connectionStats.lastPredictionSnapshotTickIndex; ++tickIndex) {
 			const TickIndex leftTickIndex = tickIndex.getPrevious();
-			graphics.instances2D.putRectangleInstance({.position{getTickX(leftTickIndex), position.y}, .size{TICK_WIDTH, HEIGHT}, .color = Color::GRAY});
+			graphics.instances2D.putRectangleInstance({.position{getTickX(leftTickIndex), static_cast<float>(position.y)}, .size{TICK_WIDTH, HEIGHT}, .color = Color::GRAY});
 		}
-		graphics.instances2D.putRectangleInstance({.position{getTickX(connectionStats.firstPredictionSnapshotTickIndex), position.y + INNER_HEIGHT_MARGIN},
+		graphics.instances2D.putRectangleInstance({
+			.position{getTickX(connectionStats.firstPredictionSnapshotTickIndex), static_cast<float>(position.y) + INNER_HEIGHT_MARGIN},
 			.size{getTimestampX(predictionInterpolationTimestamp) - getTickX(connectionStats.firstPredictionSnapshotTickIndex), INNER_HEIGHT},
-			.color = Color::WHITE});
-		graphics.instances2D.putRectangleInstance({.position{getTimestampX(predictionInterpolationTimestamp), position.y + INNER_HEIGHT_MARGIN},
+			.color = Color::WHITE,
+		});
+		graphics.instances2D.putRectangleInstance({
+			.position{getTimestampX(predictionInterpolationTimestamp), static_cast<float>(position.y) + INNER_HEIGHT_MARGIN},
 			.size{connectionStats.predictionDurationErrorStatistics.standardDeviation * timeWidthScale, INNER_HEIGHT},
-			.color = Color::LIGHT_GRAY});
-		graphics.instances2D.putRectangleInstance({.position{getTimestampX(predictionInterpolationTimestamp), position.y + SMALL_HEIGHT_MARGIN},
+			.color = Color::LIGHT_GRAY,
+		});
+		graphics.instances2D.putRectangleInstance({
+			.position{getTimestampX(predictionInterpolationTimestamp), static_cast<float>(position.y) + SMALL_HEIGHT_MARGIN},
 			.size{-connectionStats.predictionDurationErrorStatistics.mean * timeWidthScale, SMALL_HEIGHT},
-			.color = getSignColor(-connectionStats.predictionDurationErrorStatistics.mean)});
+			.color = getSignColor(-connectionStats.predictionDurationErrorStatistics.mean),
+		});
 
-		graphics.put2DText({getTickX(currentTickIndex) + 32.0f, position.y + HEIGHT * 0.5f}, Color::WHITE, "Prediction", 1.0f, gfx::TextAlign::CENTER_VERTICALLY);
+		graphics.put2DText({static_cast<int32_t>(getTickX(currentTickIndex)) + 32, position.y + static_cast<int32_t>(HEIGHT) / 2}, Color::WHITE, "Prediction", 1.0f,
+			gfx::TextAlign::CENTER_VERTICALLY);
 
-		position.y -= 10.0f + TICK_MARKER_HEIGHT;
+		position.y -= 10 + static_cast<int32_t>(TICK_MARKER_HEIGHT);
 
 		const TickIndex latestReceivedSnapshotTickIndex = receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex();
 		for (TickIndex tickIndex = baseTickIndex; tickIndex <= currentTickIndex; ++tickIndex) {
 			const bool isInBuffer = tickIndex >= connectionStats.firstCommandTickIndex && tickIndex < currentTickIndex;
 			const bool isConfirmed = isInBuffer && tickIndex <= latestReceivedSnapshotTickIndex;
 			const Color color = (isConfirmed) ? Color::WHITE : (isInBuffer) ? Color::GRAY : Color::BLACK;
-			graphics.instances2D.putRectangleInstance({.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, position.y + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
+			graphics.instances2D.putRectangleInstance({
+				.position{getTickX(tickIndex) - TICK_MARKER_WIDTH * 0.5f, static_cast<float>(position.y) + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f},
 				.size{TICK_MARKER_WIDTH, TICK_MARKER_HEIGHT},
-				.color = color});
+				.color = color,
+			});
 		}
 		for (TickIndex tickIndex = connectionStats.firstCommandTickIndex.getNext(); tickIndex <= currentTickIndex; ++tickIndex) {
 			const TickIndex leftTickIndex = tickIndex.getPrevious();
@@ -405,23 +420,30 @@ private:
 			const bool isLeftConfirmed = leftTickIndex <= latestReceivedSnapshotTickIndex;
 			const bool isRightConfirmed = rightTickIndex <= latestReceivedSnapshotTickIndex;
 			const Color color = (isLeftConfirmed && isRightConfirmed) ? Color::GRAY : Color::DARK_GRAY;
-			graphics.instances2D.putRectangleInstance({.position{getTickX(leftTickIndex), position.y}, .size{TICK_WIDTH, HEIGHT}, .color = color});
+			graphics.instances2D.putRectangleInstance({.position{getTickX(leftTickIndex), static_cast<float>(position.y)}, .size{TICK_WIDTH, HEIGHT}, .color = color});
 		}
 		const Timestamp predictionTimestamp = predictionInterpolationTimestamp.withTicksAdded(1);
-		graphics.instances2D.putRectangleInstance({.position{getTickX(latestReceivedSnapshotTickIndex), position.y + INNER_HEIGHT_MARGIN},
+		graphics.instances2D.putRectangleInstance({
+			.position{getTickX(latestReceivedSnapshotTickIndex), static_cast<float>(position.y) + INNER_HEIGHT_MARGIN},
 			.size{getTimestampX(predictionTimestamp) - getTickX(latestReceivedSnapshotTickIndex), INNER_HEIGHT},
-			.color = Color::WHITE});
-		graphics.instances2D.putRectangleInstance({.position{getTimestampX(predictionTimestamp), position.y + INNER_HEIGHT_MARGIN},
+			.color = Color::WHITE,
+		});
+		graphics.instances2D.putRectangleInstance({
+			.position{getTimestampX(predictionTimestamp), static_cast<float>(position.y) + INNER_HEIGHT_MARGIN},
 			.size{connectionStats.predictionDurationErrorStatistics.standardDeviation * timeWidthScale, INNER_HEIGHT},
-			.color = Color::LIGHT_GRAY});
-		graphics.instances2D.putRectangleInstance({.position{getTimestampX(predictionTimestamp), position.y + SMALL_HEIGHT_MARGIN},
+			.color = Color::LIGHT_GRAY,
+		});
+		graphics.instances2D.putRectangleInstance({
+			.position{getTimestampX(predictionTimestamp), static_cast<float>(position.y) + SMALL_HEIGHT_MARGIN},
 			.size{-connectionStats.predictionDurationErrorStatistics.mean * timeWidthScale, SMALL_HEIGHT},
-			.color = getSignColor(-connectionStats.predictionDurationErrorStatistics.mean)});
-		graphics.put2DText({getTickX(currentTickIndex) + 32.0f, position.y + HEIGHT * 0.5f}, Color::WHITE, "Commands", 1.0f, gfx::TextAlign::CENTER_VERTICALLY);
+			.color = getSignColor(-connectionStats.predictionDurationErrorStatistics.mean),
+		});
+		graphics.put2DText({static_cast<int32_t>(getTickX(currentTickIndex)) + 32, position.y + static_cast<int32_t>(HEIGHT) / 2}, Color::WHITE, "Commands", 1.0f,
+			gfx::TextAlign::CENTER_VERTICALLY);
 
 		for (TickIndex tickIndex = baseTickIndex; tickIndex <= currentTickIndex; ++tickIndex) {
 			if ((currentTickIndex - tickIndex) % 5 == 0) {
-				graphics.put2DText({getTickX(tickIndex), position.y + (HEIGHT - TICK_MARKER_HEIGHT) * 0.5f - 12.0f}, Color::WHITE,
+				graphics.put2DText({static_cast<int32_t>(getTickX(tickIndex)), position.y + static_cast<int32_t>(HEIGHT - TICK_MARKER_HEIGHT) / 2 - 12}, Color::WHITE,
 					formatSmallString<16>("{}", tickIndex - TickIndex{}), 1.0f, gfx::TextAlign::CENTER_HORIZONTALLY_TOP);
 			}
 		}

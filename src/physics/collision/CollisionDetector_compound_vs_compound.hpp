@@ -34,8 +34,8 @@ public:
 
 		updateSubContacts(colliderA.shape, transformationA, colliderB.shape, transformationB);
 
-		const CompoundColliderShape<N>& compoundColliderShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<CompoundColliderShape<N>>();
-		const CompoundColliderShape<N>& compoundColliderShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<CompoundColliderShape<N>>();
+		const CompoundColliderShape<N>& compoundColliderShapeA = colliderA.shape.template as<CompoundColliderShape<N>>();
+		const CompoundColliderShape<N>& compoundColliderShapeB = colliderB.shape.template as<CompoundColliderShape<N>>();
 		const Span<const SubCollider<N>> subCollidersA = compoundColliderShapeA.getSubColliders();
 		const Span<const SubCollider<N>> subCollidersB = compoundColliderShapeB.getSubColliders();
 		for (SubContact& subContact : subContacts) {
@@ -60,8 +60,8 @@ public:
 
 		updateSubContacts(colliderA.shape, transformationA, colliderB.shape, transformationB);
 
-		const CompoundColliderShape<N>& compoundColliderShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<CompoundColliderShape<N>>();
-		const CompoundColliderShape<N>& compoundColliderShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<CompoundColliderShape<N>>();
+		const CompoundColliderShape<N>& compoundColliderShapeA = colliderA.shape.template as<CompoundColliderShape<N>>();
+		const CompoundColliderShape<N>& compoundColliderShapeB = colliderB.shape.template as<CompoundColliderShape<N>>();
 		const Span<const SubCollider<N>> subCollidersA = compoundColliderShapeA.getSubColliders();
 		const Span<const SubCollider<N>> subCollidersB = compoundColliderShapeB.getSubColliders();
 		for (SubContact& subContact : subContacts) {
@@ -92,8 +92,8 @@ private:
 	};
 
 	void updateSubContacts(ShapeView<N> shapeA, const Transformation<N>& transformationA, ShapeView<N> shapeB, const Transformation<N>& transformationB) {
-		const CompoundColliderShape<N>& compoundColliderShapeA = static_cast<const Shape<N>&>(shapeA).template as<CompoundColliderShape<N>>();
-		const CompoundColliderShape<N>& compoundColliderShapeB = static_cast<const Shape<N>&>(shapeB).template as<CompoundColliderShape<N>>();
+		const CompoundColliderShape<N>& compoundColliderShapeA = shapeA.template as<CompoundColliderShape<N>>();
+		const CompoundColliderShape<N>& compoundColliderShapeB = shapeB.template as<CompoundColliderShape<N>>();
 		const Span<const SubCollider<N>> subCollidersA = compoundColliderShapeA.getSubColliders();
 		const Span<const SubCollider<N>> subCollidersB = compoundColliderShapeB.getSubColliders();
 		newSubContacts.clear();
@@ -107,8 +107,8 @@ private:
 				const LocalTransformation<N> localTransformationB = translateRotateScale(subColliderB.localOffset, subColliderB.localOrientation, subColliderB.localScale);
 				const Transformation<N> globalTransformationA = transformationA * localTransformationA;
 				const Transformation<N> globalTransformationB = transformationB * localTransformationB;
-				const Optional<Box<N>> aabbA = ShapeView<N>{subColliderA.collider.shape}.getBoundingBox(globalTransformationA);
-				const Optional<Box<N>> aabbB = ShapeView<N>{subColliderB.collider.shape}.getBoundingBox(globalTransformationB);
+				const Optional<Box<N>> aabbA = subColliderA.collider.shape.getBoundingBox(globalTransformationA);
+				const Optional<Box<N>> aabbB = subColliderB.collider.shape.getBoundingBox(globalTransformationB);
 				if (!aabbA || !aabbB || intersects(*aabbA, *aabbB)) {
 					if (subContactIndex < subContacts.size() && subContacts[subContactIndex].subColliderIndices == subColliderIndices) {
 						newSubContacts.push_back(SubContact{

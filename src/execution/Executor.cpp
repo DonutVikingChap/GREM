@@ -137,7 +137,7 @@ public:
 		tasks.reserve(subTaskCount);
 		for (Task::ParallelIndex subTaskIndex = 0; subTaskIndex < subTaskCount; ++subTaskIndex) {
 			const Task::Function function = [](void* context, byte* taskSharedMemory, Task::ParallelIndex parallelIndex, Task::ParallelCount parallelism) -> void {
-				TaskContext& taskContext = *static_cast<TaskContext*>(context);
+				const TaskContext& taskContext = *static_cast<TaskContext*>(context);
 				taskContext.subTask.execute(taskContext.subTaskContext, taskSharedMemory, parallelIndex, parallelism);
 			};
 			tasks.emplace_back(function, 0, subTaskIndex, subTaskCount, Task::DependencyIndices{}, UniquePointer<char[]>{});
@@ -266,7 +266,7 @@ private:
 		} catch (...) {
 			bool handled = false;
 			{
-				ScopedLock lock{errorMutex};
+				const ScopedLock lock{errorMutex};
 				if (!errorPointer) {
 					errorPointer = std::current_exception();
 					errorFlag.test_and_set(MemoryOrder::RELEASE);
@@ -283,7 +283,7 @@ private:
 		if (errorFlag.test(MemoryOrder::ACQUIRE)) {
 			std::exception_ptr error{};
 			{
-				ScopedLock lock{errorMutex};
+				const ScopedLock lock{errorMutex};
 				error = std::exchange(errorPointer, {});
 				errorFlag.clear(MemoryOrder::RELEASE);
 			}

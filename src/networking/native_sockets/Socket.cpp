@@ -43,7 +43,7 @@ void Socket::open(AddressFamily domain, ProtocolType type, std::error_code& erro
 		}
 	}
 
-	SOCKET newHandle = socket(static_cast<int>(static_cast<short>(domain)), static_cast<int>(type), 0);
+	const SOCKET newHandle = socket(static_cast<int>(static_cast<short>(domain)), static_cast<int>(type), 0);
 	if (newHandle == INVALID_SOCKET) {
 		errorCode = networking::Error::getLastErrorCode();
 		return;

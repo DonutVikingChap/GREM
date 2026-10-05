@@ -29,6 +29,7 @@ enum class ControllerType : uint8_t {
 	SWITCH_JOYCON_RIGHT, ///< Nintendo Switch Right Joycon-like controller.
 	SWITCH_JOYCON_PAIR,  ///< Nintendo Switch Joycon Pair-like controller.
 	GAMECUBE,            ///< Nintendo Gamecube-like controller.
+	STEAM,               ///< Steam Controller-like controller.
 };
 
 /**

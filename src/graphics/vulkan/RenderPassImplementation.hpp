@@ -134,7 +134,7 @@ struct RenderPassImplementation {
 				if (colorTarget->texture->get()->type == TextureType::SWAPCHAIN) {
 					GREM_ASSERT(colorTarget->subresource.layer == 0);
 					GREM_ASSERT(colorTarget->subresource.mipLevel == 0);
-					TextureImplementation::SwapchainImplementation& swapchainImplementation =
+					const TextureImplementation::SwapchainImplementation& swapchainImplementation =
 						colorTarget->texture->get()->object.get<TextureImplementation::SwapchainImplementation>();
 					result.colorTargetHandle = swapchainImplementation.device->get()->acquireSwapchainImage(*colorTarget->texture->get()).lock();
 				} else {
@@ -158,7 +158,7 @@ struct RenderPassImplementation {
 				if (depthStencilTarget->texture->get()->type == TextureType::SWAPCHAIN) {
 					GREM_ASSERT(depthStencilTarget->subresource.layer == 0);
 					GREM_ASSERT(depthStencilTarget->subresource.mipLevel == 0);
-					TextureImplementation::SwapchainImplementation& swapchainImplementation =
+					const TextureImplementation::SwapchainImplementation& swapchainImplementation =
 						depthStencilTarget->texture->get()->object.get<TextureImplementation::SwapchainImplementation>();
 					result.depthStencilTargetHandle = swapchainImplementation.depthStencilBuffer.lock();
 					result.depthStencilTargetAspectMask =
@@ -187,7 +187,7 @@ struct RenderPassImplementation {
 				if (resolveTarget->texture->get()->type == TextureType::SWAPCHAIN) {
 					GREM_ASSERT(resolveTarget->subresource.layer == 0);
 					GREM_ASSERT(resolveTarget->subresource.mipLevel == 0);
-					TextureImplementation::SwapchainImplementation& swapchainImplementation =
+					const TextureImplementation::SwapchainImplementation& swapchainImplementation =
 						resolveTarget->texture->get()->object.get<TextureImplementation::SwapchainImplementation>();
 					result.resolveTargetHandle = swapchainImplementation.device->get()->acquireSwapchainImage(*resolveTarget->texture->get()).lock();
 				} else {

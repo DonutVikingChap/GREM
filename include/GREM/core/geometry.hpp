@@ -12,6 +12,7 @@
 #include <GREM/core/data/Array.hpp>
 #include <GREM/core/data/Optional.hpp>
 #include <GREM/core/data/Span.hpp>
+#include <GREM/core/data/StridedSpan.hpp>
 #include <GREM/core/data/Variant.hpp>
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/core/math.hpp>
@@ -1215,40 +1216,46 @@ struct Frustum {
 	using Component = T;              ///< Scalar coordinate component type.
 
 	/**
-	 * Create a view frustum from a combined view-projection matrix.
+	 * Create a world-space view frustum from a combined view-projection matrix.
 	 *
 	 * \param viewProjectionMatrix combined view-projection matrix to create the
 	 *        frustum from.
+	 *
+	 * \return the newly created frustum.
 	 */
 	static constexpr Frustum fromViewProjectionMatrix(const mat<4, 4, T>& viewProjectionMatrix) noexcept {
-		constexpr mat4 CONVERT_DEPTH_REVERSE_RANGE{
+		constexpr mat<4, 4, T> CONVERT_DEPTH_REVERSE_RANGE{
 			// clang-format off
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f,-1.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 1.0f,
+			T{1},  T{0},  T{0},  T{0},
+			T{0},  T{1},  T{0},  T{0},
+			T{0},  T{0}, T{-1},  T{0},
+			T{0},  T{0},  T{1},  T{1},
 			// clang-format on
 		};
 
-		constexpr mat4 CONVERT_DEPTH_FROM_ZO_TO_NO{
+		constexpr mat<4, 4, T> CONVERT_DEPTH_FROM_ZO_TO_NO{
 			// clang-format off
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 2.0f, 0.0f,
-			0.0f, 0.0f,-1.0f, 1.0f,
+			T{1},  T{0},  T{0},  T{0},
+			T{0},  T{1},  T{0},  T{0},
+			T{0},  T{0},  T{2},  T{0},
+			T{0},  T{0}, T{-1},  T{1},
 			// clang-format on
 		};
 
-		constexpr mat4 DEPTH_CONVERSION_MATRIX = CONVERT_DEPTH_FROM_ZO_TO_NO * CONVERT_DEPTH_REVERSE_RANGE;
+		constexpr mat<4, 4, T> DEPTH_CONVERSION_MATRIX = CONVERT_DEPTH_FROM_ZO_TO_NO * CONVERT_DEPTH_REVERSE_RANGE;
 
 		const mat<4, 4, T> transposedViewProjectionMatrix = transpose(DEPTH_CONVERSION_MATRIX * viewProjectionMatrix);
 
-		const vec<4, T> left = transposedViewProjectionMatrix[3] + transposedViewProjectionMatrix[0];
-		const vec<4, T> right = transposedViewProjectionMatrix[3] - transposedViewProjectionMatrix[0];
-		const vec<4, T> bottom = transposedViewProjectionMatrix[3] + transposedViewProjectionMatrix[1];
-		const vec<4, T> top = transposedViewProjectionMatrix[3] - transposedViewProjectionMatrix[1];
-		const vec<4, T> farPlane = transposedViewProjectionMatrix[3] + transposedViewProjectionMatrix[2];
-		const vec<4, T> nearPlane = transposedViewProjectionMatrix[3] - transposedViewProjectionMatrix[2];
+		const auto normalizeXYZ = [](vec<4, T> plane) -> vec<4, T> {
+			return plane / length(vec<3, T>{plane});
+		};
+
+		const vec<4, T> left = normalizeXYZ(transposedViewProjectionMatrix[3] + transposedViewProjectionMatrix[0]);
+		const vec<4, T> right = normalizeXYZ(transposedViewProjectionMatrix[3] - transposedViewProjectionMatrix[0]);
+		const vec<4, T> bottom = normalizeXYZ(transposedViewProjectionMatrix[3] + transposedViewProjectionMatrix[1]);
+		const vec<4, T> top = normalizeXYZ(transposedViewProjectionMatrix[3] - transposedViewProjectionMatrix[1]);
+		const vec<4, T> farPlane = normalizeXYZ(transposedViewProjectionMatrix[3] + transposedViewProjectionMatrix[2]);
+		const vec<4, T> nearPlane = normalizeXYZ(transposedViewProjectionMatrix[3] - transposedViewProjectionMatrix[2]);
 
 		const Array planeNormalCrossProducts{
 			cross(vec<3, T>{left}, vec<3, T>{right}),
@@ -1285,8 +1292,45 @@ struct Frustum {
 	}
 
 	/**
-	 * Plane equation coefficients of the 6 planes of the frustum in the
-	 * following order:
+	 * Create a frustum from its corners.
+	 *
+	 * \param corners positions of the 8 corners of the frustum, in the
+	 *        following order:
+	 *        - [0]: Far bottom left
+	 *        - [1]: Far top left
+	 *        - [2]: Far bottom right
+	 *        - [3]: Far top right
+	 *        - [4]: Near bottom left
+	 *        - [5]: Near top left
+	 *        - [6]: Near bottom right
+	 *        - [7]: Near top right
+	 *
+	 * \return the newly created frustum.
+	 *
+	 * \note If the given corners are not in the correct order, the result is
+	 *       unspecified.
+	 */
+	[[nodiscard]] static constexpr Frustum fromCorners(StridedSpan<const Point<3, T>, 8> corners) {
+		const auto getPlaneFromTriangle = [](Point<3, T> a, Point<3, T> b, Point<3, T> c) -> vec<4, T> {
+			const vec<3, T> v = normalize(cross(b - a, c - a));
+			return vec<4, T>{v, -dot(v, a)};
+		};
+		return Frustum{
+			.planes{
+				getPlaneFromTriangle(corners[4], corners[0], corners[1]),
+				getPlaneFromTriangle(corners[6], corners[3], corners[2]),
+				getPlaneFromTriangle(corners[4], corners[2], corners[0]),
+				getPlaneFromTriangle(corners[5], corners[1], corners[3]),
+				getPlaneFromTriangle(corners[0], corners[2], corners[1]),
+				getPlaneFromTriangle(corners[4], corners[7], corners[6]),
+			},
+			.corners{corners[0], corners[1], corners[2], corners[3], corners[4], corners[5], corners[6], corners[7]},
+		};
+	}
+
+	/**
+	 * Plane equation coefficients of the 6 planes of the frustum, pointing
+	 * inwards, in the following order:
 	 * - [0]: Left
 	 * - [1]: Right
 	 * - [2]: Bottom
@@ -1411,6 +1455,45 @@ template <typename T>
 concept spherical_shape = requires(const T t) {
 	{ t.toSphere() } -> convertible_to<Sphere<T::RANK, typename T::Component>>;
 };
+
+/**
+ * Calculate the axis-aligned bounding box of a set of points.
+ *
+ * \param points set of points to get the axis-aligned bounding box of.
+ *
+ * \return an axis-aligned box that contains all of the given points.
+ */
+template <size_t N, typename T>
+[[nodiscard]] constexpr Box<N, T> calculateBoundingBox(StridedSpan<const Point<N, T>> points) noexcept {
+	if (points.empty()) {
+		return Box<N, T>{};
+	}
+	Box<N, T> result{
+		.min = points.front(),
+		.max = points.front(),
+	};
+	for (const Point<N, T> vertex : points.subspan(1)) {
+		result.min = min(result.min, vertex);
+		result.max = max(result.max, vertex);
+	}
+	return result;
+}
+
+/**
+ * Calculate the bounding radius from the origin of a set of points.
+ *
+ * \param points set of points to get the bounding radius of.
+ *
+ * \return the largest distance from the origin of the given points.
+ */
+template <size_t N, typename T>
+[[nodiscard]] constexpr T calculateBoundingRadius(StridedSpan<const Point<N, T>> points) noexcept requires(floating_point<T>) {
+	T result{};
+	for (const Point<N, T> point : points) {
+		result = max(result, length2(point));
+	}
+	return sqrt(result);
+}
 
 /**
  * Get the axis-aligned bounding box of an axis-aligned box with an affine

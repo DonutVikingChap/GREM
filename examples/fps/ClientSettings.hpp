@@ -56,7 +56,11 @@ struct ClientSettings {
 	[[nodiscard]] static ClientSettings load(const Filesystem& filesystem, CStringView filepath) {
 		ClientSettings result{};
 		if (Optional<String> fileContents = filesystem.tryReadInputFileString(filepath)) {
-			json::deserializeFromString(std::move(*fileContents), result);
+			try {
+				json::deserializeFromString(std::move(*fileContents), result);
+			} catch (...) {
+				Error::throwWithNestedFilepath(filepath);
+			}
 
 			result.audio.outputVolume = clamp(result.audio.outputVolume, 0.0f, 1.0f);
 			result.graphics.maxMultisampleCount = clamp(roundUpToPowerOf2(static_cast<uint32_t>(result.graphics.maxMultisampleCount)), uint32_t{1}, uint32_t{16});

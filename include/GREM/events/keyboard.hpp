@@ -185,6 +185,7 @@ enum class KeyCode : uint32_t {
 	CLEAR_AGAIN = 0x400000A2,                ///< Keyboard Clear/Again
 	CR_SEL = 0x400000A3,                     ///< Keyboard CrSel/Props
 	EX_SEL = 0x400000A4,                     ///< Keyboard ExSel
+	FRONT = 0x400000A5,                      ///< Keyboard Front (Sun keyboards)
 	NUMPAD_00 = 0x400000B0,                  ///< Keypad 00
 	NUMPAD_000 = 0x400000B1,                 ///< Keypad 000
 	THOUSANDS_SEPARATOR = 0x400000B2,        ///< Thousands Separator
@@ -457,6 +458,7 @@ enum class Scancode : uint16_t {
 	CLEAR_AGAIN = 0xA2,                ///< Keyboard Clear/Again
 	CR_SEL = 0xA3,                     ///< Keyboard CrSel/Props
 	EX_SEL = 0xA4,                     ///< Keyboard ExSel
+	FRONT = 0xA5,                      ///< Keyboard Front (Sun keyboards)
 	NUMPAD_00 = 0xB0,                  ///< Keypad 00
 	NUMPAD_000 = 0xB1,                 ///< Keypad 000
 	THOUSANDS_SEPARATOR = 0xB2,        ///< Thousands Separator

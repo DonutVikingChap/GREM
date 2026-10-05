@@ -40,7 +40,7 @@ LightProbeVolumes3D::LightProbeVolumes3D(Device& device, Texture irradianceAtlas
 	GREM_ASSERT(this->irradianceAtlasTexture.getWidth() == this->irradianceAtlasTexture.getHeight());
 	GREM_ASSERT(this->distanceAtlasTexture.getWidth() == this->distanceAtlasTexture.getHeight());
 
-	if (volumeOptions.size() > size_t{Limits<uint32_t>::MAX}) {
+	if (this->volumeOptions.size() > size_t{Limits<uint32_t>::MAX}) {
 		throw std::length_error{"Maximum light probe volume count exceeded."};
 	}
 }
@@ -130,18 +130,22 @@ void LightProbeVolumes3D::flushVolumesAndTextures(Device& device) const {
 				maxVerticalProbeCount = max(maxVerticalProbeCount, volumeOptions.probeCounts.y);
 			}
 
-			resource::ArrayAtlasPacker irradianceAtlasPacker{{
-				.initialResolution = roundUpToPowerOf2(maxHorizontalIrradianceResolution),
-				.initialDepth = maxVerticalProbeCount,
-				.padding = 0,
-				.alignment = 1,
-			}};
-			resource::ArrayAtlasPacker distanceAtlasPacker{{
-				.initialResolution = roundUpToPowerOf2(maxHorizontalDistanceResolution),
-				.initialDepth = maxVerticalProbeCount,
-				.padding = 0,
-				.alignment = 1,
-			}};
+			resource::ArrayAtlasPacker irradianceAtlasPacker{
+				resource::ArrayAtlasPackerOptions{
+					.initialResolution = roundUpToPowerOf2(maxHorizontalIrradianceResolution),
+					.initialDepth = maxVerticalProbeCount,
+					.padding = 0,
+					.alignment = 1,
+				},
+			};
+			resource::ArrayAtlasPacker distanceAtlasPacker{
+				resource::ArrayAtlasPackerOptions{
+					.initialResolution = roundUpToPowerOf2(maxHorizontalDistanceResolution),
+					.initialDepth = maxVerticalProbeCount,
+					.padding = 0,
+					.alignment = 1,
+				},
+			};
 			for (const LightProbeVolumeOptions3D& volumeOptions : this->volumeOptions) {
 				GREM_ASSERT(isPowerOf2(volumeOptions.irradianceMapResolution) && volumeOptions.irradianceMapResolution >= 4);
 				GREM_ASSERT(isPowerOf2(volumeOptions.distanceMapResolution) && volumeOptions.distanceMapResolution >= 4);

@@ -12,7 +12,7 @@ add_compile_options($<$<OR:$<C_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:GNU>>:-Wno-arr
 
 FetchContent_Declare(SPIRV-Tools
 	GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Tools
-	GIT_TAG 9a49b0883b9b635689a85b5647dbfcb223268151 # vulkan-sdk-1.4.357.0
+	GIT_TAG ef96ed763b43b59b33b31b362f09a02b729fa1c9 # vulkan-sdk-1.4.363.0
 	EXCLUDE_FROM_ALL
 	SYSTEM
 	OVERRIDE_FIND_PACKAGE)
@@ -22,9 +22,9 @@ FetchContent_MakeAvailable(SPIRV-Tools)
 file(READ "${spirv-tools_SOURCE_DIR}/LICENSE" GREM_SPIRV_TOOLS_LICENSE_FILE_CONTENTS)
 string(REPLACE "\r\n" "\n" GREM_SPIRV_TOOLS_LICENSE_FILE_CONTENTS "${GREM_SPIRV_TOOLS_LICENSE_FILE_CONTENTS}")
 
-set(GREM_SPIRV_TOOLS_TITLE "SPIRV-Tools (vulkan-sdk-1.4.357.0)" PARENT_SCOPE)
+set(GREM_SPIRV_TOOLS_TITLE "SPIRV-Tools (vulkan-sdk-1.4.363.0)" PARENT_SCOPE)
 set(GREM_SPIRV_TOOLS_USE "Used by GREM and glslang." PARENT_SCOPE)
-set(GREM_SPIRV_TOOLS_LINK "https://github.com/KhronosGroup/SPIRV-Tools/tree/9a49b0883b9b635689a85b5647dbfcb223268151" PARENT_SCOPE)
+set(GREM_SPIRV_TOOLS_LINK "https://github.com/KhronosGroup/SPIRV-Tools/tree/ef96ed763b43b59b33b31b362f09a02b729fa1c9" PARENT_SCOPE)
 set(GREM_SPIRV_TOOLS_COPYRIGHT "\
 Copyright (c) 2015-2016 The Khronos Group Inc.\n\
 \n\

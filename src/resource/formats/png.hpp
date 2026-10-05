@@ -683,10 +683,10 @@ struct PNGChunkHeader {
 			break;
 		default: throw resource::Error{"Invalid PNG color type."};
 	}
-	const bool greyscale = colorType == 0b000;
 	const bool alphaUsed = (colorType & 0b100) != 0;
 	const bool truecolorUsed = (colorType & 0b010) != 0;
 	const bool paletteUsed = (colorType & 0b001) != 0;
+	const bool greyscale = !alphaUsed & !truecolorUsed & !paletteUsed;
 
 	const uint8_t compressionMethod = reader.readUInt8();
 	if (compressionMethod != 0) {
@@ -982,7 +982,7 @@ inline void savePNGImage(const ImageView& image, const ImageSavePNGOptions& opti
 	writer.write(imageHeaderChunkData);
 	writer.writeUInt32BE(static_cast<uint32_t>(CRC32{"IHDR"} + imageHeaderChunkData));
 
-	const byte filterTypeOverride = bit_cast<byte>(options.filterTypeOverride.value_or(ImageSavePNGOptions::FilterType{5}));
+	const byte filterTypeOverride = bit_cast<byte>(options.filterTypeOverride.value_or(ImageSavePNGOptions::FilterType{5})); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
 	const Allocation<byte> imageData = buildPNGDataFrom8BitImage(layer.getSize2D(), channelCount, layer.getContents(), filterTypeOverride);
 	const Buffer<byte> imageDataChunkData = encodeZLIBStreamFromPNGData(imageData, options.compressionLevel);
 	writer.writeUInt32BE(imageDataChunkData.size());

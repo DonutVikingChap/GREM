@@ -9,7 +9,49 @@
 #include <GREM/core/fundamentals.hpp>
 #include <GREM/core/math.hpp>
 
+#include <type_traits> // std::is_constant_evaluated
+
 namespace grem {
+
+namespace detail {
+
+[[nodiscard]] constexpr float constexprFifthRoot(float value) {
+	float previous = 0.0f;
+	float x = value;
+	while (x != previous) {
+		previous = x;
+		x = 0.2f * (4.0f * x + value / (x * x * x * x));
+	}
+	return x;
+}
+
+[[nodiscard]] constexpr float constexprTwelvthRoot(float value) {
+	float previous = 0.0f;
+	float x = value;
+	while (x != previous) {
+		previous = x;
+		x = (1.0f / 12.0f) * (11.0f * x + value / (x * x * x * x * x * x * x * x * x * x * x));
+	}
+	return x;
+}
+
+[[nodiscard]] constexpr float powTwoPointFour(float value) {
+	if (std::is_constant_evaluated()) {
+		// x^2.4 = x^2 * x^(2/5) = x^2 * (x^2)^(1/5)
+		return value * value * constexprFifthRoot(value * value);
+	}
+	return pow(value, 2.4f);
+}
+
+[[nodiscard]] constexpr float powInverseTwoPointFour(float value) {
+	if (std::is_constant_evaluated()) {
+		// x^(1/2.4) = x^(5/12) = (x^5)^(1/12)
+		return constexprTwelvthRoot(value * value * value * value * value);
+	}
+	return pow(value, 1.0f / 2.4f);
+}
+
+} // namespace detail
 
 /**
  * Floating-point linear RGBA color in the Rec. 709 gamut with 32 bits per
@@ -182,8 +224,8 @@ public:
 	 *
 	 * \return the converted normalized sRGB color component value.
 	 */
-	[[nodiscard]] static float convertLinearToSRGB(float x) {
-		return (x <= 0.0031308f) ? x * 12.92f : 1.055f * pow(x, 1.0f / 2.4f) - 0.055f;
+	[[nodiscard]] static constexpr float convertLinearToSRGB(float x) {
+		return (x <= 0.0031308f) ? x * 12.92f : 1.055f * detail::powInverseTwoPointFour(x) - 0.055f;
 	}
 
 	/**
@@ -193,7 +235,7 @@ public:
 	 *
 	 * \return the converted normalized sRGB color value.
 	 */
-	[[nodiscard]] static vec3 convertLinearToSRGB(vec3 rgb) {
+	[[nodiscard]] static constexpr vec3 convertLinearToSRGB(vec3 rgb) {
 		return {
 			convertLinearToSRGB(rgb.x),
 			convertLinearToSRGB(rgb.y),
@@ -208,7 +250,7 @@ public:
 	 *
 	 * \return the converted normalized sRGB color value.
 	 */
-	[[nodiscard]] static vec4 convertLinearToSRGB(vec4 rgba) {
+	[[nodiscard]] static constexpr vec4 convertLinearToSRGB(vec4 rgba) {
 		return {
 			convertLinearToSRGB(rgba.x),
 			convertLinearToSRGB(rgba.y),
@@ -224,8 +266,8 @@ public:
 	 *
 	 * \return the converted normalized linear color component value.
 	 */
-	[[nodiscard]] static float convertSRGBToLinear(float x) {
-		return (x <= 0.04045f) ? x / 12.92f : pow((x + 0.055f) / 1.055f, 2.4f);
+	[[nodiscard]] static constexpr float convertSRGBToLinear(float x) {
+		return (x <= 0.04045f) ? x / 12.92f : detail::powTwoPointFour((x + 0.055f) / 1.055f);
 	}
 
 	/**
@@ -235,7 +277,7 @@ public:
 	 *
 	 * \return the converted normalized linear color value.
 	 */
-	[[nodiscard]] static vec3 convertSRGBToLinear(vec3 rgb) {
+	[[nodiscard]] static constexpr vec3 convertSRGBToLinear(vec3 rgb) {
 		return {
 			convertSRGBToLinear(rgb.x),
 			convertSRGBToLinear(rgb.y),
@@ -250,7 +292,7 @@ public:
 	 *
 	 * \return the converted normalized linear color value.
 	 */
-	[[nodiscard]] static vec4 convertSRGBToLinear(vec4 rgba) {
+	[[nodiscard]] static constexpr vec4 convertSRGBToLinear(vec4 rgba) {
 		return {
 			convertSRGBToLinear(rgba.x),
 			convertSRGBToLinear(rgba.y),
@@ -267,7 +309,7 @@ public:
 	 * \return the converted normalized linear color value with pre-multiplied
 	 *         alpha.
 	 */
-	[[nodiscard]] static vec4 convertStraightToPremultipliedAlpha(vec4 rgba) {
+	[[nodiscard]] static constexpr vec4 convertStraightToPremultipliedAlpha(vec4 rgba) {
 		return vec4{vec3{rgba} * rgba.w, rgba.w};
 	}
 
@@ -278,7 +320,7 @@ public:
 	 *
 	 * \return the converted normalized linear color value with straight alpha.
 	 */
-	[[nodiscard]] static vec4 convertPremultipliedToStraightAlpha(vec4 rgba) {
+	[[nodiscard]] static constexpr vec4 convertPremultipliedToStraightAlpha(vec4 rgba) {
 		return vec4{(rgba.w > 0.0001f) ? vec3{rgba} / rgba.w : vec3{}, rgba.w};
 	}
 
@@ -363,7 +405,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(u8norm r, u8norm g, u8norm b, u8norm a = 1.0f) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(u8norm r, u8norm g, u8norm b, u8norm a = 1.0f) noexcept {
 		return fromLinear(          //
 			convertSRGBToLinear(r), //
 			convertSRGBToLinear(g), //
@@ -382,7 +424,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept {
 		return fromLinear(                            //
 			convertSRGBToLinear(bit_cast<u8norm>(r)), //
 			convertSRGBToLinear(bit_cast<u8norm>(g)), //
@@ -400,7 +442,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(u8vec3norm rgb, u8norm a = 1.0f) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(u8vec3norm rgb, u8norm a = 1.0f) noexcept {
 		return fromSRGB(rgb.x, rgb.y, rgb.z, a);
 	}
 
@@ -415,7 +457,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(u8vec3 rgb, uint8_t a = 255) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(u8vec3 rgb, uint8_t a = 255) noexcept {
 		return fromSRGB(rgb.x, rgb.y, rgb.z, a);
 	}
 
@@ -429,7 +471,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(vec3 rgb, float a = 1.0f) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(vec3 rgb, float a = 1.0f) noexcept {
 		return fromLinear(convertSRGBToLinear(rgb), a);
 	}
 
@@ -443,7 +485,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(u8vec4norm rgba) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(u8vec4norm rgba) noexcept {
 		return fromSRGB(rgba.x, rgba.y, rgba.z, rgba.w);
 	}
 
@@ -458,7 +500,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(u8vec4 rgba) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(u8vec4 rgba) noexcept {
 		return fromSRGB(rgba.x, rgba.y, rgba.z, rgba.w);
 	}
 
@@ -473,7 +515,7 @@ public:
 	 *
 	 * \return a linear color corresponding to the given components.
 	 */
-	[[nodiscard]] static Color fromSRGB(vec4 rgba) noexcept {
+	[[nodiscard]] static constexpr Color fromSRGB(vec4 rgba) noexcept {
 		return fromLinear(convertSRGBToLinear(rgba));
 	}
 
@@ -530,7 +572,7 @@ public:
 	 * \return an SRGB-encoded vector corresponding to the RGB components of the
 	 *         color.
 	 */
-	[[nodiscard]] u8vec3norm toSRGB() const noexcept {
+	[[nodiscard]] constexpr u8vec3norm toSRGB() const noexcept {
 		return u8vec3norm{toFloatSRGB()};
 	}
 
@@ -541,7 +583,7 @@ public:
 	 * \return a floating-point SRGB vector corresponding to the RGB components
 	 *         of the color.
 	 */
-	[[nodiscard]] vec3 toFloatSRGB() const noexcept {
+	[[nodiscard]] constexpr vec3 toFloatSRGB() const noexcept {
 		return vec3{toFloatSRGBA()};
 	}
 
@@ -553,7 +595,7 @@ public:
 	 * \return an SRGB-encoded vector corresponding to the RGBA components of
 	 *         the color.
 	 */
-	[[nodiscard]] u8vec4norm toSRGBA() const noexcept {
+	[[nodiscard]] constexpr u8vec4norm toSRGBA() const noexcept {
 		return u8vec4norm{toFloatSRGBA()};
 	}
 
@@ -565,13 +607,31 @@ public:
 	 * \return a floating-point SRGB vector corresponding to the RGBA components
 	 *         of the color.
 	 */
-	[[nodiscard]] vec4 toFloatSRGBA() const noexcept {
+	[[nodiscard]] constexpr vec4 toFloatSRGBA() const noexcept {
 		return vec4{
 			convertLinearToSRGB(rgba.x),
 			convertLinearToSRGB(rgba.y),
 			convertLinearToSRGB(rgba.z),
 			rgba.w,
 		};
+	}
+
+	/**
+	 * Get the linear alpha component of the color.
+	 *
+	 * \return the alpha component of the color.
+	 */
+	[[nodiscard]] constexpr float getAlpha() const noexcept {
+		return rgba.w;
+	}
+
+	/**
+	 * Set the linear alpha component of the color.
+	 *
+	 * \param newAlpha new alpha component value to set.
+	 */
+	constexpr void setAlpha(float newAlpha) noexcept {
+		rgba.w = newAlpha;
 	}
 
 	/**

@@ -26,7 +26,7 @@ namespace grem::audio {
  * Distance attenuation/falloff model for 3D positional audio.
  */
 enum class SoundAttenuationModel : uint8_t { // NOLINT(performance-enum-size)
-	/**
+                                             /**
 	 * No distance attenuation; sound has the same volume regardless of distance
 	 * between the sound instance and the listener.
 	 */
@@ -377,8 +377,10 @@ public:
 			if constexpr (requires { newFilter.parameters; }) {
 				using Parameters = std::remove_cvref_t<decltype(newFilter.parameters)>;
 				const size_t parametersOffset = std::launder(reinterpret_cast<const byte*>(&newFilter.parameters)) - std::launder(reinterpret_cast<const byte*>(&newFilter));
-				detail::Filter filter{detail::createCustomFilter(asBytes(Span{static_cast<const F*>(&newFilter), 1}), parametersOffset,
-					detail::FILTER_PARAMETER_DESCRIPTIONS<Parameters>, detail::FILTER_PARAMETER_INFOS<Parameters>, doFilter)};
+				detail::Filter filter{
+					detail::createCustomFilter(asBytes(Span{static_cast<const F*>(&newFilter), 1}), parametersOffset, detail::FILTER_PARAMETER_DESCRIPTIONS<Parameters>,
+						detail::FILTER_PARAMETER_INFOS<Parameters>, doFilter),
+				};
 				setFilterImplementation(filterSlotIndex, std::move(filter));
 			} else {
 				detail::Filter filter{detail::createCustomFilter(asBytes(Span{static_cast<const F*>(&newFilter), 1}), 0, {}, doFilter)};
@@ -413,7 +415,21 @@ public:
 	 *       and is not intended to be used outside of it. The returned handle
 	 *       has no meaning to application code.
 	 */
-	[[nodiscard]] void* get() const noexcept {
+	[[nodiscard]] void* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return sourceHandle.get();
+	}
+
+	/**
+	 * Get an opaque handle to the internal representation of the sound.
+	 *
+	 * \return an untyped non-owning read-only pointer to the internal
+	 *         representation of the sound.
+	 *
+	 * \note This function is used internally by the SoundStage implementation
+	 *       and is not intended to be used outside of it. The returned handle
+	 *       has no meaning to application code.
+	 */
+	[[nodiscard]] const void* get() const noexcept {
 		return sourceHandle.get();
 	}
 

@@ -30,7 +30,7 @@ constexpr TextureFormat DECAL_ATLAS_INTERNAL_FORMAT = TextureFormat::R8G8B8A8_UN
 
 	const auto [offset, resized] = atlasPacker.insertRectangle(image.getSize2D());
 	if (!atlasTexture || resized) {
-		Texture oldAtlasTexture = std::move(atlasTexture);
+		const Texture oldAtlasTexture = std::move(atlasTexture);
 		const Extent2D size{atlasPacker.getResolution()};
 		atlasTexture = Texture::create(device, TextureType::TEXTURE_2D, DECAL_ATLAS_INTERNAL_FORMAT, size, resource::Image::getMaxMipLevelCount(size), ClearValues{},
 			TextureSamplerOptions{
@@ -80,21 +80,21 @@ void Decals3D::clearDecalMaterials() noexcept {
 DecalMaterialID Decals3D::createDecalMaterial(const DecalMaterialOptions& options) {
 	const vec4 baseColorMapPositionAndSize =
 		(options.baseColorMapImage.getType() == resource::ImageType::EMPTY)
-			? vec4{getDefaultDecalBaseColorMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.baseColorMapImage, Color::TransferFunction::SRGB, options.convertToPremultipliedAlpha);
+	        ? vec4{getDefaultDecalBaseColorMapPosition(), vec2{1.0f, 1.0f}}
+	        : insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.baseColorMapImage, Color::TransferFunction::SRGB, options.convertToPremultipliedAlpha);
 	const vec4 normalMapPositionAndSize =
 		(options.normalMapImage.getType() == resource::ImageType::EMPTY)
-			? vec4{getDefaultDecalNormalMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.normalMapImage, Color::TransferFunction::LINEAR, options.convertToPremultipliedAlpha);
+	        ? vec4{getDefaultDecalNormalMapPosition(), vec2{1.0f, 1.0f}}
+	        : insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.normalMapImage, Color::TransferFunction::LINEAR, options.convertToPremultipliedAlpha);
 	const vec4 occlusionRoughnessMetallicMapPositionAndSize =
 		(options.occlusionRoughnessMetallicMapImage.getType() == resource::ImageType::EMPTY)
-			? vec4{getDefaultDecalOcclusionRoughnessMetallicMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.occlusionRoughnessMetallicMapImage, Color::TransferFunction::LINEAR,
+	        ? vec4{getDefaultDecalOcclusionRoughnessMetallicMapPosition(), vec2{1.0f, 1.0f}}
+	        : insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.occlusionRoughnessMetallicMapImage, Color::TransferFunction::LINEAR,
 				  options.convertToPremultipliedAlpha);
 	const vec4 emissiveMapPositionAndSize =
 		(options.emissiveMapImage.getType() == resource::ImageType::EMPTY)
-			? vec4{getDefaultDecalEmissiveMapPosition(), vec2{1.0f, 1.0f}}
-			: insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.emissiveMapImage, Color::TransferFunction::SRGB, options.convertToPremultipliedAlpha);
+	        ? vec4{getDefaultDecalEmissiveMapPosition(), vec2{1.0f, 1.0f}}
+	        : insertSprite(*device, atlasPacker, atlasTexture, PADDING, options.emissiveMapImage, Color::TransferFunction::SRGB, options.convertToPremultipliedAlpha);
 	const uint32_t index = static_cast<uint32_t>(decalMaterials.size());
 	decalMaterials.push_back(DecalMaterial{
 		.baseColorMapPositionAndSize = baseColorMapPositionAndSize,
@@ -194,9 +194,11 @@ void Decals3D::setDecalModelInstanceIdentifier(DecalID id, uint32_t newModelInst
 vec2 Decals3D::getDefaultDecalBaseColorMapPosition() {
 	if (!defaultBaseColorMapPosition) {
 		constexpr Array WHITE_PIXEL{uint8_t{255}, uint8_t{255}, uint8_t{255}, uint8_t{255}};
-		defaultBaseColorMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, Color::TransferFunction::SRGB,
-			false)};
+		defaultBaseColorMapPosition = vec2{
+			insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+				resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})},
+				Color::TransferFunction::SRGB, false),
+		};
 	}
 	return *defaultBaseColorMapPosition;
 }
@@ -204,9 +206,11 @@ vec2 Decals3D::getDefaultDecalBaseColorMapPosition() {
 vec2 Decals3D::getDefaultDecalNormalMapPosition() {
 	if (!defaultNormalMapPosition) {
 		constexpr Array FLAT_NORMAL_PIXEL{uint8_t{128}, uint8_t{128}, uint8_t{255}, uint8_t{255}};
-		defaultNormalMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{FLAT_NORMAL_PIXEL})},
-			Color::TransferFunction::LINEAR, false)};
+		defaultNormalMapPosition = vec2{
+			insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+				resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{FLAT_NORMAL_PIXEL})},
+				Color::TransferFunction::LINEAR, false),
+		};
 	}
 	return *defaultNormalMapPosition;
 }
@@ -214,9 +218,11 @@ vec2 Decals3D::getDefaultDecalNormalMapPosition() {
 vec2 Decals3D::getDefaultDecalOcclusionRoughnessMetallicMapPosition() {
 	if (!defaultOcclusionRoughnessMetallicMapPosition) {
 		constexpr Array WHITE_PIXEL{uint8_t{255}, uint8_t{255}, uint8_t{255}, uint8_t{255}};
-		defaultOcclusionRoughnessMetallicMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})},
-			Color::TransferFunction::LINEAR, false)};
+		defaultOcclusionRoughnessMetallicMapPosition = vec2{
+			insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+				resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})},
+				Color::TransferFunction::LINEAR, false),
+		};
 	}
 	return *defaultOcclusionRoughnessMetallicMapPosition;
 }
@@ -224,9 +230,11 @@ vec2 Decals3D::getDefaultDecalOcclusionRoughnessMetallicMapPosition() {
 vec2 Decals3D::getDefaultDecalEmissiveMapPosition() {
 	if (!defaultEmissiveMapPosition) {
 		constexpr Array WHITE_PIXEL{uint8_t{255}, uint8_t{255}, uint8_t{255}, uint8_t{255}};
-		defaultEmissiveMapPosition = vec2{insertSprite(*device, atlasPacker, atlasTexture, PADDING,
-			resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})}, Color::TransferFunction::SRGB,
-			false)};
+		defaultEmissiveMapPosition = vec2{
+			insertSprite(*device, atlasPacker, atlasTexture, PADDING,
+				resource::ImageView{resource::ImageType::IMAGE_2D, resource::ImageFormat::R8G8B8A8_UINT, Extent2D{1, 1}, 1, asBytes(Span{WHITE_PIXEL})},
+				Color::TransferFunction::SRGB, false),
+		};
 	}
 	return *defaultEmissiveMapPosition;
 }

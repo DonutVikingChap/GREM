@@ -577,14 +577,17 @@ public:
 	 * \return a writer for the file.
 	 */
 	[[nodiscard]] GREM_ALWAYS_INLINE operator Writer() & {
-		return Writer{this, [](void* context, Span<const byte> data, bool thenFlush) -> size_t {
-						  OutputFile& output = *static_cast<OutputFile*>(context);
-						  const size_t bytesWritten = output.writeSome(data);
-						  if (thenFlush) {
-							  output.flush();
-						  }
-						  return bytesWritten;
-					  }};
+		return Writer{
+			this,
+			[](void* context, Span<const byte> data, bool thenFlush) -> size_t {
+				OutputFile& output = *static_cast<OutputFile*>(context);
+				const size_t bytesWritten = output.writeSome(data);
+				if (thenFlush) {
+					output.flush();
+				}
+				return bytesWritten;
+			},
+		};
 	}
 
 	/**

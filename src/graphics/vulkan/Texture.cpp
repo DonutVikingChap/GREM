@@ -555,7 +555,7 @@ void Texture::pasteTexture(const Texture& texture, Offset3D destinationOffset, R
 	GREM_ASSERT(destinationOffset.x + static_cast<int32_t>(sourceRegion.size.width) <= static_cast<int32_t>(implementation->size.width));
 	GREM_ASSERT(destinationOffset.y + static_cast<int32_t>(sourceRegion.size.height) <= static_cast<int32_t>(implementation->size.height));
 	GREM_ASSERT(destinationOffset.z + static_cast<int32_t>(sourceRegion.size.depth) <= static_cast<int32_t>(implementation->size.depth));
-	implementation->pasteTextureOntoFirstMipLevelAndGenerateMipmap(*texture.get(), destinationOffset, sourceRegion);
+	implementation->pasteTextureOntoFirstMipLevelAndGenerateMipmap(*const_cast<TextureImplementation*>(texture.get()), destinationOffset, sourceRegion);
 }
 
 void Texture::fill(const ClearValues& values) {

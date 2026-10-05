@@ -27,7 +27,7 @@ struct ResourceTypeDeclaration {
 //==============================================================================
 
 struct SessionState {
-	enum Flag : uint8_t {
+	enum Flag : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class)
 		PAUSED = 1 << 0,
 	};
 

@@ -30,7 +30,7 @@ namespace {
 
 class BitSpanReader {
 public:
-	BitSpanReader(SpanReader reader)
+	explicit BitSpanReader(SpanReader reader)
 		: reader(reader) {}
 
 	[[nodiscard]] uint16_t readBits(uint32_t n) {
@@ -105,7 +105,7 @@ private:
 
 class BitWriter {
 public:
-	BitWriter(Writer writer)
+	explicit BitWriter(Writer writer)
 		: writer(writer) {}
 
 	void writeBits(uint16_t bits, uint32_t n) {
@@ -483,7 +483,7 @@ void compress(Writer writer, Span<const byte> data, const CompressionOptions& op
 			const Span<const byte> remainingData = data.subspan(dataOffset);
 			ArrayList<const byte*>& hashTableEntry = hashTable[hashFunction(remainingData.first<3>()) % HASH_TABLE_SIZE];
 			for (const byte* const begin : hashTableEntry) {
-				if (remainingData.data() - begin <= MAX_DISTANCE) {
+				if (static_cast<size_t>(remainingData.data() - begin) <= MAX_DISTANCE) { // NOLINT(modernize-use-integer-sign-comparison)
 					const size_t matchingByteCount = countMatchingBytes(begin, remainingData.data(), min(remainingData.size(), MAX_LENGTH));
 					if (matchingByteCount >= longestMatchingByteCount) {
 						longestMatchingByteCount = matchingByteCount;
@@ -501,9 +501,9 @@ void compress(Writer writer, Span<const byte> data, const CompressionOptions& op
 				// Check if the next byte has a longer matching byte sequence.
 				// If it does, write this byte as a literal.
 				const Span<const byte> nextRemainingData = data.subspan(dataOffset + 1);
-				ArrayList<const byte*>& nextHashTableEntry = hashTable[hashFunction(nextRemainingData.first<3>()) % HASH_TABLE_SIZE];
+				const ArrayList<const byte*>& nextHashTableEntry = hashTable[hashFunction(nextRemainingData.first<3>()) % HASH_TABLE_SIZE];
 				for (const byte* const nextBegin : nextHashTableEntry) {
-					if (nextRemainingData.data() - nextBegin <= MAX_DISTANCE) {
+					if (static_cast<size_t>(nextRemainingData.data() - nextBegin) <= MAX_DISTANCE) { // NOLINT(modernize-use-integer-sign-comparison)
 						const size_t matchingByteCount = countMatchingBytes(nextBegin, nextRemainingData.data(), min(nextRemainingData.size(), MAX_LENGTH));
 						if (matchingByteCount > longestMatchingByteCount) {
 							longestMatchingBytesBegin = nullptr;
@@ -517,7 +517,7 @@ void compress(Writer writer, Span<const byte> data, const CompressionOptions& op
 				const size_t length = longestMatchingByteCount;
 				GREM_ASSERT(length <= MAX_LENGTH);
 				size_t lengthCodeIndex = 0;
-				while (lengthCodeIndex + 1 < HuffmanDecoder::LENGTH_CODE_LENGTHS.size() && length > HuffmanDecoder::LENGTH_CODE_LENGTHS[lengthCodeIndex + 1] - 1) {
+				while (lengthCodeIndex + 1 < HuffmanDecoder::LENGTH_CODE_LENGTHS.size() && length > size_t{HuffmanDecoder::LENGTH_CODE_LENGTHS[lengthCodeIndex + 1]} - 1) {
 					++lengthCodeIndex;
 				}
 				writeHuffmanCode(bitWriter, lengthCodeIndex + 257);
@@ -528,7 +528,8 @@ void compress(Writer writer, Span<const byte> data, const CompressionOptions& op
 				const size_t distance = static_cast<size_t>(remainingData.data() - longestMatchingBytesBegin);
 				GREM_ASSERT(distance <= MAX_DISTANCE);
 				size_t distanceCodeIndex = 0;
-				while (distanceCodeIndex + 1 < HuffmanDecoder::DISTANCE_CODE_DISTANCES.size() && distance > HuffmanDecoder::DISTANCE_CODE_DISTANCES[distanceCodeIndex + 1] - 1) {
+				while (distanceCodeIndex + 1 < HuffmanDecoder::DISTANCE_CODE_DISTANCES.size() &&
+					   distance > size_t{HuffmanDecoder::DISTANCE_CODE_DISTANCES[distanceCodeIndex + 1]} - 1) {
 					++distanceCodeIndex;
 				}
 				bitWriter.writeBits(getBitsReversed(distanceCodeIndex, 5), 5);

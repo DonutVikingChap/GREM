@@ -28,6 +28,11 @@ public:
 	using pointer = typename std::allocator_traits<Allocator>::pointer;
 	using const_pointer = typename std::allocator_traits<Allocator>::const_pointer;
 
+	constexpr Indirect() requires(std::is_default_constructible_v<T> && std::is_default_constructible_v<Allocator>)
+		: allocator() {
+		emplace();
+	}
+
 	constexpr Indirect(std::allocator_arg_t, const Allocator& allocator = Allocator()) requires(std::is_default_constructible_v<T>)
 		: allocator(allocator) {
 		emplace();

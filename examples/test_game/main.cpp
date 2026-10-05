@@ -50,12 +50,14 @@ struct GameOptions {
 	imgui::GraphicalUserInterfaceOptions gui{};
 	aud::SoundStageOptions snd{};
 	evt::InputManagerOptions in{};
-	CStringView bgm = "sounds/music/donauwalzer.ogg";
+	String bgm = "sounds/music/donauwalzer.ogg";
 	phys::Quantity<1, phys::Degrees> fov = 90_degrees;
 };
 
 class Game final : public app::Application {
 public:
+	static constexpr CStringView GAME_CONFIGURATION_FILEPATH = "configuration/game.json";
+
 	Game(Filesystem& filesystem, const GameOptions& options)
 		: app::Application(options.app)
 		, eventPump(options.ev)
@@ -681,7 +683,12 @@ int main(int argc, char* argv[]) {
 		filesystem.mountInputArchivesInMountedDirectory("custom", "zip");
 		filesystem.mountInputArchive(filesystem.getOutputDirectory());
 
-		GameOptions gameOptions = json::deserializeFromString<GameOptions>(filesystem.readInputFileString("configuration/game.json"));
+		GameOptions gameOptions{};
+		try {
+			json::deserializeFromString(filesystem.readInputFileString(Game::GAME_CONFIGURATION_FILEPATH), gameOptions);
+		} catch (...) {
+			Error::throwWithNestedFilepath(Game::GAME_CONFIGURATION_FILEPATH);
+		}
 		try {
 			cli::parseCommandLineOptions(gameOptions, argc, argv, {.longOptionPrefix = "-"});
 		} catch (const cli::Error& e) {

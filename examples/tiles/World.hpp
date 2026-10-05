@@ -76,13 +76,13 @@ struct World {
 
 	[[nodiscard]] exec::EntityID createPlayerEntity(Position position) {
 		const Schema& schema = resources.getResource<Schema>();
-		exec::EntityBuilder entityBuilder = registry.createEntity();
-		entityBuilder.addComponent<Position>(position);
-		entityBuilder.addComponent<PreviousPosition>(position);
-		entityBuilder.addComponent<LinearVelocity>();
-		entityBuilder.addComponent<Movement>();
-		entityBuilder.addComponent<Sprite>(Sprite{.brushID = schema.brushIDs.at("PLAYER_IDLE_DOWN")});
-		entityBuilder.addComponent<FourDirectionalMovementSprites>(FourDirectionalMovementSprites{
+		exec::EntityBuilder entity = registry.createEntity();
+		entity.addComponent<Position>(position);
+		entity.addComponent<PreviousPosition>(position);
+		entity.addComponent<LinearVelocity>();
+		entity.addComponent<Movement>();
+		entity.addComponent<Sprite>(Sprite{.brushID = schema.brushIDs.at("PLAYER_IDLE_DOWN")});
+		entity.addComponent<FourDirectionalMovementSprites>(FourDirectionalMovementSprites{
 			.idle{
 				schema.brushIDs.at("PLAYER_IDLE_LEFT"),
 				schema.brushIDs.at("PLAYER_IDLE_RIGHT"),
@@ -102,25 +102,25 @@ struct World {
 				schema.brushIDs.at("PLAYER_RUN_UP"),
 			},
 		});
-		entityBuilder.addComponent<Collider>();
+		entity.addComponent<Collider>();
 
 		Map& map = resources.getResource<Map>();
-		map.addEntity(entityBuilder.getEntityID(), position.getTileCoordinates());
+		map.addEntity(entity.getEntityID(), position.getTileCoordinates());
 
-		return entityBuilder.build();
+		return entity.build();
 	}
 
 	exec::EntityID createFlagEntity(Position position) {
 		const Schema& schema = resources.getResource<Schema>();
-		exec::EntityBuilder entityBuilder = registry.createEntity();
-		entityBuilder.addComponent<Position>(position);
-		entityBuilder.addComponent<PreviousPosition>(position);
-		entityBuilder.addComponent<Sprite>(Sprite{.brushID = schema.brushIDs.at("FLAG")});
+		exec::EntityBuilder entity = registry.createEntity();
+		entity.addComponent<Position>(position);
+		entity.addComponent<PreviousPosition>(position);
+		entity.addComponent<Sprite>(Sprite{.brushID = schema.brushIDs.at("FLAG")});
 
 		Map& map = resources.getResource<Map>();
-		map.addEntity(entityBuilder.getEntityID(), position.getTileCoordinates());
+		map.addEntity(entity.getEntityID(), position.getTileCoordinates());
 
-		return entityBuilder.build();
+		return entity.build();
 	}
 
 	void destroyEntity(exec::EntityID id) {
@@ -269,12 +269,12 @@ private:
 	void updateFourDirectionalMovementSprites() {
 		constexpr float MAX_IDLE_SPEED = 1.0f;
 		constexpr float MIN_RUNNING_SPEED = 6.0f;
-		constexpr Array<vec2, 4> DIRECTIONS{{
-			{-1.0f, 0.0f},
-			{1.0f, 0.0f},
-			{0.0f, -1.0f},
-			{0.0f, 1.0f},
-		}};
+		constexpr Array<vec2, 4> DIRECTIONS{
+			vec2{-1.0f, 0.0f},
+			vec2{1.0f, 0.0f},
+			vec2{0.0f, -1.0f},
+			vec2{0.0f, 1.0f},
+		};
 
 		for (auto&& [entityID, sprite, linearVelocity, movement, fourDirectionalMovementSprites] :
 			registry.getEntities<Sprite, const LinearVelocity, const Movement, const FourDirectionalMovementSprites>()) {

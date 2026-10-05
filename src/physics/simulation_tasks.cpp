@@ -122,7 +122,7 @@ void updateObjectActivityAndBounds(
 		}
 
 		if (activity.energyLevel > 0) {
-			if (const Optional<Box<N>> shapeAABB = ShapeView<N>{collider.shape}.getBoundingBox(translateRotateScale(position, orientation, scale))) {
+			if (const Optional<Box<N>> shapeAABB = collider.shape.getBoundingBox(translateRotateScale(position, orientation, scale))) {
 				if (activity.isCorrectable) {
 					const Force<N> buoyancyForce = fluidDensity * gravityAcceleration * volume * product(scale);
 					const Torque<N> buoyancyTorque = cross(centerOfBuoyancy, buoyancyForce);
@@ -605,7 +605,7 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 			const ContactIndex contactIndex = static_cast<ContactIndex>(contacts.find(minmax(objectID, otherObjectID)).getIndex());
 			auto&& [objectIDs, contact] = contacts.getAtIndex(contactIndex);
 			for (size_t manifoldIndex = 0; manifoldIndex < contact.manifolds.size(); ++manifoldIndex) {
-				ContactManifold<N>& manifold = contact.manifolds[manifoldIndex];
+				const ContactManifold<N>& manifold = contact.manifolds[manifoldIndex];
 				GREM_ASSERT(!manifold.points.empty());
 
 				Length1D largestPenetrationDepth = Length1D::MIN;
@@ -847,7 +847,7 @@ void integrateLinearVelocities(execution::Entities<LinearVelocity<N>, const Orie
 		const Speed newSpeed = sqrt(newSquaredSpeed);
 		if (newSpeed > 0) {
 			const Direction<N> direction = Direction<N>::reinterpret(newLinearVelocity / newSpeed);
-			if (const Optional<Area> referenceArea = ShapeView<N>{collider.shape}.getReferenceArea(rotateScale(orientation, scale), direction)) {
+			if (const Optional<Area> referenceArea = collider.shape.getReferenceArea(rotateScale(orientation, scale), direction)) {
 				const Force1D dragForce = -0.5f * Density{fluidDensity} * newSquaredSpeed * material.linearDrag * *referenceArea;
 				const LinearVelocity1D speedDelta = inverseMass * dragForce * deltaTime;
 				if (newSpeed + speedDelta <= 0) {
@@ -882,7 +882,7 @@ void integrateAngularVelocities(
 		const SquaredAngularSpeed newSquaredAngularSpeed = length2(newAngularVelocity);
 		const AngularSpeed newAngularSpeed = sqrt(newSquaredAngularSpeed);
 		if (newAngularSpeed > 0) {
-			if (const Optional<Distance> effectiveRadius = ShapeView<N>{collider.shape}.getBoundingRadius(rotateScale(orientation, scale))) {
+			if (const Optional<Distance> effectiveRadius = collider.shape.getBoundingRadius(rotateScale(orientation, scale))) {
 				const AngularScale<N> axis = newAngularVelocity / newAngularSpeed;
 				// This "drag torque" approximation is kinda bogus, but it's probably better than nothing. :)
 				const Torque2D dragTorque = -0.5f * Density{fluidDensity} * newSquaredAngularSpeed * material.angularDrag * length2(length2(*effectiveRadius)) * *effectiveRadius;
@@ -1426,7 +1426,7 @@ void solveJointConstraintsImplementation(
 
 		const auto [biasRates, massScales, momentumScales] =
 			(useBias) ? getSoftConstraintParameters(angularConstraint.limitStiffnesses, angularConstraint.limitDampingRatios, deltaTime, inverseDeltaTime)
-					  : SoftConstraintParameters<(N == 3) ? 3 : 1>{};
+			          : SoftConstraintParameters<(N == 3) ? 3 : 1>{};
 
 		const Orientation<N> referenceFrame = orientationA * attachmentOrientations.first;
 		const Orientation<N> inverseReferenceFrame = inverse(referenceFrame);
@@ -1534,7 +1534,7 @@ void solveJointConstraintsImplementation(
 
 		const auto [biasRates, massScales, momentumScales] =
 			(useBias) ? getSoftConstraintParameters(linearConstraint.limitStiffnesses, linearConstraint.limitDampingRatios, deltaTime, inverseDeltaTime)
-					  : SoftConstraintParameters<N>{};
+			          : SoftConstraintParameters<N>{};
 
 		{
 			const Length<N> lowerLimitErrors = offsetsInReferenceFrame - linearConstraint.minOffsets;
@@ -1644,7 +1644,7 @@ void solveJointConstraintsImplementation(
 
 		const auto [biasRate, massScale, momentumScale] =
 			(useBias) ? getSoftConstraintParameters(distanceConstraint.limitStiffness, distanceConstraint.limitDampingRatio, deltaTime, inverseDeltaTime)
-					  : SoftConstraintParameters<1>{};
+			          : SoftConstraintParameters<1>{};
 
 		{
 			const Length1D lowerLimitError = distance - distanceConstraint.minDistance;
@@ -1987,7 +1987,7 @@ void solveContactConstraintsImplementation(
 		// Calculate soft constraint parameters.
 		const auto [biasRate, massScale, momentumScale] =
 			(useBias) ? getSoftConstraintParameters(simulationOptions.contactStiffness, simulationOptions.contactDampingRatio, deltaTime, inverseDeltaTime)
-					  : SoftConstraintParameters<1>{};
+			          : SoftConstraintParameters<1>{};
 
 		bool wakeA = false;
 		bool wakeB = false;
@@ -2102,8 +2102,8 @@ void solveContactConstraintsImplementation(
 				const InverseMomentOfInertiaTensor<N> combinedInverseEffectiveMomentOfInertiaTensor = inverseMomentOfInertiaTensorA + inverseMomentOfInertiaTensorB;
 				const MomentOfInertiaTensor<N> combinedEffectiveMomentOfInertiaTensor =
 					(combinedInverseEffectiveMomentOfInertiaTensor == 0)
-						? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS}
-						: inverse(combinedInverseEffectiveMomentOfInertiaTensor);
+				        ? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS}
+				        : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
 
 				const AngularVelocity<N> relativeAngularVelocity = angularVelocityA - angularVelocityB;
 				const AngularVelocity<N> errorDerivative = relativeAngularVelocity;
@@ -2229,7 +2229,6 @@ void applyContactRestitutionImplementation(
 				default: iterationCount = 8; break;
 			}
 
-			LinearImpulse1D totalRestitutionImpulse{};
 			for (size_t iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex) {
 				for (ContactPoint<N>& point : manifold.points) {
 					const LinearVelocity1D preSolveRelativeNormalVelocity = getNormalComponent(point.relativeVelocityInTangentSpace);

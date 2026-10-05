@@ -1,0 +1,29 @@
+{
+    "bindings": {
+        "key_return": "confirm",
+        "key_space": "confirm",
+        "key_escape": "cancel",
+        "key_arrow_up": "up",
+        "key_arrow_down": "down",
+        "key_arrow_left": "left",
+        "key_arrow_right": "right",
+        "mouse_button_left": "confirm",
+        "mouse_button_right": "cancel",
+        "mouse_scroll_up": "scroll_up",
+        "mouse_scroll_down": "scroll_down",
+        "controller_button_south": "confirm",
+        "controller_button_east": "cancel",
+        "controller_button_dpad_up": "up",
+        "controller_button_dpad_down": "down",
+        "controller_button_dpad_left": "left",
+        "controller_button_dpad_right": "right",
+        "controller_button_left_stick": "scroll_up",
+        "controller_button_right_stick": "scroll_down",
+        "controller_axis_left_stick_up": "up",
+        "controller_axis_left_stick_down": "down",
+        "controller_axis_left_stick_left": "left",
+        "controller_axis_left_stick_right": "right",
+        "controller_axis_left_trigger": "cancel",
+        "controller_axis_right_trigger": "confirm"
+    }
+}

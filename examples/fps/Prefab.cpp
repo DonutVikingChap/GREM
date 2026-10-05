@@ -59,7 +59,7 @@ struct PrefabImplementation { // NOLINT(misc-use-internal-linkage)
 
 namespace {
 
-void loadJSONPrefab(Arena<928>& arena, PrefabImplementation& prefab, AssetCache& assetCache, Schema& schema, CStringView filepath) {
+void loadJSONPrefab(Arena<928>& arena, PrefabImplementation& prefab, AssetCache& assetCache, const Schema& schema, CStringView filepath) {
 	GREM_PROFILE_BLOCK_DYNAMIC(formatString("Load JSON prefab {}", filepath));
 
 #if defined(NDEBUG) && !defined(__EMSCRIPTEN__)
@@ -220,7 +220,7 @@ void loadModelPrefab(Arena<928>& arena, PrefabImplementation& prefab, AssetCache
 		SynchronizedEntityIDAddresses synchronizedEntityIDAddresses{};
 		InplaceArrayList<ComponentInitializer, tuple_size_v<decltype(VALID_STATE_COMPONENT_TYPES)>> componentInitializers{};
 
-		const auto addEntityComponent = [&]<typename C>(C&& component) -> void {
+		const auto addEntityComponent = [&]<typename C>(C&& component) -> void { // NOLINT(cppcoreguidelines-missing-std-forward)
 			using T = std::remove_cvref_t<C>;
 			constexpr CRC32 NAME_CRC32 = COMPONENT_NAME_CRC32<T>;
 			static_assert(NAME_CRC32 != CRC32{}, "Invalid component type in initializer.");
@@ -305,11 +305,11 @@ void loadModelPrefab(Arena<928>& arena, PrefabImplementation& prefab, AssetCache
 		for (const ModelObjectDescription::PhysicsJointDescription& physicsJointDescription : modelObjectDescription.physicsJointDescriptions) {
 			addEntityComponent(JointConnectedObjects{
 				.first = SynchronizedEntityID{.value = (physicsJointDescription.objectIndices.first == Limits<res::Model::PhysicsObjectIndex>::MAX)
-			                                               ? 0
-			                                               : physicsObjectEntityIndices[physicsJointDescription.objectIndices.first]},
+				                                           ? 0
+				                                           : physicsObjectEntityIndices[physicsJointDescription.objectIndices.first]},
 				.second = SynchronizedEntityID{.value = (physicsJointDescription.objectIndices.second == Limits<res::Model::PhysicsObjectIndex>::MAX)
-			                                                ? 0
-			                                                : physicsObjectEntityIndices[physicsJointDescription.objectIndices.second]},
+				                                            ? 0
+				                                            : physicsObjectEntityIndices[physicsJointDescription.objectIndices.second]},
 			});
 			addEntityComponent(phys::GenericJointOptions3D{physicsJointDescription.genericJointOptions});
 			addEntity(EntityType{"JOINT"});

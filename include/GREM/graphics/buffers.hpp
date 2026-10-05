@@ -67,7 +67,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] UniformBufferImplementation* get() const noexcept {
+	[[nodiscard]] UniformBufferImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const UniformBufferImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -110,7 +122,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] StorageBufferImplementation* get() const noexcept {
+	[[nodiscard]] StorageBufferImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const StorageBufferImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -152,7 +176,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] BufferSetImplementation* get() const noexcept {
+	[[nodiscard]] BufferSetImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const BufferSetImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -286,7 +322,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] DrawCommandBufferImplementation* get() const noexcept {
+	[[nodiscard]] DrawCommandBufferImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const DrawCommandBufferImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -335,7 +383,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] UnorderedDrawCommandBufferImplementation* get() const noexcept {
+	[[nodiscard]] UnorderedDrawCommandBufferImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const UnorderedDrawCommandBufferImplementation* get() const noexcept {
 		return implementation.get();
 	}
 

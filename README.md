@@ -16,7 +16,9 @@ GREM is a modular, cross-platform C++ library for building games, game engines a
 
 **tiles**: Tile-based top-down 2D pixel art game with basic player collision code that renders animated tiles and sprite objects in a dynamically paintable GPU-resident sparse tilemap, sampled in a fullscreen shader from an array of JSON-configured tileset images | [Code (~3500 lines)](examples/tiles/main.cpp) | [Run in browser (4 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-tiles.html)<sup>1, 2</sup>
 
-**fps**: Multiplayer FPS prototype with basic weapon handling, fully networked 3D physics, snapshot-based client-predicted server-authoritative netcode with subticked player commands, lag-compensated hit detection with bullet drop and short-range hitscan, splitscreen support with up to 9 local players per client by default, JSON-based runtime entity definitions and a multithreaded ECS architecture comprised of dynamically loaded game systems | [Code (~21000 lines)](examples/fps/main.cpp) | [Run in browser (20 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-fps.html)<sup>1, 3</sup>
+**fps**: Multiplayer FPS prototype with basic weapon handling, fully networked 3D physics, snapshot-based client-predicted server-authoritative netcode with subticked player commands, lag-compensated hit detection with bullet drop and short-range hitscan, splitscreen support with up to 9 local players per client by default, JSON-based runtime entity definitions and a multithreaded ECS architecture comprised of dynamically loaded game systems | [Code (~21000 lines)](examples/fps/main.cpp) | [Run in browser (20 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-fps.html)<sup>1, 3, 4</sup>
+
+**platformer**: Third-person 3D platformer game with a gameplay-code-focused architecture, basic player movement and camera system, collectibles, a custom 3D model shader, and a simple Python script for exporting game levels made in Blender | [Code (~3000 lines)](examples/platformer/main.cpp) | [Run in browser (16 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-platformer.html)<sup>1, 4</sup>
 
 **test_game**: Single-file demo of various features | [Code (~700 lines)](examples/test_game/main.cpp) | [Run in browser (16 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-test_game.html)<sup>1</sup>
 
@@ -24,7 +26,8 @@ GREM is a modular, cross-platform C++ library for building games, game engines a
 
 > <sup>1</sup> The web builds contain compiled code from the libraries listed in [ThirdPartyLegalNotices.md](https://donutvikingchap.github.io/GREM/bin/ThirdPartyLegalNotices.md).<br>
 > <sup>2</sup> The tiles example uses ~0.5 to ~4 GB VRAM depending on zoom level.<br>
-> <sup>3</sup> This web build of the FPS example is WebAssembly/WebGL 2-based, single-threaded, and runs a listen server over an emulated socket that supports local splitscreen multiplayer only (Players -> Add Local Player). A basic sandbox [flat map (debug variant)](examples/data/fps/maps/flatland.json5) is included. Press X to switch fire modes and G to spawn boxes! See [configuration/player1.json](examples/data/fps/configuration/player1.json) for more controls. (Be careful of accidentally closing the tab with Ctrl+W when crouching.)
+> <sup>3</sup> Note that this web build of the FPS example is WebAssembly/WebGL 2-based, single-threaded, and runs a listen server over an emulated socket that supports local splitscreen multiplayer only (Players -> Add Local Player). A basic sandbox [flat map (debug variant)](examples/data/fps/maps/flatland.json5) is included. Press X to switch fire modes and G to spawn boxes! See [configuration/player1.json](examples/data/fps/configuration/player1.json) for more controls.<br>
+> <sup>4</sup> On Firefox, be careful of accidentally closing the tab with Ctrl+W while trying to crouch/ground pound in these demos. (Real web-focused games should probably use a different control scheme.)
 
 ## Features
 
@@ -201,7 +204,7 @@ Building an application with GREM requires:
 -  a **C++20** and **C11**-compatible **compiler toolchain**, such as:
 	- [GCC](https://gcc.gnu.org/) (version 12+), or
 	- [Clang](https://clang.llvm.org/) (version 16+), or
-	- [MSVC](https://visualstudio.microsoft.com/) (VS 2022 version 17.7+), or
+	- [MSVC](https://visualstudio.microsoft.com/) (VS 2026 version 18+), or
 	- [Emscripten](https://emscripten.org/) (SDK version 5+).
 - a **build system** compatible with the compiler toolchain, such as:
 	- GNU Make (often included with Linux distros), or

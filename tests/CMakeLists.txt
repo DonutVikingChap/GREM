@@ -4,8 +4,9 @@ project("GREM-tests")
 if(GREM_FETCH_DEPENDENCIES)
 	FetchContent_Declare(Catch2
 		GIT_REPOSITORY https://github.com/catchorg/Catch2
-		GIT_TAG 29c9844f688acb27c87338c39cd186ebfe41aa19 # v3.13.0
-	)
+		GIT_TAG 317ac1ed4c0bb6e6b91eafc817e05c488feffcb3 # v3.16.0
+		EXCLUDE_FROM_ALL
+		SYSTEM)
 	FetchContent_MakeAvailable(Catch2)
 else()
 	find_package(Catch2 REQUIRED)

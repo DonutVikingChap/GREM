@@ -31,16 +31,16 @@ public:
 		CollisionFilterTest filterTest) override {
 		GREM_PROFILE_FUNCTION();
 
-		const LocallyTransformedShape<N>& locallyTransformedShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<LocallyTransformedShape<N>>();
-		const LocallyTransformedShape<N>& locallyTransformedShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<LocallyTransformedShape<N>>();
+		const LocallyTransformedShape<N>& locallyTransformedShapeA = colliderA.shape.template as<LocallyTransformedShape<N>>();
+		const LocallyTransformedShape<N>& locallyTransformedShapeB = colliderB.shape.template as<LocallyTransformedShape<N>>();
 		const LocalTransformation<N> localTransformationA =
 			translateRotateScale(locallyTransformedShapeA.localOffset, locallyTransformedShapeA.localOrientation, locallyTransformedShapeA.localScale);
 		const LocalTransformation<N> localTransformationB =
 			translateRotateScale(locallyTransformedShapeB.localOffset, locallyTransformedShapeB.localOrientation, locallyTransformedShapeB.localScale);
 		const Transformation<N> globalTransformationA = transformationA * localTransformationA;
 		const Transformation<N> globalTransformationB = transformationB * localTransformationB;
-		const Optional<Box<N>> aabbA = ShapeView<N>{*locallyTransformedShapeA.shape}.getBoundingBox(transformationA);
-		const Optional<Box<N>> aabbB = ShapeView<N>{*locallyTransformedShapeB.shape}.getBoundingBox(transformationB);
+		const Optional<Box<N>> aabbA = locallyTransformedShapeA.shape->getBoundingBox(transformationA);
+		const Optional<Box<N>> aabbB = locallyTransformedShapeB.shape->getBoundingBox(transformationB);
 		if (!aabbA || !aabbB || intersects(*aabbA, *aabbB)) {
 			if (!collisionAlgorithm) {
 				collisionAlgorithm.emplace(CollisionAlgorithm<N>::chooseImplementation(*locallyTransformedShapeA.shape, *locallyTransformedShapeB.shape));
@@ -57,16 +57,16 @@ public:
 		FunctionView<void(const CollisionAlgorithmResult<N>& collision)> callback) override {
 		GREM_PROFILE_FUNCTION();
 
-		const LocallyTransformedShape<N>& locallyTransformedShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<LocallyTransformedShape<N>>();
-		const LocallyTransformedShape<N>& locallyTransformedShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<LocallyTransformedShape<N>>();
+		const LocallyTransformedShape<N>& locallyTransformedShapeA = colliderA.shape.template as<LocallyTransformedShape<N>>();
+		const LocallyTransformedShape<N>& locallyTransformedShapeB = colliderB.shape.template as<LocallyTransformedShape<N>>();
 		const LocalTransformation<N> localTransformationA =
 			translateRotateScale(locallyTransformedShapeA.localOffset, locallyTransformedShapeA.localOrientation, locallyTransformedShapeA.localScale);
 		const LocalTransformation<N> localTransformationB =
 			translateRotateScale(locallyTransformedShapeB.localOffset, locallyTransformedShapeB.localOrientation, locallyTransformedShapeB.localScale);
 		const Transformation<N> globalTransformationA = transformationA * localTransformationA;
 		const Transformation<N> globalTransformationB = transformationB * localTransformationB;
-		const Optional<Box<N>> aabbA = ShapeView<N>{*locallyTransformedShapeA.shape}.getBoundingBox(transformationA);
-		const Optional<Box<N>> aabbB = ShapeView<N>{*locallyTransformedShapeB.shape}.getBoundingBox(transformationB);
+		const Optional<Box<N>> aabbA = locallyTransformedShapeA.shape->getBoundingBox(transformationA);
+		const Optional<Box<N>> aabbB = locallyTransformedShapeB.shape->getBoundingBox(transformationB);
 		if (!aabbA || !aabbB || intersects(*aabbA, *aabbB)) {
 			if (!collisionAlgorithm) {
 				collisionAlgorithm.emplace(CollisionAlgorithm<N>::chooseImplementation(*locallyTransformedShapeA.shape, *locallyTransformedShapeB.shape));

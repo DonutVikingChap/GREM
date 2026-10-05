@@ -659,7 +659,7 @@ struct WindowDeleter {
 using WindowHandle = UniqueHandle<SDL_Window*, WindowDeleter, nullptr>;
 
 struct GLContextInitializer {
-	[[nodiscard]] GLContextInitializer(SDL_Window* window) {
+	[[nodiscard]] explicit GLContextInitializer(SDL_Window* window) {
 		if (windowCount == 0) {
 			GREM_PROFILE_BLOCK("Create SDL GL context");
 

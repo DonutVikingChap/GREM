@@ -147,31 +147,6 @@ template <size_t N>
 	}
 }
 
-template <size_t N>
-[[nodiscard]] inline Box<N, float> calculateBoundingBox(Span<const vec<N, float>> vertices) noexcept {
-	if (vertices.empty()) {
-		return Box<N, float>{};
-	}
-	Box<N, float> result{
-		.min = vertices.front(),
-		.max = vertices.front(),
-	};
-	for (const vec<N, float> vertex : vertices.subspan(1)) {
-		result.min = min(result.min, vertex);
-		result.max = max(result.max, vertex);
-	}
-	return result;
-}
-
-template <size_t N>
-[[nodiscard]] inline float calculateBoundingRadius(Span<const vec<N, float>> vertices) noexcept {
-	float result = 0.0f;
-	for (const vec<N, float> vertex : vertices) {
-		result = max(result, length2(vertex));
-	}
-	return sqrt(result);
-}
-
 } // namespace detail
 
 /**
@@ -240,8 +215,8 @@ public:
 	 */
 	ConvexPolytope(Span<const Vertex> vertices, const mat<N + 1, N + 1, float>& transformation, ConvexPolytopeVertexIndex maxVertexCount = Limits<ConvexPolytopeVertexIndex>::MAX)
 		: data(detail::buildConvexHull<N>(vertices, transformation, maxVertexCount))
-		, boundingBox(detail::calculateBoundingBox<N>(data.vertices))
-		, boundingRadius(detail::calculateBoundingRadius<N>(data.vertices)) {}
+		, boundingBox(calculateBoundingBox<N, float>(data.vertices))
+		, boundingRadius(calculateBoundingRadius<N, float>(data.vertices)) {}
 
 	/**
 	 * Construct a convex polytope from a set of vertices.

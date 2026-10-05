@@ -65,7 +65,11 @@
 
 struct GameSettings {
 	[[nodiscard]] static GameSettings load(const Filesystem& filesystem, CStringView filepath) {
-		return json::deserializeFromString<GameSettings>(filesystem.readInputFileString(filepath));
+		try {
+			return json::deserializeFromString<GameSettings>(filesystem.readInputFileString(filepath));
+		} catch (...) {
+			Error::throwWithNestedFilepath(filepath);
+		}
 	}
 
 #ifdef __EMSCRIPTEN__
@@ -107,12 +111,12 @@ struct GameArguments {
 struct GameOptions {
 	static constexpr net::PortNumber DEFAULT_PORT_NUMBER = 25701;
 
-	CStringView settingsFilepath = "configuration/game.json";
+	String settingsFilepath = "configuration/game.json";
 	GameSettings settings{};
 	net::PortNumber listenServerPort = DEFAULT_PORT_NUMBER;
-	CStringView systems = "systems.json5";
-	CStringView schema = "schema.json5";
-	CStringView listenServerMap{};
+	String systems = "systems.json5";
+	String schema = "schema.json5";
+	String listenServerMap{};
 	exec::Task::ParallelCount workerThreads = exec::DynamicExecutorOptions{}.targetParallelism;
 	GameServerOptions sv{};
 	GameClientOptions cl{};
@@ -768,7 +772,7 @@ private:
 						if (serverDebugVisualization) {
 							if (serverThread) {
 								serverThread->setDebugVisualization(nullptr);
-								ScopedLock lock{serverDebugVisualization->mutex};
+								const ScopedLock lock{serverDebugVisualization->mutex};
 								atomicThreadFence(MemoryOrder::SEQUENTIALLY_CONSISTENT);
 							}
 							serverDebugVisualization.reset();

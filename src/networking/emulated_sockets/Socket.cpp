@@ -49,7 +49,7 @@ public:
 		}
 		SharedPointer<EmulatedSocket> socket{};
 		{
-			ScopedLock lock{socketsMutex};
+			const ScopedLock lock{socketsMutex};
 			const auto it = sockets.find(handle);
 			if (it == sockets.end()) {
 				errorCode = make_error_code(std::errc::bad_file_descriptor);
@@ -60,13 +60,13 @@ public:
 		}
 		PortNumber boundPortNumber = 0;
 		{
-			ScopedLock lock{socket->mutex};
+			const ScopedLock lock{socket->mutex};
 			if (socket->localEndpoint) {
 				boundPortNumber = socket->localEndpoint->getPortNumber();
 			}
 		}
 		if (boundPortNumber != 0) {
-			ScopedLock lock{socketsMutex};
+			const ScopedLock lock{socketsMutex};
 			if (const auto itPort = ports.find(boundPortNumber); itPort != ports.end()) {
 				erase_if(itPort->second.ipv4Bindings, [&](const EmulatedPortIPv4Binding& binding) -> bool { return binding.socketHandle == handle; });
 				erase_if(itPort->second.ipv6Bindings, [&](const EmulatedPortIPv6Binding& binding) -> bool { return binding.socketHandle == handle; });
@@ -79,7 +79,7 @@ public:
 	}
 
 	[[nodiscard]] SOCKET open(AddressFamily domain, ProtocolType type, std::error_code& errorCode) {
-		ScopedLock lock{socketsMutex};
+		const ScopedLock lock{socketsMutex};
 		SOCKET newHandle = bit_cast<SOCKET>(nextSocketHandleValue++);
 		if (newHandle == INVALID_SOCKET) {
 			newHandle = bit_cast<SOCKET>(nextSocketHandleValue++);
@@ -100,21 +100,21 @@ public:
 
 	void setBlockingMode(SOCKET handle, BlockingMode newMode, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
-			ScopedLock lock{socket->mutex};
+			const ScopedLock lock{socket->mutex};
 			socket->blockingMode = newMode;
 		}
 	}
 
 	void setReceiveTimeout(SOCKET handle, Duration newTimeout, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
-			ScopedLock lock{socket->mutex};
+			const ScopedLock lock{socket->mutex};
 			socket->receiveTimeout = newTimeout;
 		}
 	}
 
 	void setSendTimeout(SOCKET handle, Duration newTimeout, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
-			ScopedLock lock{socket->mutex};
+			const ScopedLock lock{socket->mutex};
 			socket->sendTimeout = newTimeout;
 		}
 	}
@@ -142,7 +142,7 @@ public:
 
 	[[nodiscard]] Optional<Endpoint> getLocalEndpoint(SOCKET handle, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
-			ScopedLock lock{socket->mutex};
+			const ScopedLock lock{socket->mutex};
 			if (socket->localEndpoint) {
 				return socket->localEndpoint;
 			}
@@ -153,7 +153,7 @@ public:
 
 	[[nodiscard]] Optional<Endpoint> getRemoteEndpoint(SOCKET handle, std::error_code& errorCode) {
 		if (const SharedPointer<EmulatedSocket> socket = getSocket(handle, errorCode)) {
-			ScopedLock lock{socket->mutex};
+			const ScopedLock lock{socket->mutex};
 			if (socket->remoteEndpoint) {
 				return socket->remoteEndpoint;
 			}
@@ -338,7 +338,7 @@ private:
 
 			SOCKET remoteHandle = INVALID_SOCKET;
 			{
-				ScopedLock remoteLock{remote->socket->mutex};
+				const ScopedLock remoteLock{remote->socket->mutex};
 				if (remote->socket->domain != domain || remote->socket->type != ProtocolType::TCP || remote->socket->tcpState != EmulatedTCPState::LISTEN ||
 					remote->socket->listenQueue.size() >= remote->socket->listenQueueBacklogSize) {
 					errorCode = make_error_code(std::errc::connection_refused);
@@ -394,7 +394,7 @@ private:
 								return;
 							}
 							{
-								ScopedLock remoteLock{remoteSocket->mutex};
+								const ScopedLock remoteLock{remoteSocket->mutex};
 								if (remoteSocket->tcpState != EmulatedTCPState::CLOSED) {
 									remoteSocket->remoteSocketHandle = INVALID_SOCKET;
 									remoteSocket->tcpState = EmulatedTCPState::LAST_ACK;
@@ -527,7 +527,7 @@ private:
 			PortNumber remotePortNumber{};
 			Optional<Endpoint> newLocalEndpoint{};
 			{
-				ScopedLock remoteLock{remoteSocket->mutex};
+				const ScopedLock remoteLock{remoteSocket->mutex};
 				if (!remoteSocket->localEndpoint || !remoteSocket->remoteEndpoint || remoteSocket->remoteSocketHandle != handle ||
 					remoteSocket->tcpState != EmulatedTCPState::SYN_SENT) {
 					errorCode = make_error_code(std::errc::connection_aborted);
@@ -540,7 +540,7 @@ private:
 			SOCKET newHandle = INVALID_SOCKET;
 			{
 				EmulatedSockets& emulatedSockets = EmulatedSockets::getInstance();
-				ScopedLock socketsLock{emulatedSockets.socketsMutex};
+				const ScopedLock socketsLock{emulatedSockets.socketsMutex};
 				const auto itPort = emulatedSockets.ports.try_emplace(newLocalEndpoint->getPortNumber()).first;
 				newHandle = bit_cast<SOCKET>(emulatedSockets.nextSocketHandleValue++);
 				if (newHandle == INVALID_SOCKET) {
@@ -594,7 +594,7 @@ private:
 			}
 
 			{
-				ScopedLock remoteLock{remoteSocket->mutex};
+				const ScopedLock remoteLock{remoteSocket->mutex};
 				remoteSocket->tcpState = EmulatedTCPState::ESTABLISHED;
 			}
 
@@ -759,7 +759,7 @@ private:
 
 			size_t bytesSent = 0;
 			{
-				ScopedLock remoteLock{remote->socket->mutex};
+				const ScopedLock remoteLock{remote->socket->mutex};
 				if (remote->socket->domain != domain || remote->socket->type != type) {
 					errorCode = make_error_code(std::errc::connection_refused);
 					return {};
@@ -915,7 +915,7 @@ private:
 	};
 
 	[[nodiscard]] Optional<Endpoint> bindPort(const Endpoint& endpoint, SOCKET handle, std::error_code& errorCode) {
-		ScopedLock socketsLock{socketsMutex};
+		const ScopedLock socketsLock{socketsMutex};
 		Endpoint newEndpoint = endpoint;
 		PortNumber portNumber = newEndpoint.getPortNumber();
 		if (portNumber == 0) {
@@ -966,7 +966,7 @@ private:
 			errorCode = make_error_code(std::errc::bad_file_descriptor);
 			return {};
 		}
-		ScopedLock socketsLock{socketsMutex};
+		const ScopedLock socketsLock{socketsMutex};
 		const auto it = sockets.find(handle);
 		if (it == sockets.end()) {
 			errorCode = make_error_code(std::errc::bad_file_descriptor);
@@ -982,7 +982,7 @@ private:
 			return {};
 		}
 
-		ScopedLock socketsLock{socketsMutex};
+		const ScopedLock socketsLock{socketsMutex};
 		switch (endpoint.getAddressFamily()) {
 			case AddressFamily::IPv4: {
 				const IPv4Endpoint ipv4Endpoint = *endpoint.getIPv4Endpoint();

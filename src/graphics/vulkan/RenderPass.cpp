@@ -230,7 +230,7 @@ void setupInstanceContext(RenderPassImplementation& implementation, bool& buffer
 				}
 			}
 
-			void* const buffer = it->second.get();
+			const void* const buffer = it->second.get();
 			GREM_MATCH(bufferLayout) {
 				GREM_CASE(const UniformBufferLayoutReference& uniformBufferLayout) {
 					descriptorSets.push_back(static_cast<const UniformBufferImplementation*>(buffer)->getDescriptorSet());
@@ -267,15 +267,15 @@ void setupInstanceContext(RenderPassImplementation& implementation, bool& buffer
 } // namespace
 
 void RenderPassImplementation::invalidateContentsOfOldBuffersAvailableForReuse() noexcept {
-	for (UniformBufferImplementation* const uniformBuffer : usedUniformBuffers) {
-		for (UniformBufferImplementation* handle = uniformBuffer; handle->oldResource; handle = handle->oldResource.get()) {
+	for (const UniformBufferImplementation* const uniformBuffer : usedUniformBuffers) {
+		for (const UniformBufferImplementation* handle = uniformBuffer; handle->oldResource; handle = handle->oldResource.get()) {
 			if (handle->oldResource.use_count() == 1) {
 				handle->oldResource->invalidateContents();
 			}
 		}
 	}
-	for (BufferSetImplementation* const bufferSet : usedBufferSets) {
-		for (BufferSetImplementation* handle = bufferSet; handle->oldResource; handle = handle->oldResource.get()) {
+	for (const BufferSetImplementation* const bufferSet : usedBufferSets) {
+		for (const BufferSetImplementation* handle = bufferSet; handle->oldResource; handle = handle->oldResource.get()) {
 			if (handle->oldResource.use_count() == 1) {
 				handle->oldResource->invalidateContents();
 			}

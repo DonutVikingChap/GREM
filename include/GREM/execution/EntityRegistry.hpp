@@ -2049,7 +2049,9 @@ public:
 	EntityBuilder(const EntityBuilder&) = delete;
 
 	/** Move constructor. */
-	EntityBuilder(EntityBuilder&&) = default;
+	EntityBuilder(EntityBuilder&& other) noexcept
+		: registry(other.registry)
+		, entityID(std::exchange(other.entityID, {})) {}
 
 	/** Copying an entity builder is not allowed. */
 	EntityBuilder& operator=(const EntityBuilder&) = delete;

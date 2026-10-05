@@ -69,11 +69,13 @@ namespace {
 					result.shape = phys::InfiniteHalfSpaceShape3D{};
 				}
 			} else {
-				result.shape = phys::BoxShape3D{.halfExtents{
-					isinf(plane.sizeX) ? 1000_meters : plane.sizeX * phys::METERS,
-					phys::Length1D::MACHINE_EPSILON,
-					isinf(plane.sizeZ) ? 1000_meters : plane.sizeZ * phys::METERS,
-				}};
+				result.shape = phys::BoxShape3D{
+					.halfExtents{
+						isinf(plane.sizeX) ? 1000_meters : plane.sizeX * phys::METERS,
+						phys::Length1D::MACHINE_EPSILON,
+						isinf(plane.sizeZ) ? 1000_meters : plane.sizeZ * phys::METERS,
+					},
+				};
 			}
 			break;
 		}
@@ -275,11 +277,11 @@ namespace {
 				.driveTargetVelocities = physicsJoint.targetAngularVelocity * phys::RADIANS_PER_SECOND,
 				.driveMaxTorques{
 					((physicsJoint.driveIgnoresMomentOfInertiaX) ? combinedPrincipalMomentsOfInertia.getX() * (physicsJoint.maxTorque.x * phys::RADIANS_PER_SECOND_SQUARED)
-																 : physicsJoint.maxTorque.x * phys::NEWTON_METERS),
+					                                             : physicsJoint.maxTorque.x * phys::NEWTON_METERS),
 					((physicsJoint.driveIgnoresMomentOfInertiaY) ? combinedPrincipalMomentsOfInertia.getY() * (physicsJoint.maxTorque.y * phys::RADIANS_PER_SECOND_SQUARED)
-																 : physicsJoint.maxTorque.y * phys::NEWTON_METERS),
+					                                             : physicsJoint.maxTorque.y * phys::NEWTON_METERS),
 					((physicsJoint.driveIgnoresMomentOfInertiaZ) ? combinedPrincipalMomentsOfInertia.getZ() * (physicsJoint.maxTorque.z * phys::RADIANS_PER_SECOND_SQUARED)
-																 : physicsJoint.maxTorque.z * phys::NEWTON_METERS),
+					                                             : physicsJoint.maxTorque.z * phys::NEWTON_METERS),
 				},
 				.minAngles = select(isfinite(physicsJoint.minAngles), physicsJoint.minAngles * phys::RADIANS, phys::Rotation3D::MIN),
 				.maxAngles = select(isfinite(physicsJoint.maxAngles), physicsJoint.maxAngles * phys::RADIANS, phys::Rotation3D::MAX),
@@ -487,12 +489,12 @@ const ModelObjectDescription& Schema::loadModelObjectDescription(AssetCache& ass
 						physicsJointDescription.objectIndices.second != Limits<res::Model::PhysicsObjectIndex>::MAX) {
 						const res::Model::PhysicsObjectIndex physicsObjectIndexA =
 							(physicsJointDescription.objectIndices.first == Limits<res::Model::PhysicsObjectIndex>::MAX)
-								? static_cast<res::Model::PhysicsObjectIndex>(modelObjectDescription.physicsObjectDescriptions.size() - 1)
-								: physicsJointDescription.objectIndices.first;
+						        ? static_cast<res::Model::PhysicsObjectIndex>(modelObjectDescription.physicsObjectDescriptions.size() - 1)
+						        : physicsJointDescription.objectIndices.first;
 						const res::Model::PhysicsObjectIndex physicsObjectIndexB =
 							(physicsJointDescription.objectIndices.second == Limits<res::Model::PhysicsObjectIndex>::MAX)
-								? static_cast<res::Model::PhysicsObjectIndex>(modelObjectDescription.physicsObjectDescriptions.size() - 1)
-								: physicsJointDescription.objectIndices.second;
+						        ? static_cast<res::Model::PhysicsObjectIndex>(modelObjectDescription.physicsObjectDescriptions.size() - 1)
+						        : physicsJointDescription.objectIndices.second;
 						const phys::CollisionLayer layerA = getModelCollisionLayer(formatString("{}[{}]", modelDescription.filepath, physicsObjectIndexA));
 						const phys::CollisionLayer layerB = getModelCollisionLayer(formatString("{}[{}]", modelDescription.filepath, physicsObjectIndexB));
 						phys::Collider3D& colliderA = modelObjectDescription.physicsObjectDescriptions[physicsObjectIndexA].collider;
@@ -888,7 +890,7 @@ void setImpliedModelJointComponents(EntityBuilder& entityBuilder, ModelType mode
 	if (modelDescription.massOverride) {
 		mass = *modelDescription.massOverride;
 		if (mass <= 0) {
-			mass = phys::ShapeView3D{collider.shape}.calculateVolume() * 0.5_grams_per_cubic_centimeter;
+			mass = collider.shape.calculateVolume() * 0.5_grams_per_cubic_centimeter;
 			if (mass <= 0) {
 				mass = phys::Mass::INF;
 			}
@@ -897,14 +899,14 @@ void setImpliedModelJointComponents(EntityBuilder& entityBuilder, ModelType mode
 		const res::Model::PhysicsJointIndex physicsObjectIndex = *modelObjectDescription.jointDescriptions[jointIndex].physicsObjectIndex;
 		mass = modelObjectDescription.physicsObjectDescriptions[physicsObjectIndex].mass;
 		if (mass <= 0) {
-			mass = phys::ShapeView3D{collider.shape}.calculateVolume() * 0.5_grams_per_cubic_centimeter;
+			mass = collider.shape.calculateVolume() * 0.5_grams_per_cubic_centimeter;
 			if (mass <= 0) {
 				mass = phys::Mass::INF;
 			}
 		}
 	} else {
 		if (mass <= 0) {
-			mass = phys::ShapeView3D{collider.shape}.calculateVolume() * 0.5_grams_per_cubic_centimeter;
+			mass = collider.shape.calculateVolume() * 0.5_grams_per_cubic_centimeter;
 			if (mass <= 0) {
 				mass = phys::Mass::INF;
 			}
@@ -1084,9 +1086,10 @@ void spawnDecal(EntityRegistry& registry, ResourceRegistry& resources, DecalMate
 				.size = size,
 				.range = range,
 			},
-			DestroyCountdown{.destroyOnTickIndex = (isinf(decalMaterialDescription.maxLifetime))
-	                                                   ? TickIndex{}.getNext(Limits<TickCount>::MAX)
-	                                                   : Timestamp{tickIndex, decalMaterialDescription.maxLifetime, tickInterval}.getTickIndex()},
+			DestroyCountdown{
+				.destroyOnTickIndex = (isinf(decalMaterialDescription.maxLifetime)) ? TickIndex{}.getNext(Limits<TickCount>::MAX)
+				                                                                    : Timestamp{tickIndex, decalMaterialDescription.maxLifetime, tickInterval}.getTickIndex(),
+			},
 		});
 }
 
@@ -1104,8 +1107,8 @@ void spawnParticle(EntityRegistry& registry, ResourceRegistry& resources, rng::X
 
 	const EntityType entityType =
 		(particleDescription.spriteType != SpriteType{} && schema.getSpriteDescription(particleDescription.spriteType).frameCount > 1)
-			? EntityType{"ANIMATED_PARTICLE"}
-			: EntityType{"PARTICLE"};
+	        ? EntityType{"ANIMATED_PARTICLE"}
+	        : EntityType{"PARTICLE"};
 	const phys::Position3D launchPosition = position + orientation(particleDescription.localOffset);
 
 	rng::UniformIntegerDistribution<uint16_t> launchCountDistribution{
@@ -1179,7 +1182,8 @@ void spawnParticle(EntityRegistry& registry, ResourceRegistry& resources, rng::X
 				SpriteAnimationState{.animationStartTimestamp{tickIndex.getNext()}},
 				DestroyCountdown{
 					.destroyOnTickIndex = (isinf(particleDescription.maxLifetime)) ? TickIndex{}.getNext(Limits<TickCount>::MAX)
-		                                                                           : Timestamp{tickIndex, particleDescription.maxLifetime, tickInterval}.getTickIndex()},
+					                                                               : Timestamp{tickIndex, particleDescription.maxLifetime, tickInterval}.getTickIndex(),
+				},
 			});
 	}
 }

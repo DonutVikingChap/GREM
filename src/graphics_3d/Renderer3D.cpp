@@ -191,6 +191,13 @@ const Renderer3D::DefaultSky3DVertexShader& Renderer3D::getDefaultSky3DVertexSha
 	return *defaultSky3DVertexShader;
 }
 
+const Renderer3D::UnlitSky3DFragmentShader& Renderer3D::getUnlitSky3DFragmentShader() {
+	if (!unlitSky3DFragmentShader) {
+		unlitSky3DFragmentShader.emplace(UnlitSky3DFragmentShader::create(device, detail::RENDERER_3D_UNLIT_SKY_3D_FRAGMENT_SHADER_CODE));
+	}
+	return *unlitSky3DFragmentShader;
+}
+
 const Renderer3D::PBRSky3DFragmentShader& Renderer3D::getPBRSky3DFragmentShader() {
 	if (!pbrSky3DFragmentShader) {
 		pbrSky3DFragmentShader.emplace(PBRSky3DFragmentShader::create(device, detail::RENDERER_3D_PBR_SKY_3D_FRAGMENT_SHADER_CODE));
@@ -669,14 +676,17 @@ void Renderer3D::drawFrameImplementation(RenderPass& renderPass, StridedSpan<con
 
 	if (frameOptions.drawSky) {
 		// Draw the sky AFTER opaque instances to reduce overdraw.
-		Optional<DrawCommandBuffer<Cubemap3D::Mesh>>& drawCommandBuffer = (frameOptions.hdr) ? hdrSkyDrawCommandBuffer : skyDrawCommandBuffer;
-		if (!drawCommandBuffer) {
-			const Cubemap3D::ShaderPipeline& shaderPipeline = (frameOptions.hdr) ? getHDRPBRSky3DShaderPipeline() : getPBRSky3DShaderPipeline();
-			drawCommandBuffer.emplace(device);
-			drawCommandBuffer->push(shaderPipeline, getCubemap3D().getMesh());
+		if (!skyDrawCommandBuffer) {
+			skyDrawCommandBuffer.emplace(device);
+			skyDrawCommandBuffer->push(nullptr, getCubemap3D().getMesh());
 		}
 		setTemporaryCombinedBufferHandles(extraBufferHandles, camera.getParameterBuffer());
-		renderPass.drawShaded(std::move(frameOptions.skyShaderPipelineOverrideHandle), drawCommandBuffer->lock(), {}, temporaryCombinedBufferHandles);
+		SharedPointer<ShaderPipelineImplementation> skyShaderPipelineOverrideHandle = std::move(frameOptions.skyShaderPipelineOverrideHandle);
+		if (!skyShaderPipelineOverrideHandle) {
+			skyShaderPipelineOverrideHandle = (frameOptions.pbr) ? ((frameOptions.hdr) ? getHDRPBRSky3DShaderPipeline().lock() : getPBRSky3DShaderPipeline().lock())
+			                                                     : ((frameOptions.hdr) ? getHDRUnlitSky3DShaderPipeline().lock() : getUnlitSky3DShaderPipeline().lock());
+		}
+		renderPass.drawShaded(std::move(skyShaderPipelineOverrideHandle), skyDrawCommandBuffer->lock(), {}, temporaryCombinedBufferHandles);
 	}
 
 	if (combined2DAnd3DTransparentDrawCommands.empty()) {
@@ -802,7 +812,7 @@ void Renderer3D::flushPBRBuffers(Extent2D framebufferSize, const Viewport& viewp
 			const bool containingCamera = differenceOfSquares <= 0.0f;
 			const bool behindCamera = projectedCenter.y + radius >= -nearZ;
 			const vec2 direction = (containingCamera) ? vec2{} : vec2{sqrt(differenceOfSquares), radius} / sqrt(distanceSquared);
-			const float discriminantSqrt = sqrt(length2(radius) - length2(-nearZ - projectedCenter.y));
+			const float discriminantSqrt = sqrt(max(length2(radius) - length2(-nearZ - projectedCenter.y), 0.0f));
 			vec2 lowerBound{};
 			vec2 upperBound{};
 			if (!containingCamera) {

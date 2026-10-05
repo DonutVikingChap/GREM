@@ -211,7 +211,7 @@ struct Constant {
  * \tparam X constant value to wrap.
  */
 template <auto X>
-constexpr Constant<X> CONSTANT{};
+constexpr Constant<X> CONSTANT{}; // NOLINT(modernize-avoid-c-style-cast)
 
 /**
  * Execute a function for each index in the sequence from 0 up to, but not
@@ -1477,7 +1477,7 @@ struct TestStruct {
 	std::size_t myField123;
 };
 
-enum TestEnum : int { // NOLINT(performance-enum-size)
+enum TestEnum : int { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	MY_ENUMERAND_ABC,
 	MY_ENUMERAND_123,
 };
@@ -1750,7 +1750,7 @@ requires enumeration<std::remove_cvref_t<decltype(decltype(Enumerand)::value)>> 
  * \tparam Enumerand value of the enumerand to get the name of.
  */
 template <auto Enumerand>
-inline constexpr auto enumerand_name_v = ConstantString<char, enumerand_name<Enumerand>::value.size()>{enumerand_name<Enumerand>::value};
+inline constexpr auto enumerand_name_v = ConstantString<char, enumerand_name<Enumerand>::value.size()>{enumerand_name<Enumerand>::value}; // NOLINT(modernize-avoid-c-style-cast)
 
 static_assert(enumerand_name_v<GREM_private_MetaReflectionEnum::GREM_PRIVATE_META_REFLECTION_ENUMERAND> == "GREM_PRIVATE_META_REFLECTION_ENUMERAND");
 static_assert(enumerand_name_v<detail::MY_ENUMERAND_ABC> == "MY_ENUMERAND_ABC");

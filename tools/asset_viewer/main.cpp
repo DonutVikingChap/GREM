@@ -78,7 +78,11 @@ struct AssetViewerPreferences {
 	[[nodiscard]] static AssetViewerPreferences load(const Filesystem& filesystem, CStringView filepath) {
 		AssetViewerPreferences result{};
 		if (Optional<String> fileContents = filesystem.tryReadInputFileString(filepath)) {
-			json::deserializeFromString(std::move(*fileContents), result);
+			try {
+				json::deserializeFromString(std::move(*fileContents), result);
+			} catch (...) {
+				Error::throwWithNestedFilepath(filepath);
+			}
 
 			result.windowSize.width = max(result.windowSize.width, uint32_t{1});
 			result.windowSize.height = max(result.windowSize.height, uint32_t{1});
@@ -842,20 +846,25 @@ private:
 			for (uint32_t mipLevel = 0; mipLevel < sourceImage.getMipLevelCount(); ++mipLevel) {
 				MipLevel& mip = mipLevels.emplace_back();
 				for (uint32_t layer = 0; layer < sourceImage.getDepth(); ++layer) {
-					mip.layers.push_back({.texture{dev, sourceImage.getLayer(layer, mipLevel),
-						gfx::TextureImageUploadOptions{
-							.transferFunction = (srgb) ? Color::TransferFunction::SRGB : Color::TransferFunction::LINEAR,
-							.convertToPremultipliedAlpha = false,
-							.generateMipmap = false,
+					mip.layers.push_back({
+						.texture{
+							dev,
+							sourceImage.getLayer(layer, mipLevel),
+							gfx::TextureImageUploadOptions{
+								.transferFunction = (srgb) ? Color::TransferFunction::SRGB : Color::TransferFunction::LINEAR,
+								.convertToPremultipliedAlpha = false,
+								.generateMipmap = false,
+							},
+							gfx::TextureSamplerOptions{
+								.minificationFilter = (linearFiltering) ? gfx::TextureFilter::LINEAR : gfx::TextureFilter::NEAREST,
+								.magnificationFilter = (linearFiltering) ? gfx::TextureFilter::LINEAR : gfx::TextureFilter::NEAREST,
+								.mipmapMode = gfx::TextureMipmapMode::NONE,
+								.horizontalWrappingMode = horizontalWrappingMode,
+								.verticalWrappingMode = verticalWrappingMode,
+								.maxAnisotropy = 1.0f,
+							},
 						},
-						gfx::TextureSamplerOptions{
-							.minificationFilter = (linearFiltering) ? gfx::TextureFilter::LINEAR : gfx::TextureFilter::NEAREST,
-							.magnificationFilter = (linearFiltering) ? gfx::TextureFilter::LINEAR : gfx::TextureFilter::NEAREST,
-							.mipmapMode = gfx::TextureMipmapMode::NONE,
-							.horizontalWrappingMode = horizontalWrappingMode,
-							.verticalWrappingMode = verticalWrappingMode,
-							.maxAnisotropy = 1.0f,
-						}}});
+					});
 				}
 			}
 		}
@@ -1856,7 +1865,7 @@ private:
 			gfx::RenderPass renderPass =
 				(isMultisampled) ? gfx::RenderPass{device, assetView.resolvedColorTexture, gfx::DiscardIntermediateValues{},
 									   {assetView.renderColorTexture, assetView.renderDepthStencilTexture}, gfx::ClearValues{}}
-								 : gfx::RenderPass{device, {assetView.resolvedColorTexture, assetView.renderDepthStencilTexture}, gfx::ClearValues{}};
+				                 : gfx::RenderPass{device, {assetView.resolvedColorTexture, assetView.renderDepthStencilTexture}, gfx::ClearValues{}};
 			renderer3D.drawPBRFrame(renderPass, {assetView.instances3D}, assetView.camera3D, assetView.fog, assetView.sky, assetView.decals, assetView.lights,
 				assetView.lightProbeVolumes, assetView.reflectionProbes);
 			device.render(renderPass);

@@ -36,13 +36,13 @@ void Swapchain::setMaxBufferedFrameCount(uint32_t maxBufferedFrameCount) {
 
 bool Swapchain::isVerticalSynchronizationEnabled() const {
 	GREM_ASSERT(getType() == TextureType::SWAPCHAIN);
-	TextureImplementation::SwapchainImplementation& swapchainImplementation = get()->object.get<TextureImplementation::SwapchainImplementation>();
+	const TextureImplementation::SwapchainImplementation& swapchainImplementation = get()->object.get<TextureImplementation::SwapchainImplementation>();
 	return swapchainImplementation.isVerticalSynchronizationEnabled;
 }
 
 uint32_t Swapchain::getMaxBufferedFrameCount() const {
 	GREM_ASSERT(getType() == TextureType::SWAPCHAIN);
-	TextureImplementation::SwapchainImplementation& swapchainImplementation = get()->object.get<TextureImplementation::SwapchainImplementation>();
+	const TextureImplementation::SwapchainImplementation& swapchainImplementation = get()->object.get<TextureImplementation::SwapchainImplementation>();
 	return swapchainImplementation.options.maxBufferedFrameCount;
 }
 

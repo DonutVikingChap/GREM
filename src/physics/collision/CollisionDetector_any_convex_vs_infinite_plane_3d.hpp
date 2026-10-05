@@ -35,7 +35,7 @@ public:
 
 		GREM_ASSERT(colliderA.shape.isConvexShapeType());
 		const ConvexShapeView3D convexShapeA{colliderA.shape};
-		GREM_ASSERT(static_cast<const Shape3D&>(colliderB.shape).is<InfinitePlaneShape3D>());
+		GREM_ASSERT(colliderB.shape.is<InfinitePlaneShape3D>());
 
 		const InverseTransformation3D inverseTransformationA = inverse(transformationA);
 
@@ -62,7 +62,7 @@ public:
 
 		GREM_ASSERT(colliderA.shape.isConvexShapeType());
 		const ConvexShapeView3D convexShapeA{colliderA.shape};
-		GREM_ASSERT(static_cast<const Shape3D&>(colliderB.shape).is<InfinitePlaneShape3D>());
+		GREM_ASSERT(colliderB.shape.is<InfinitePlaneShape3D>());
 
 		const InverseTransformation3D inverseTransformationA = inverse(transformationA);
 		const InverseTransformation3D inverseTransformationB = inverse(transformationB);

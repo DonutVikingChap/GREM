@@ -388,7 +388,7 @@ struct ModelObjectDescription {
 	ArrayList<LightDescription> lightDescriptions{};
 };
 
-enum EntityFlag : EntityID::Flags { // NOLINT(performance-enum-size)
+enum EntityFlag : EntityID::Flags { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	ENTITY_CLIENTSIDE = 1 << 0,
 	ENTITY_PART_OF_MAP = 1 << 1,
 	ENTITY_PHYSICS_PREDICTED = 1 << 2,
@@ -607,7 +607,11 @@ template <size_t N>
 }
 
 [[nodiscard]] inline phys::CollisionLayer parseCollisionLayer(const json::Value& jsonValue) {
-	return phys::CollisionLayer{parseNumber<uint32_t>(jsonValue)};
+	const uint32_t layer = parseNumber<uint32_t>(jsonValue);
+	if (static_cast<size_t>(layer) > static_cast<size_t>(phys::CollisionLayer::MAX)) {
+		throw json::Error{"Invalid collision layer index.", jsonValue.getSource()};
+	}
+	return phys::CollisionLayer{layer};
 }
 
 [[nodiscard]] inline phys::CollisionLayers parseCollisionLayers(const json::Value& jsonValue) {

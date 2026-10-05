@@ -597,7 +597,7 @@ template <size_t N>
 	if (isinf(mass)) {
 		return {};
 	}
-	PrincipalMomentsOfInertia<N> result = ShapeView<N>{shape}.calculatePrincipalMomentsOfInertia(mass);
+	PrincipalMomentsOfInertia<N> result = shape.calculatePrincipalMomentsOfInertia(mass);
 	if constexpr (N == 3) {
 		meta::forEachIndex<3>([&](auto index) -> void {
 			if (result[index] == 0) {

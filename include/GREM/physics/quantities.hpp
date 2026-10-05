@@ -31,21 +31,6 @@
 
 namespace grem::physics {
 
-namespace detail {
-
-[[nodiscard]] static consteval long double constexprSqrt(long double value, long double current, long double previous) {
-	if (current == previous) {
-		return current;
-	}
-	return constexprSqrt(value, 0.5l * (current + value / current), current);
-}
-
-[[nodiscard]] static consteval long double constexprSqrt(long double value) {
-	return constexprSqrt(value, value, 0.0l);
-}
-
-} // namespace detail
-
 /**
  * Concept that checks if a type is a valid physical dimension type.
  *
@@ -493,7 +478,7 @@ struct Magnitude {
 	 */
 	[[nodiscard]] friend consteval auto sqrt(const Magnitude& magnitude) {
 		(void)magnitude;
-		return Magnitude<detail::constexprSqrt(Value), IsAbsolute>{};
+		return Magnitude<grem::sqrt(Value), IsAbsolute>{};
 	}
 };
 
@@ -3316,13 +3301,27 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 }
 
 template <detail::quantity_ternary_operand_a A, detail::quantity_ternary_operand_b<A> B, detail::quantity_ternary_operand_c<A, B> C>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL mix(A a, B b, C alpha) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL lerp(A a, B b, C alpha) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::quantity_rank_v<B> == N, "Quantities of different ranks cannot be interpolated.");
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be interpolated.");
 	static_assert(detail::unit_type_t<C>{} == UNITLESS, "Alpha quantity must be unitless.");
 	return Quantity<N, UnitT>::reinterpret((a - 0) * (C{1.0f} - alpha) + (b - 0) * alpha);
+}
+
+template <detail::quantity_ternary_operand_a A, detail::quantity_ternary_operand_b<A> B, detail::quantity_ternary_operand_c<A, B> C>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL unlerp(A value, B minValue, C maxValue) {
+	static_assert(detail::quantity_rank_v<A> == 1 && detail::quantity_rank_v<B> == 1 && detail::quantity_rank_v<C> == 1, "Non-scalar quantities cannot be deinterpolated.");
+	using UnitT = detail::unit_type_t<A>;
+	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be deinterpolated.");
+	static_assert(detail::unit_type_t<C>{} == UnitT{}, "Quantities of different units cannot be deinterpolated.");
+	return (value - minValue) / (maxValue - minValue);
+}
+
+template <detail::quantity_ternary_operand_a A, detail::quantity_ternary_operand_b<A> B, detail::quantity_ternary_operand_c<A, B> C>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL mix(A a, B b, C alpha) {
+	return lerp(a, b, alpha);
 }
 
 template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B>
@@ -3360,21 +3359,35 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	}
 }
 
+template <detail::quantity_ternary_operand_a A, detail::quantity_ternary_operand_b<A> B, detail::quantity_ternary_operand_c<A, B> C>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL moveTowards(A value, B targetValue, C amount) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	using UnitT = detail::unit_type_t<A>;
+	static_assert(detail::quantity_rank_v<B> == N, "Cannot move towards a quantity of a different rank.");
+	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Cannot move towards a quantity of a different unit.");
+	static_assert(detail::quantity_rank_v<C> == 1, "Cannot move by a non-scalar quantity.");
+	using AmountUnitT = detail::unit_type_t<C>;
+	static_assert(!AmountUnitT::MagnitudeType::IS_ABSOLUTE, "Cannot move by an absolute unit.");
+	static_assert(AmountUnitT{} == Relative<UnitT>{}, "Cannot move by a quantity of a different unit.");
+	return Quantity<N, UnitT>::reinterpret(grem::moveTowards(detail::toQuantity(value)._private_getUnderlyingValue(), detail::toQuantity(targetValue)._private_getUnderlyingValue(),
+		detail::toQuantity(amount)._private_getUnderlyingValue()));
+}
+
 template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B, typename Frequency, typename Duration>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL expDecay(A value, B targetValue, Frequency decayRate, Duration decayTime) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL expDecay(A value, B targetValue, Frequency decayRate, Duration deltaTime) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::quantity_rank_v<B> == N, "Cannot decay towards a quantity of a different rank.");
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Cannot decay towards a quantity of a different unit.");
 	return Quantity<N, UnitT>::reinterpret(
-		grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), detail::toQuantity(targetValue)._private_getUnderlyingValue(), decayRate, decayTime));
+		grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), detail::toQuantity(targetValue)._private_getUnderlyingValue(), decayRate, deltaTime));
 }
 
 template <detail::quantity_unary_operand A, typename Frequency, typename Duration>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL expDecay(A value, Frequency decayRate, Duration decayTime) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL expDecay(A value, Frequency decayRate, Duration deltaTime) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
-	return Quantity<N, UnitT>::reinterpret(grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), decayRate, decayTime));
+	return Quantity<N, UnitT>::reinterpret(grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), decayRate, deltaTime));
 }
 
 template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B>
@@ -3900,6 +3913,13 @@ using Angle = Quantity<1, Radians>;
 inline constexpr Angle PI{numbers::PI};
 
 /**
+ * %Absolute angle in world space.
+ *
+ * Unit: Radians.
+ */
+using AbsoluteAngle = Quantity<1, Absolute<Radians>>;
+
+/**
  * %Absolute angles in world space.
  *
  * Unit: Radians.
@@ -3907,14 +3927,14 @@ inline constexpr Angle PI{numbers::PI};
  * \tparam N number of dimensions of the world space (must be 2 or 3).
  */
 template <size_t N>
-using Angles = AngularQuantity<N, Absolute<Radians>>;
+using AbsoluteAngles = AngularQuantity<N, Absolute<Radians>>;
 
 /**
  * %Absolute angle in 2-dimensional space.
  *
  * Unit: Radians.
  */
-using Roll = Angles<2>;
+using Roll = AbsoluteAngles<2>;
 
 /**
  * %Absolute angles in 3-dimensional space without roll.
@@ -3928,7 +3948,7 @@ using PitchYaw = Quantity<2, Absolute<Radians>>;
  *
  * Unit: Radians.
  */
-using PitchYawRoll = Angles<3>;
+using PitchYawRoll = AbsoluteAngles<3>;
 
 /**
  * %Relative rotation of roll.
@@ -4110,6 +4130,47 @@ template <detail::quantity_unary_operand A>
 	return Direction2D::reinterpret(Scale2D{a._private_value.y, -a._private_value.x});
 }
 
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto flipX(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	using UnitT = detail::unit_type_t<A>;
+	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot be flipped because it represents an absolute position.");
+	return Quantity<N, UnitT>::reinterpret(grem::flipX(a._private_getUnderlyingValue()));
+}
+
+template <size_t N>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto flipX(Direction<N> a) {
+	return Direction<N>::reinterpret(grem::flipX(a._private_getUnderlyingValue()));
+}
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto flipY(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	using UnitT = detail::unit_type_t<A>;
+	static_assert(N >= 2, "Quantity cannot be flipped on the Y axis because it has fewer than 2 dimensions.");
+	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot be flipped because it represents an absolute position.");
+	return Quantity<N, UnitT>::reinterpret(grem::flipY(a._private_getUnderlyingValue()));
+}
+
+template <size_t N>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto flipY(Direction<N> a) requires(N >= 2) {
+	return Direction<N>::reinterpret(grem::flipY(a._private_getUnderlyingValue()));
+}
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto flipZ(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	using UnitT = detail::unit_type_t<A>;
+	static_assert(N >= 2, "Quantity cannot be flipped on the Z axis because it has fewer than 3 dimensions.");
+	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot be flipped because it represents an absolute position.");
+	return Quantity<N, UnitT>::reinterpret(grem::flipZ(a._private_getUnderlyingValue()));
+}
+
+template <size_t N>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto flipZ(Direction<N> a) requires(N >= 3) {
+	return Direction<N>::reinterpret(grem::flipZ(a._private_getUnderlyingValue()));
+}
+
 /**
  * Basis whose columns are all unit vectors that are orthogonal to each other.
  *
@@ -4285,7 +4346,7 @@ struct Orientation<2> {
  */
 template <>
 struct Orientation<3> {
-	using Component = Quantity<1, Absolute<Radians>>;
+	using Component = AbsoluteAngle;
 	using Unit = Absolute<Radians>;
 	using DimensionType = typename Unit::DimensionType;
 	using MagnitudeType = typename Unit::MagnitudeType;
@@ -4302,23 +4363,23 @@ struct Orientation<3> {
 		return Orientation{grem::quatLookAt(vec3{direction}, vec3{up})};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation angleAxis(Angle angle, Scale3D axis) {
+	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation angleAxis(AbsoluteAngle angle, Scale3D axis) {
 		return Orientation{grem::angleAxis(float{angle.in(RADIANS)}, vec3{axis})};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation pitch(Angle angle) {
+	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation pitch(AbsoluteAngle angle) {
 		return Orientation{grem::pitch(float{angle})};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation yaw(Angle angle) {
+	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation yaw(AbsoluteAngle angle) {
 		return Orientation{grem::yaw(float{angle})};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation roll(Angle angle) {
+	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation roll(AbsoluteAngle angle) {
 		return Orientation{grem::roll(float{angle})};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation fromAngles(Angle pitchAngle, Angle yawAngle, Angle rollAngle) {
+	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation fromAngles(AbsoluteAngle pitchAngle, AbsoluteAngle yawAngle, AbsoluteAngle rollAngle) {
 		return Orientation{grem::convertAnglesToQuaternion(float{pitchAngle}, float{yawAngle}, float{rollAngle})};
 	}
 
@@ -4448,6 +4509,14 @@ GREM_ALWAYS_INLINE Orientation<N>& operator-=(Orientation<N>& a, Rotation<N> b) 
 	return Orientation3D{grem::normalize(quat{a} * quat{b})};
 }
 
+[[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL slerp(Orientation3D a, Orientation3D b, Coefficient alpha) {
+	return Orientation3D{grem::slerp(quat{a}, quat{b}, float{alpha})};
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL slerp(Orientation3D a, Orientation3D b, float alpha) {
+	return Orientation3D{grem::slerp(quat{a}, quat{b}, alpha)};
+}
+
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL mix(Orientation2D a, Orientation2D b, Coefficient alpha) {
 	return Orientation2D{grem::mix(float{a}, float{b}, float{alpha}) * Orientation2D::UNIT};
 }
@@ -4457,11 +4526,11 @@ GREM_ALWAYS_INLINE Orientation<N>& operator-=(Orientation<N>& a, Rotation<N> b) 
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL mix(Orientation3D a, Orientation3D b, Coefficient alpha) {
-	return Orientation3D{grem::mix(quat{a}, quat{b}, float{alpha})};
+	return slerp(a, b, alpha);
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL mix(Orientation3D a, Orientation3D b, float alpha) {
-	return Orientation3D{grem::mix(quat{a}, quat{b}, alpha)};
+	return slerp(a, b, alpha);
 }
 
 template <size_t N, typename UnitT>
@@ -4484,6 +4553,10 @@ template <size_t N, typename UnitT>
 	return OrthonormalBasis2D::reinterpret(mat2{grem::rotate(float{r})});
 }
 
+[[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYawRotations r) {
+	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(quat{Orientation3D{} + PitchYawRollRotations{r, 0}})});
+}
+
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYawRollRotations r) {
 	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(quat{Orientation3D{} + r})});
 }
@@ -4499,6 +4572,10 @@ template <size_t N>
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis2D rotate(Roll angle) {
 	return OrthonormalBasis2D::reinterpret(mat2{grem::rotate(float{angle})});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYaw angles) {
+	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(vec3{vec2{angles}, 0.0f})});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYawRoll angles) {
@@ -4526,12 +4603,83 @@ template <size_t N, typename UnitT>
 	}
 }
 
+[[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getAngle(Orientation2D orientation) {
+	return orientation;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getAngle(Orientation3D orientation) {
+	return grem::getAngle(quat{orientation});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE Direction3D getAxis(Orientation3D orientation) {
+	return Direction3D::reinterpret(grem::getAxis(quat{orientation}));
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getPitch(Orientation3D orientation) {
+	return grem::getPitch(quat{orientation});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getYaw(Orientation3D orientation) {
+	return grem::getYaw(quat{orientation});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getRoll(Orientation2D orientation) {
+	return orientation;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getRoll(Orientation3D orientation) {
+	return grem::getRoll(quat{orientation});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE PitchYawRoll getPitchYawRoll(Orientation3D orientation) {
+	return {getPitch(orientation), getYaw(orientation), getRoll(orientation)};
+}
+
 [[nodiscard]] GREM_ALWAYS_INLINE Direction2D convertAnglesToForwardDirection(Roll angles) {
 	return Direction2D::reinterpret(grem::convertAnglesToForwardDirection(float{angles}));
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Direction3D convertAnglesToForwardDirection(PitchYaw angles) {
 	return Direction3D::reinterpret(grem::convertAnglesToForwardDirection(vec2{angles}));
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE Direction3D convertAnglesToForwardDirection(PitchYawRoll angles) {
+	return Direction3D::reinterpret(grem::convertAnglesToForwardDirection(vec3{angles}));
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE Roll convertForwardDirectionToAngles(Direction2D forward) {
+	return Roll::reinterpret(grem::convertForwardDirectionToAngles(vec2{forward}));
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE PitchYaw convertForwardDirectionToAngles(Direction3D forward) {
+	return PitchYaw::reinterpret(grem::convertForwardDirectionToAngles(vec3{forward}));
+}
+
+/**
+ * Get the smallest signed angle between two absolute angles.
+ *
+ * \param a first angle.
+ * \param b second angle.
+ *
+ * \return the smallest signed angle from angle a to b, in the range [-pi, pi].
+ */
+[[nodiscard]] inline Angle getAngleDifference(AbsoluteAngle a, AbsoluteAngle b) {
+	return wrap((b - a) + PI, 2.0f * PI) - PI;
+}
+
+/**
+ * Get the smallest signed angle around an axis between two relative vectors.
+ *
+ * \param axis axis to get the angle around.
+ * \param a first vector.
+ * \param b second vector.
+ *
+ * \return the smallest signed angle around the given axis from the direction of
+ *         a to the direction of b.
+ */
+template <typename UnitT>
+[[nodiscard]] inline Angle getAngleDifferenceAroundAxis(Direction3D axis, Quantity<3, UnitT> a, Quantity<3, UnitT> b) requires(!UnitT::MagnitudeType::IS_ABSOLUTE) {
+	return atan2(dot(cross(a, b), axis), dot(a, b));
 }
 
 /**
@@ -4586,21 +4734,6 @@ inline constexpr Direction<N> Z_AXIS;
 template <>
 inline constexpr Direction<3> Z_AXIS<3> = Direction<3>::reinterpret(vec3{0.0f, 0.0f, 1.0f});
 inline constexpr Direction3D Z_AXIS_3D = Z_AXIS<3>; ///< The Z axis in 3-dimensional space.
-
-/**
- * Get the smallest signed angle around an axis between two relative vectors.
- *
- * \param axis axis to get the angle around.
- * \param a first vector.
- * \param b second vector.
- *
- * \return the smallest signed angle around the given axis between the
- *         directions of a and b.
- */
-template <typename UnitT>
-[[nodiscard]] inline Angle getAngleDifferenceAroundAxis(Direction3D axis, Quantity<3, UnitT> a, Quantity<3, UnitT> b) requires(!UnitT::MagnitudeType::IS_ABSOLUTE) {
-	return atan2(dot(cross(a, b), axis), dot(a, b));
-}
 
 /**
  * %Relative distance/length offset quantity.

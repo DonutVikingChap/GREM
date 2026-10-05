@@ -308,6 +308,10 @@ public:
 	/** Default vertex shader for drawing skyboxes. */
 	using DefaultSky3DVertexShader = VertexShader<Sky3D::Mesh, Sky3D::VertexShaderConstants, Sky3D::VertexShaderOutputs, Camera3D::ParameterBuffer>;
 
+	/** Default fragment shader for drawing skyboxes without fog. */
+	using UnlitSky3DFragmentShader =
+		FragmentShader<Sky3D::Mesh, Sky3D::VertexShaderOutputs, Sky3D::FragmentShaderConstants, Sky3D::FragmentShaderOutputs, Camera3D::ParameterBuffer, Sky3D::ParameterBuffer>;
+
 	/** Default fragment shader for drawing skyboxes using PBR. */
 	using PBRSky3DFragmentShader =
 		FragmentShader<Sky3D::Mesh, Sky3D::VertexShaderOutputs, Sky3D::FragmentShaderConstants, Sky3D::FragmentShaderOutputs, Camera3D::ParameterBuffer, EnvironmentBuffers>;
@@ -415,6 +419,162 @@ public:
 			Pair<BufferLayoutReference, SharedPointer<void>>{ExtraBuffers::LAYOUT_REFERENCE, extraBuffers.lock()}...,
 		};
 		drawFrameImplementation(renderPass, instanceBatches, camera, extraBufferHandles, {.unordered = true});
+	}
+
+	/**
+	 * Push the draw commands of a frame of 3D instance batches and a 3D sky to
+	 * a render pass, without any environment buffers provided.
+	 *
+	 * \param renderPass render pass to push the draw commands to.
+	 * \param instanceBatches read-only views over the instance batches to draw.
+	 * \param camera perspective to render the instances from.
+	 * \param sky sky of the environment.
+	 * \param extraBuffers extra buffers required by the shaders used in the
+	 *        batch.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning All extra buffers required by the shaders used in the batches
+	 *          must be provided through the parameter pack.
+	 * \warning This function cannot be used with instance batches that contain
+	 *          any instances that use PBR shaders.
+	 */
+	template <typename... ExtraBuffers>
+	void drawUnlitFrameWithSky(RenderPass& renderPass, StridedSpan<const Instances3DView> instanceBatches, const Camera3D& camera, Sky3DView sky,
+		const ExtraBuffers&... extraBuffers) {
+		GREM_ASSERT(sky.sky);
+		sky.sky->flush(*this);
+		Array<Pair<BufferLayoutReference, SharedPointer<void>>, 1 + sizeof...(ExtraBuffers)> extraBufferHandles{
+			Pair<BufferLayoutReference, SharedPointer<void>>{Sky3D::ParameterBuffer::LAYOUT_REFERENCE, sky.sky->parameterBuffer.lock()},
+			Pair<BufferLayoutReference, SharedPointer<void>>{ExtraBuffers::LAYOUT_REFERENCE, extraBuffers.lock()}...,
+		};
+		drawFrameImplementation(renderPass, instanceBatches, camera, extraBufferHandles,
+			{
+				.skyShaderPipelineOverrideHandle = std::move(sky.shaderPipelineOverrideHandle),
+				.drawSky = true,
+			});
+	}
+
+	/**
+	 * Push the draw commands of a frame of 3D instance batches and a 3D sky to
+	 * a render pass, without any environment buffers provided, and without
+	 * sorting alpha-blended instances by their distance to the camera.
+	 *
+	 * \param renderPass render pass to push the draw commands to.
+	 * \param instanceBatches read-only views over the instance batches to draw.
+	 * \param camera perspective to render the instances from.
+	 * \param sky sky of the environment.
+	 * \param extraBuffers extra buffers required by the shaders used in the
+	 *        batch.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning All extra buffers required by the shaders used in the batches
+	 *          must be provided through the parameter pack.
+	 * \warning This function cannot be used with instance batches that contain
+	 *          any instances that use PBR shaders.
+	 */
+	template <typename... ExtraBuffers>
+	void drawUnlitUnorderedFrameWithSky(RenderPass& renderPass, StridedSpan<const Instances3DView> instanceBatches, const Camera3D& camera, Sky3DView sky,
+		const ExtraBuffers&... extraBuffers) {
+		GREM_ASSERT(sky.sky);
+		sky.sky->flush(*this);
+		Array<Pair<BufferLayoutReference, SharedPointer<void>>, 1 + sizeof...(ExtraBuffers)> extraBufferHandles{
+			Pair<BufferLayoutReference, SharedPointer<void>>{Sky3D::ParameterBuffer::LAYOUT_REFERENCE, sky.sky->parameterBuffer.lock()},
+			Pair<BufferLayoutReference, SharedPointer<void>>{ExtraBuffers::LAYOUT_REFERENCE, extraBuffers.lock()}...,
+		};
+		drawFrameImplementation(renderPass, instanceBatches, camera, extraBufferHandles,
+			{
+				.skyShaderPipelineOverrideHandle = std::move(sky.shaderPipelineOverrideHandle),
+				.unordered = true,
+				.drawSky = true,
+			});
+	}
+
+	/**
+	 * Push the draw commands of a frame of 3D instance batches and a 3D sky to
+	 * a render pass, without any environment buffers provided, and without
+	 * tonemapping when drawing the sky.
+	 *
+	 * \param renderPass render pass to push the draw commands to.
+	 * \param instanceBatches read-only views over the instance batches to draw.
+	 * \param camera perspective to render the instances from.
+	 * \param sky sky of the environment.
+	 * \param extraBuffers extra buffers required by the shaders used in the
+	 *        batch.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning All extra buffers required by the shaders used in the batches
+	 *          must be provided through the parameter pack.
+	 * \warning This function cannot be used with instance batches that contain
+	 *          any instances that use PBR shaders.
+	 */
+	template <typename... ExtraBuffers>
+	void drawHDRUnlitFrameWithSky(RenderPass& renderPass, StridedSpan<const Instances3DView> instanceBatches, const Camera3D& camera, Sky3DView sky,
+		const ExtraBuffers&... extraBuffers) {
+		GREM_ASSERT(sky.sky);
+		sky.sky->flush(*this);
+		Array<Pair<BufferLayoutReference, SharedPointer<void>>, 1 + sizeof...(ExtraBuffers)> extraBufferHandles{
+			Pair<BufferLayoutReference, SharedPointer<void>>{Sky3D::ParameterBuffer::LAYOUT_REFERENCE, sky.sky->parameterBuffer.lock()},
+			Pair<BufferLayoutReference, SharedPointer<void>>{ExtraBuffers::LAYOUT_REFERENCE, extraBuffers.lock()}...,
+		};
+		drawFrameImplementation(renderPass, instanceBatches, camera, extraBufferHandles,
+			{
+				.skyShaderPipelineOverrideHandle = std::move(sky.shaderPipelineOverrideHandle),
+				.hdr = true,
+				.drawSky = true,
+			});
+	}
+
+	/**
+	 * Push the draw commands of a frame of 3D instance batches and a 3D sky to
+	 * a render pass, without any environment buffers provided, and without
+	 * sorting alpha-blended instances by their distance to the camera, and
+	 * without tonemapping when drawing the sky.
+	 *
+	 * \param renderPass render pass to push the draw commands to.
+	 * \param instanceBatches read-only views over the instance batches to draw.
+	 * \param camera perspective to render the instances from.
+	 * \param sky sky of the environment.
+	 * \param extraBuffers extra buffers required by the shaders used in the
+	 *        batch.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 *
+	 * \warning All extra buffers required by the shaders used in the batches
+	 *          must be provided through the parameter pack.
+	 * \warning This function cannot be used with instance batches that contain
+	 *          any instances that use PBR shaders.
+	 */
+	template <typename... ExtraBuffers>
+	void drawHDRUnlitUnorderedFrameWithSky(RenderPass& renderPass, StridedSpan<const Instances3DView> instanceBatches, const Camera3D& camera, Sky3DView sky,
+		const ExtraBuffers&... extraBuffers) {
+		GREM_ASSERT(sky.sky);
+		sky.sky->flush(*this);
+		Array<Pair<BufferLayoutReference, SharedPointer<void>>, 1 + sizeof...(ExtraBuffers)> extraBufferHandles{
+			Pair<BufferLayoutReference, SharedPointer<void>>{Sky3D::ParameterBuffer::LAYOUT_REFERENCE, sky.sky->parameterBuffer.lock()},
+			Pair<BufferLayoutReference, SharedPointer<void>>{ExtraBuffers::LAYOUT_REFERENCE, extraBuffers.lock()}...,
+		};
+		drawFrameImplementation(renderPass, instanceBatches, camera, extraBufferHandles,
+			{
+				.skyShaderPipelineOverrideHandle = std::move(sky.shaderPipelineOverrideHandle),
+				.hdr = true,
+				.unordered = true,
+				.drawSky = true,
+			});
 	}
 
 	/**
@@ -1214,6 +1374,59 @@ public:
 	[[nodiscard]] GREM_API(graphics_3d) const DefaultSky3DVertexShader& getDefaultSky3DVertexShader();
 
 	/**
+	 * Get the default unlit skybox fragment shader.
+	 *
+	 * \return a read-only reference to the unlit skybox fragment shader.
+	 *
+	 * \throws graphics::Error on failure to create the shader if it doesn't
+	 *         already exist.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] GREM_API(graphics_3d) const UnlitSky3DFragmentShader& getUnlitSky3DFragmentShader();
+
+	/**
+	 * Get the default unlit skybox shader pipeline.
+	 *
+	 * \return a reference to the unlit skybox shader pipeline.
+	 *
+	 * \throws graphics::Error on failure to create the pipeline if it doesn't
+	 *         already exist.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] const Sky3D::ShaderPipeline& getUnlitSky3DShaderPipeline() {
+		if (!unlitSky3DShaderPipeline) {
+			[[unlikely]];
+			unlitSky3DShaderPipeline.emplace(device, getDefaultSky3DVertexShader(), Sky3D::DEFAULT_VERTEX_SHADER_CONSTANTS, getUnlitSky3DFragmentShader(),
+				Sky3D::FragmentShaderConstants{.SKY_HDR = false}, Sky3D::DEFAULT_SHADER_PIPELINE_OPTIONS);
+		}
+		return *unlitSky3DShaderPipeline;
+	}
+
+	/**
+	 * Get the default non-tonemapped unlit skybox shader pipeline.
+	 *
+	 * \return a reference to the non-tonemapped unlit skybox shader pipeline.
+	 *
+	 * \throws graphics::Error on failure to create the pipeline if it doesn't
+	 *         already exist.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] const Sky3D::ShaderPipeline& getHDRUnlitSky3DShaderPipeline() {
+		if (!hdrUnlitSky3DShaderPipeline) {
+			[[unlikely]];
+			hdrUnlitSky3DShaderPipeline.emplace(device, getDefaultSky3DVertexShader(), Sky3D::DEFAULT_VERTEX_SHADER_CONSTANTS, getUnlitSky3DFragmentShader(),
+				Sky3D::FragmentShaderConstants{.SKY_HDR = true}, Sky3D::DEFAULT_SHADER_PIPELINE_OPTIONS);
+		}
+		return *hdrUnlitSky3DShaderPipeline;
+	}
+
+	/**
 	 * Get the default PBR skybox fragment shader.
 	 *
 	 * \return a read-only reference to the PBR skybox fragment shader.
@@ -1698,6 +1911,9 @@ private:
 	Optional<ShadowMapModel3DShaderPipelineSet> shadowMapModel3DShaderPipelineSet{};
 	Optional<DistanceModel3DShaderPipelineSet> distanceModel3DShaderPipelineSet{};
 	Optional<DefaultSky3DVertexShader> defaultSky3DVertexShader{};
+	Optional<UnlitSky3DFragmentShader> unlitSky3DFragmentShader{};
+	Optional<Sky3D::ShaderPipeline> unlitSky3DShaderPipeline{};
+	Optional<Sky3D::ShaderPipeline> hdrUnlitSky3DShaderPipeline{};
 	Optional<PBRSky3DFragmentShader> pbrSky3DFragmentShader{};
 	Optional<Sky3D::ShaderPipeline> pbrSky3DShaderPipeline{};
 	Optional<Sky3D::ShaderPipeline> hdrPBRSky3DShaderPipeline{};
@@ -1714,7 +1930,6 @@ private:
 	DrawCommandBuffer<Model2D::Mesh> transparentDrawCommandBuffer2D{device};
 	Buffer<TransparentDrawCommandReference> combined2DAnd3DTransparentDrawCommands{};
 	Optional<DrawCommandBuffer<Cubemap3D::Mesh>> skyDrawCommandBuffer{};
-	Optional<DrawCommandBuffer<Cubemap3D::Mesh>> hdrSkyDrawCommandBuffer{};
 	PBRParameterBuffer pbrParameterBuffer{device};
 	EnvironmentBuffers environmentBuffers{device, nullptr};
 	ScreenBuffers screenBuffers{device};

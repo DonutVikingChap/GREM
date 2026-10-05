@@ -113,6 +113,11 @@ struct TouchEventBase : InputEventBase {
 	float normalizedFingerPressure;      ///< Amount of pressure applied, normalized to the range [0, 1].
 };
 
+/** Pinch Event base. */
+struct PinchEventBase : InputEventBase {
+	float scale; ///< Scale change since the last PinchUpdateEvent. Scale <1 is "zoom out", >1 is "zoom in".
+};
+
 /** Keyboard keymap Event base. */
 struct KeymapEventBase : EventBase {};
 
@@ -261,14 +266,23 @@ struct ControllerButtonPressedEvent : ControllerButtonEventBase {};
 /** Controller button was released. */
 struct ControllerButtonReleasedEvent : ControllerButtonEventBase {};
 
-/** Touch was moved. */
+/** Finger touch was moved. */
 struct TouchMovedEvent : TouchEventBase {};
 
-/** Touch was pressed. */
+/** Finger touch was pressed. */
 struct TouchPressedEvent : TouchEventBase {};
 
-/** Touch was released. */
+/** Finger touch was released. */
 struct TouchReleasedEvent : TouchEventBase {};
+
+/** Finger pinch started. */
+struct PinchBeginEvent : PinchEventBase {};
+
+/** Finger pinch was updated. */
+struct PinchUpdateEvent : PinchEventBase {};
+
+/** Finger pinch ended. */
+struct PinchEndEvent : PinchEventBase {};
 
 /** Keyboard keymap was changed. */
 struct KeymapChangedEvent : KeymapEventBase {};
@@ -345,6 +359,9 @@ struct Event
 		  TouchMovedEvent,                 //
 		  TouchPressedEvent,               //
 		  TouchReleasedEvent,              //
+		  PinchBeginEvent,                 //
+		  PinchUpdateEvent,                //
+		  PinchEndEvent,                   //
 		  KeymapChangedEvent,              //
 		  ClipboardUpdatedEvent,           //
 		  DroppedFileEvent,                //

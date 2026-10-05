@@ -47,7 +47,7 @@ template <size_t N>
 		return {};
 	}
 
-	GREM_MATCH(static_cast<const Shape<N>&>(colliderB.shape)) {
+	GREM_MATCH(colliderB.shape) {
 		GREM_CASE(const LocallyTransformedShape<N>& locallyTransformedShape) {
 			const LocalTransformation<N> localTransformation =
 				translateRotateScale(locallyTransformedShape.localOffset, locallyTransformedShape.localOrientation, locallyTransformedShape.localScale);
@@ -84,7 +84,7 @@ template <size_t N>
 		return {RayMiss{}, {}};
 	}
 
-	if (const CompoundColliderShape<N>* const compoundColliderShape = static_cast<const Shape<N>&>(colliderB.shape).template get_if<CompoundColliderShape<N>>()) {
+	if (const CompoundColliderShape<N>* const compoundColliderShape = colliderB.shape.template get_if<CompoundColliderShape<N>>()) {
 		RaycastResult<N> raycastResult{};
 		filterTestResult = {};
 		for (const SubCollider<N>& subCollider : compoundColliderShape->getSubColliders()) {
@@ -138,7 +138,7 @@ template <size_t N>
 	}
 
 	if constexpr (N == 3) {
-		if (static_cast<const Shape<N>&>(colliderB.shape).template is<InfinitePlaneShape3D>()) {
+		if (colliderB.shape.template is<InfinitePlaneShape3D>()) {
 			const InverseTransformation3D inverseTransformationA = inverse(transformationA);
 			const InverseTransformation3D inverseTransformationB = inverse(transformationB);
 			const Plane3D plane{.point = transformationB.getOrigin(), .normal = transformationB.getDirection(Y_AXIS<N>)};
@@ -159,7 +159,7 @@ template <size_t N>
 			return {ShapecastHit3D{.localOffsets = localOffsets, .normal = normal, .distance = distance}, filterTestResult};
 		}
 	}
-	GREM_MATCH(static_cast<const Shape<N>&>(colliderB.shape)) {
+	GREM_MATCH(colliderB.shape) {
 		GREM_CASE(const InfiniteHalfSpaceShape<N>& infiniteHalfSpaceShape) {
 			const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 			const InverseTransformation<N> inverseTransformationB = inverse(transformationB);
@@ -296,8 +296,8 @@ template <size_t N>
 
 template <>
 CollisionAlgorithm2D CollisionAlgorithm2D::chooseImplementation(ShapeView2D shapeA, ShapeView2D shapeB) {
-	return match(static_cast<const Shape2D&>(shapeA))([&shapeB]<typename ShapeA>(const ShapeA&) -> CollisionAlgorithm2D { //
-		return match(static_cast<const Shape2D&>(shapeB))([]<typename ShapeB>(const ShapeB&) -> CollisionAlgorithm2D {    //
+	return match(shapeA)([&shapeB]<typename ShapeA>(const ShapeA&) -> CollisionAlgorithm2D { //
+		return match(shapeB)([]<typename ShapeB>(const ShapeB&) -> CollisionAlgorithm2D {    //
 			return CollisionAlgorithm2D::create<typename choose_collision_detector<2, ShapeA, ShapeB>::type>();
 		});
 	});
@@ -305,8 +305,8 @@ CollisionAlgorithm2D CollisionAlgorithm2D::chooseImplementation(ShapeView2D shap
 
 template <>
 CollisionAlgorithm3D CollisionAlgorithm3D::chooseImplementation(ShapeView3D shapeA, ShapeView3D shapeB) {
-	return match(static_cast<const Shape3D&>(shapeA))([&shapeB]<typename ShapeA>(const ShapeA&) -> CollisionAlgorithm3D { //
-		return match(static_cast<const Shape3D&>(shapeB))([]<typename ShapeB>(const ShapeB&) -> CollisionAlgorithm3D {    //
+	return match(shapeA)([&shapeB]<typename ShapeA>(const ShapeA&) -> CollisionAlgorithm3D { //
+		return match(shapeB)([]<typename ShapeB>(const ShapeB&) -> CollisionAlgorithm3D {    //
 			return CollisionAlgorithm3D::create<typename choose_collision_detector<3, ShapeA, ShapeB>::type>();
 		});
 	});

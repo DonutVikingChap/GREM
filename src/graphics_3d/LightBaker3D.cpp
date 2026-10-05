@@ -153,13 +153,17 @@ void LightBaker3D::bakeSkybox(Sky3D& sky, const resource::ImageView& newSkyImage
 	switch (newSkyImage.getType()) {
 		case resource::ImageType::EMPTY: break;
 		case resource::ImageType::IMAGE_2D: {
-			const Texture equirectangularMap{device, newSkyImage, newSkyImageUploadOptions,
+			const Texture equirectangularMap{
+				device,
+				newSkyImage,
+				newSkyImageUploadOptions,
 				TextureSamplerOptions{
 					.mipmapMode = TextureMipmapMode::NONE,
 					.horizontalWrappingMode = TextureWrappingMode::CLAMP_TO_EDGE,
 					.verticalWrappingMode = TextureWrappingMode::CLAMP_TO_EDGE,
 					.maxAnisotropy = 1.0f,
-				}};
+				},
+			};
 			newSkyTexture = generateCubemapFromEquirectangularMap(equirectangularMap.getInternalFormat(),
 				(newSkyOptions.radianceMapResolution == 0) ? equirectangularMap.getHeight() : newSkyOptions.radianceMapResolution, equirectangularMap,
 				TextureSamplerOptions{
@@ -170,12 +174,16 @@ void LightBaker3D::bakeSkybox(Sky3D& sky, const resource::ImageView& newSkyImage
 			break;
 		}
 		case resource::ImageType::IMAGE_CUBE:
-			newSkyTexture = Texture{device, newSkyImage, newSkyImageUploadOptions,
+			newSkyTexture = Texture{
+				device,
+				newSkyImage,
+				newSkyImageUploadOptions,
 				TextureSamplerOptions{
 					.mipmapMode = TextureMipmapMode::LINEAR,
 					.horizontalWrappingMode = TextureWrappingMode::CLAMP_TO_EDGE,
 					.verticalWrappingMode = TextureWrappingMode::CLAMP_TO_EDGE,
-				}};
+				},
+			};
 			break;
 		default: throw graphics::Error{"Invalid sky map image type."};
 	}
@@ -241,11 +249,17 @@ void LightBaker3D::bakeLightProbeIrradianceMap(LightProbeVolumes3D& lightProbeVo
 		static_cast<uint32_t>(volume.lightProbeVolumeIrradianceAtlasOffset.z),
 	};
 	const u32vec2 irradianceAtlasCoordinates = u32vec2{irradianceAtlasOffset} + u32vec2{lightProbeGridIndices.x, lightProbeGridIndices.z} * volumeOptions.irradianceMapResolution;
-	RenderPass renderPass{device, lightProbeVolumes.irradianceAtlasTexture.getSubresource({.layer = irradianceAtlasOffset.z + lightProbeGridIndices.y}), RetainValues{},
-		Viewport{.region{
-			.offset = Offset2D::from(i32vec2{irradianceAtlasCoordinates}),
-			.size{volumeOptions.irradianceMapResolution},
-		}}};
+	RenderPass renderPass{
+		device,
+		lightProbeVolumes.irradianceAtlasTexture.getSubresource({.layer = irradianceAtlasOffset.z + lightProbeGridIndices.y}),
+		RetainValues{},
+		Viewport{
+			.region{
+				.offset = Offset2D::from(i32vec2{irradianceAtlasCoordinates}),
+				.size{volumeOptions.irradianceMapResolution},
+			},
+		},
+	};
 	lightProbeBaker.lightProbeAtlasIrradianceFragmentParameterBuffer.upload(LightProbeAtlasIrradianceFragmentParameters{
 		.radianceCubemapTexture = lightProbeBaker.colorBuffer,
 		.irradianceMapPadding = 1.0f / static_cast<float>(volumeOptions.irradianceMapResolution),
@@ -288,10 +302,12 @@ void LightBaker3D::bakeLightProbeDistanceMap(LightProbeVolumes3D& lightProbeVolu
 		static_cast<uint32_t>(volume.lightProbeVolumeDistanceAtlasOffset.z),
 	};
 	const u32vec2 distanceAtlasCoordinates = u32vec2{distanceAtlasOffset} + u32vec2{lightProbeGridIndices.x, lightProbeGridIndices.z} * volumeOptions.distanceMapResolution;
-	const Viewport viewport{.region{
-		.offset = Offset2D::from(i32vec2{distanceAtlasCoordinates}),
-		.size{volumeOptions.distanceMapResolution},
-	}};
+	const Viewport viewport{
+		.region{
+			.offset = Offset2D::from(i32vec2{distanceAtlasCoordinates}),
+			.size{volumeOptions.distanceMapResolution},
+		},
+	};
 	RenderPass renderPass{device, lightProbeVolumes.distanceAtlasTexture.getSubresource({.layer = distanceAtlasOffset.z + lightProbeGridIndices.y}), RetainValues{}, viewport};
 	lightProbeBaker.lightProbeAtlasDistanceFragmentParameterBuffer.upload(LightProbeAtlasDistanceFragmentParameters{
 		.distanceCubemapTexture = lightProbeBaker.distanceBuffer,

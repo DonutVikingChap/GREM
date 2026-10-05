@@ -2,7 +2,7 @@ message(STATUS "Configuring volk...")
 
 FetchContent_Declare(volk
 	GIT_REPOSITORY https://github.com/zeux/volk
-	GIT_TAG 776893306c5d3b22b6185b5d4a258b81d94572bf # vulkan-sdk-1.4.357.0
+	GIT_TAG 54fc0d7a72887cbfc5b030d26897b2b40ac53fb8 # vulkan-sdk-1.4.363.0
 	EXCLUDE_FROM_ALL
 	SYSTEM)
 
@@ -14,9 +14,9 @@ file(READ "${volk_SOURCE_DIR}/LICENSE.md" GREM_VOLK_LICENSE_FILE_CONTENTS)
 string(REPLACE "\r\n" "\n" GREM_VOLK_LICENSE_FILE_CONTENTS "${GREM_VOLK_LICENSE_FILE_CONTENTS}")
 string(REGEX MATCH "Copyright \\(c\\) 2018-.... Arseny Kapoulkine" GREM_VOLK_COPYRIGHT_FILE_CONTENTS "${GREM_VOLK_LICENSE_FILE_CONTENTS}")
 
-set(GREM_VOLK_TITLE "volk (vulkan-sdk-1.4.357.0)" PARENT_SCOPE)
+set(GREM_VOLK_TITLE "volk (vulkan-sdk-1.4.363.0)" PARENT_SCOPE)
 set(GREM_VOLK_USE "Used by GREM, and indirectly by Vulkan Memory Allocator as used by GREM." PARENT_SCOPE)
-set(GREM_VOLK_LINK "https://github.com/zeux/volk/tree/776893306c5d3b22b6185b5d4a258b81d94572bf" PARENT_SCOPE)
+set(GREM_VOLK_LINK "https://github.com/zeux/volk/tree/54fc0d7a72887cbfc5b030d26897b2b40ac53fb8" PARENT_SCOPE)
 set(GREM_VOLK_COPYRIGHT "${GREM_VOLK_COPYRIGHT_FILE_CONTENTS}" PARENT_SCOPE)
 set(GREM_VOLK_LICENSE "${GREM_VOLK_LICENSE_FILE_CONTENTS}" PARENT_SCOPE)
 

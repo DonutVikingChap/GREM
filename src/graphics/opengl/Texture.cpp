@@ -155,15 +155,14 @@ void copyImageFlippedVertically(byte* output, const resource::ImageView& image) 
 	return TextureImplementation::create(device, std::move(renderbufferObject), TextureType::RENDERBUFFER, internalFormat, size, 1, maxMultisampleCount, {});
 }
 
-void validateTextureShape(Device& device, TextureType type, Extent3D size, uint32_t mipLevelCount) {
+void validateTextureShape(TextureType type, Extent3D size, uint32_t mipLevelCount, const FeatureSupport& supportedFeatures) {
 	switch (type) {
 		case TextureType::EMPTY: return;
 		case TextureType::TEXTURE_2D:
 			if (size.depth != 1) {
 				throw graphics::Error{"Invalid 2D texture depth."};
 			}
-			if (const uint32_t max2DTextureResolution = device.getSupportedFeatures().max2DTextureResolution;
-				size.width > max2DTextureResolution || size.height > max2DTextureResolution) {
+			if (const uint32_t max2DTextureResolution = supportedFeatures.max2DTextureResolution; size.width > max2DTextureResolution || size.height > max2DTextureResolution) {
 				throw graphics::Error{"Maximum 2D texture resolution exceeded."};
 			}
 			break;
@@ -175,7 +174,7 @@ void validateTextureShape(Device& device, TextureType type, Extent3D size, uint3
 			if (size.depth != 6) {
 				throw graphics::Error{"Invalid cube texture depth."};
 			}
-			if (size.width > device.getSupportedFeatures().maxCubeTextureResolution) {
+			if (size.width > supportedFeatures.maxCubeTextureResolution) {
 				throw graphics::Error{"Maximum cube texture resolution exceeded."};
 			}
 			break;
@@ -186,10 +185,10 @@ void validateTextureShape(Device& device, TextureType type, Extent3D size, uint3
 			if (size.depth % 6 != 0) {
 				throw graphics::Error{"Invalid cube array texture depth."};
 			}
-			if (size.width > device.getSupportedFeatures().maxCubeTextureResolution) {
+			if (size.width > supportedFeatures.maxCubeTextureResolution) {
 				throw graphics::Error{"Maximum cube array texture resolution exceeded."};
 			}
-			if (size.depth > device.getSupportedFeatures().maxTextureLayerCount) {
+			if (size.depth > supportedFeatures.maxTextureLayerCount) {
 				throw graphics::Error{"Maximum cube array texture depth exceeded."};
 			}
 			break;
@@ -200,8 +199,7 @@ void validateTextureShape(Device& device, TextureType type, Extent3D size, uint3
 			if (mipLevelCount != 1) {
 				throw graphics::Error{"Invalid renderbuffer mip level count."};
 			}
-			if (const uint32_t max2DTextureResolution = device.getSupportedFeatures().max2DTextureResolution;
-				size.width > max2DTextureResolution || size.height > max2DTextureResolution) {
+			if (const uint32_t max2DTextureResolution = supportedFeatures.max2DTextureResolution; size.width > max2DTextureResolution || size.height > max2DTextureResolution) {
 				throw graphics::Error{"Maximum renderbuffer resolution exceeded."};
 			}
 			return;
@@ -367,7 +365,7 @@ void validateTextureShape(Device& device, TextureType type, Extent3D size, uint3
 	if (internalFormat == TextureFormat::UNKNOWN) {
 		throw graphics::Error{"Invalid internal texture format."};
 	}
-	validateTextureShape(device, type, size, mipLevelCount);
+	validateTextureShape(type, size, mipLevelCount, device.getSupportedFeatures());
 	if (type == TextureType::RENDERBUFFER) {
 		if (pixels) {
 			throw graphics::Error{"Cannot initialize renderbuffer texture to an image."};
@@ -494,7 +492,7 @@ Texture::Texture(Device& device, const resource::ImageView& image, const Texture
 		case resource::ImageFormat::KTX2_UASTC_RG_UINT_BLOCK: [[fallthrough]];
 		case resource::ImageFormat::KTX2_UASTC_RGB_UINT_BLOCK: [[fallthrough]];
 		case resource::ImageFormat::KTX2_UASTC_RGBA_UINT_BLOCK: {
-			validateTextureShape(device, type, image.getSize3D(), image.getMipLevelCount());
+			validateTextureShape(type, image.getSize3D(), image.getMipLevelCount(), device.getSupportedFeatures());
 
 			// Since there doesn't seem to be a 100% consistent way to make either OpenGL or Vulkan render framebuffer images upside-down to match the other's behavior,
 			// we flip OpenGL images vertically on upload to achieve consistent sampling behavior between the two backends.
@@ -693,8 +691,8 @@ void Texture::pasteTexture(const Texture& texture, Offset3D destinationOffset, R
 	GREM_ASSERT(destinationOffset.y + static_cast<int32_t>(sourceRegion.size.height) <= static_cast<int32_t>(implementation->size.height));
 	GREM_ASSERT(destinationOffset.z + static_cast<int32_t>(sourceRegion.size.depth) <= static_cast<int32_t>(implementation->size.depth));
 
-	detail::FramebufferObject readFramebufferObject = detail::createFramebufferObject();
-	detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
+	const detail::FramebufferObject readFramebufferObject = detail::createFramebufferObject();
+	const detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
 
 	const detail::ReadFramebufferBindingPreserver readFramebufferBindingPreserver{};
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebufferObject.get());
@@ -814,12 +812,12 @@ void Texture::fill(const ClearValues& values) {
 			textureObjectHandle = object.get();
 			break;
 		}
-		GREM_CASE(Window * window) {
+		GREM_CASE(Window * window) { // NOLINT(misc-const-correctness)
 			unreachable();
 		}
 	}
 
-	detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
+	const detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
 
 	const detail::DrawFramebufferBindingPreserver drawFramebufferBindingPreserver{};
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebufferObject.get());
@@ -879,12 +877,12 @@ void Texture::fill(TextureSubresource subresource, const ClearValues& values) {
 			textureObjectHandle = object.get();
 			break;
 		}
-		GREM_CASE(Window * window) {
+		GREM_CASE(Window * window) { // NOLINT(misc-const-correctness)
 			unreachable();
 		}
 	}
 
-	detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
+	const detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
 
 	const detail::DrawFramebufferBindingPreserver drawFramebufferBindingPreserver{};
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebufferObject.get());
@@ -996,7 +994,7 @@ resource::Image Texture::downloadImage(const TextureImageDownloadOptions& downlo
 	glPixelStorei(GL_PACK_SKIP_IMAGES, 0);
 #endif
 
-	detail::FramebufferObject readFramebufferObject = detail::createFramebufferObject();
+	const detail::FramebufferObject readFramebufferObject = detail::createFramebufferObject();
 
 	const detail::ReadFramebufferBindingPreserver readFramebufferBindingPreserver{};
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebufferObject.get());

@@ -1985,14 +1985,17 @@ template <typename Signature>
 using match_case_type_t = typename match_case_type<Signature>::type;
 
 template <typename... Ts>
-consteval Variant<Ts...> getVariantType(const Variant<Ts...>&);
+consteval Variant<Ts...> matchVariantType(const Variant<Ts...>&);
+
+template <typename T>
+consteval typename T::value_type matchVariantType(const T&);
 
 } // namespace detail
 } // namespace grem
 
 #define GREM_MATCH(...) switch (auto&& GREM_private_matchVariant = __VA_ARGS__; GREM_private_matchVariant.index())
 #define GREM_CASE(...) \
-	case grem::variant_index_v<grem::detail::match_case_type_t<void(__VA_ARGS__)>, decltype(grem::detail::getVariantType(GREM_private_matchVariant))>: \
+	case grem::variant_index_v<grem::detail::match_case_type_t<void(__VA_ARGS__)>, decltype(grem::detail::matchVariantType(GREM_private_matchVariant))>: \
 		if ([[maybe_unused]] __VA_ARGS__ = GREM_private_matchVariant.template as<grem::detail::match_case_type_t<void(__VA_ARGS__)>>(); true)
 #define GREM_CASE_DEFAULT(...) \
 	default: \

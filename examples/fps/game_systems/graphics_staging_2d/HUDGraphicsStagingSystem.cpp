@@ -51,15 +51,15 @@ public:
 		const auto begin = (settings.chat.displayAll)
 		                       ? receivedChatMessages.messages.begin()
 		                       : lowerBound(receivedChatMessages.messages, currentTime - settings.chat.displayDuration, ClientReceivedChatMessages::Message::Compare{});
-		vec2 position{
-			static_cast<float>(viewRegion.offset.x) + 15.0f,
-			static_cast<float>(viewRegion.offset.y) + static_cast<float>(viewRegion.size.height / 4),
+		Offset2D position{
+			viewRegion.offset.x + 15,
+			viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height / 4),
 		};
 		for (auto it = receivedChatMessages.messages.end(); it != begin;) {
 			--it;
 			const float nextLineOffset =
 				graphics.put2DText(position, Color::WHITE, formatString("{}: {}", it->senderName, it->message), 2.0f, gfx::TextAlign::LAST_LINE_START_BASE);
-			position.y += 8.0f - nextLineOffset;
+			position.y += 8 - static_cast<int32_t>(nextLineOffset);
 		}
 
 		if (worldView.predictionInterpolation) {
@@ -79,10 +79,10 @@ public:
 						const Timestamp timestamp = worldView.getEntityDisplayTimestamp(entity->entityIDs.second.getFlags());
 						const Duration respawnTimeRemaining =
 							getTimeBetween(timestamp, entity->getNewAttribute<&PlayerRespawnCountdown::respawnOnTickIndex>().getNext(), worldView.tickInterval);
-						const vec2 messagePosition = viewRegion.offset + viewRegion.size / 2;
+						const Offset2D messagePosition = viewRegion.offset + viewRegion.size / 2;
 						graphics.put2DText(messagePosition, Color::WHITE, "YOU ARE DEAD", 4.0f, gfx::TextAlign::CENTER);
-						graphics.put2DText(messagePosition - vec2{0.0f, 40.0f}, Color::LIGHT_GRAY, "(not big soup rice)", 2.0f, gfx::TextAlign::CENTER);
-						graphics.put2DText(messagePosition - vec2{0.0f, 40.0f + 26.0f * 2.0f}, Color::LIGHT_GRAY,
+						graphics.put2DText(messagePosition - Offset2D{0, 40}, Color::LIGHT_GRAY, "(not big soup rice)", 2.0f, gfx::TextAlign::CENTER);
+						graphics.put2DText(messagePosition - Offset2D{0, 40 + 26 * 2}, Color::LIGHT_GRAY,
 							formatSmallString<32>("   Respawning in {} seconds...", ceil<Seconds>(respawnTimeRemaining).count()), 2.0f, gfx::TextAlign::CENTER);
 						return true;
 					}

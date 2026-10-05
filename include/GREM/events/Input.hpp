@@ -169,7 +169,10 @@ namespace grem::events {
 	X(TOUCH_FINGER_MOTION_UP,               "touch_finger_motion_up",               "Touch Finger Up"       ) /**< Finger up movement. */ \
 	X(TOUCH_FINGER_MOTION_DOWN,             "touch_finger_motion_down",             "Touch Finger Down"     ) /**< Finger down movement. */ \
 	X(TOUCH_FINGER_MOTION_LEFT,             "touch_finger_motion_left",             "Touch Finger Left"     ) /**< Finger left movement. */ \
-	X(TOUCH_FINGER_MOTION_RIGHT,            "touch_finger_motion_right",            "Touch Finger Right"    ) /**< Finger right movement. */
+	X(TOUCH_FINGER_MOTION_RIGHT,            "touch_finger_motion_right",            "Touch Finger Right"    ) /**< Finger right movement. */ \
+	X(PINCH_FINGERS,                        "pinch_fingers",                        "Pinch Fingers"         ) /**< Finger pinch. */ \
+	X(PINCH_FINGERS_MOTION_TOGETHER,        "pinch_fingers_motion_together",        "Pinch Fingers Together") /**< Finger pinch "zoom out" movement. */ \
+	X(PINCH_FINGERS_MOTION_APART,           "pinch_fingers_motion_apart",           "Pinch Fingers Apart"   ) /**< Finger pinch "zoom in" movement. */
 // clang-format on
 
 /**

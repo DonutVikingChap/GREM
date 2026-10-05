@@ -38,63 +38,73 @@ public:
 		if (newRequiredBufferSizeBytes > capacity()) {
 			Buffer newBuffer{buffer.deviceLocalBuffer.get_deleter().allocator, max(newRequiredBufferSizeBytes, capacity() * 2), bufferUsage};
 			if (oldBufferRangeBegin < oldBufferRangeEnd) {
-				const Array bufferMemoryBarriers{VkBufferMemoryBarrier{
-					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-					.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = buffer.deviceLocalBuffer.get(),
-					.offset = static_cast<VkDeviceSize>(oldBufferRangeBegin),
-					.size = static_cast<VkDeviceSize>(oldBufferRangeEnd - oldBufferRangeBegin),
-				}};
+				const Array bufferMemoryBarriers{
+					VkBufferMemoryBarrier{
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+						.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = buffer.deviceLocalBuffer.get(),
+						.offset = static_cast<VkDeviceSize>(oldBufferRangeBegin),
+						.size = static_cast<VkDeviceSize>(oldBufferRangeEnd - oldBufferRangeBegin),
+					},
+				};
 				vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr,
 					static_cast<uint32_t>(bufferMemoryBarriers.size()), bufferMemoryBarriers.data(), 0, nullptr);
-				const Array copyRegions{VkBufferCopy{
-					.srcOffset = static_cast<VkDeviceSize>(oldBufferRangeBegin),
-					.dstOffset = static_cast<VkDeviceSize>(oldBufferRangeBegin),
-					.size = static_cast<VkDeviceSize>(oldBufferRangeEnd - oldBufferRangeBegin),
-				}};
+				const Array copyRegions{
+					VkBufferCopy{
+						.srcOffset = static_cast<VkDeviceSize>(oldBufferRangeBegin),
+						.dstOffset = static_cast<VkDeviceSize>(oldBufferRangeBegin),
+						.size = static_cast<VkDeviceSize>(oldBufferRangeEnd - oldBufferRangeBegin),
+					},
+				};
 				vkCmdCopyBuffer(commandBuffer, buffer.deviceLocalBuffer.get(), newBuffer.deviceLocalBuffer.get(), static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 			}
 			commandBuffer = submitAndAwaitCommands();
 			buffer = std::move(newBuffer);
 			resizedBuffer = true;
 		} else {
-			const Array bufferMemoryBarriers{VkBufferMemoryBarrier{
-				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.buffer = buffer.deviceLocalBuffer.get(),
-				.offset = static_cast<VkDeviceSize>(byteOffset),
-				.size = static_cast<VkDeviceSize>(sizeBytes),
-			}};
+			const Array bufferMemoryBarriers{
+				VkBufferMemoryBarrier{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+					.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = buffer.deviceLocalBuffer.get(),
+					.offset = static_cast<VkDeviceSize>(byteOffset),
+					.size = static_cast<VkDeviceSize>(sizeBytes),
+				},
+			};
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr,
 				static_cast<uint32_t>(bufferMemoryBarriers.size()), bufferMemoryBarriers.data(), 0, nullptr);
 		}
 
-		const Array copyRegions{VkBufferCopy{
-			.srcOffset = 0,
-			.dstOffset = static_cast<VkDeviceSize>(byteOffset),
-			.size = static_cast<VkDeviceSize>(sizeBytes),
-		}};
+		const Array copyRegions{
+			VkBufferCopy{
+				.srcOffset = 0,
+				.dstOffset = static_cast<VkDeviceSize>(byteOffset),
+				.size = static_cast<VkDeviceSize>(sizeBytes),
+			},
+		};
 		vkCmdCopyBuffer(commandBuffer, stagingBuffer, buffer.deviceLocalBuffer.get(), static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 		if (destinationPipelineStages != VkPipelineStageFlags{}) {
-			const Array bufferMemoryBarriers{VkBufferMemoryBarrier{
-				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-				.dstAccessMask = destinationAccessMask,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.buffer = buffer.deviceLocalBuffer.get(),
-				.offset = static_cast<VkDeviceSize>(byteOffset),
-				.size = static_cast<VkDeviceSize>(sizeBytes),
-			}};
+			const Array bufferMemoryBarriers{
+				VkBufferMemoryBarrier{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+					.dstAccessMask = destinationAccessMask,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = buffer.deviceLocalBuffer.get(),
+					.offset = static_cast<VkDeviceSize>(byteOffset),
+					.size = static_cast<VkDeviceSize>(sizeBytes),
+				},
+			};
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, destinationPipelineStages, VkDependencyFlags{}, 0, nullptr,
 				static_cast<uint32_t>(bufferMemoryBarriers.size()), bufferMemoryBarriers.data(), 0, nullptr);
 		}

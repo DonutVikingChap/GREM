@@ -478,8 +478,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		const GLenum attachment = getFramebufferAttachment(internalFormat);
 		const GLbitfield mask = getFramebufferMask(internalFormat);
 
-		detail::FramebufferObject readFramebufferObject = detail::createFramebufferObject();
-		detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
+		const detail::FramebufferObject readFramebufferObject = detail::createFramebufferObject();
+		const detail::FramebufferObject drawFramebufferObject = detail::createFramebufferObject();
 
 		const detail::ReadFramebufferBindingPreserver readFramebufferBindingPreserver{};
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebufferObject.get());
@@ -492,7 +492,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 
 		GREM_MATCH(other.object) {
 			GREM_CASE(const detail::TextureObject& otherTextureObject) {
-				detail::TextureObject& textureObject = object.as<detail::TextureObject>();
+				const detail::TextureObject& textureObject = object.as<detail::TextureObject>();
 
 				const GLenum target = getTextureTarget(type);
 
@@ -551,7 +551,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 				break;
 			}
 			GREM_CASE(const detail::RenderbufferObject& otherRenderbufferObject) {
-				detail::RenderbufferObject& renderbufferObject = object.as<detail::RenderbufferObject>();
+				const detail::RenderbufferObject& renderbufferObject = object.as<detail::RenderbufferObject>();
 
 				const detail::RenderbufferBindingPreserver renderbufferBindingPreserver{};
 				glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(renderbufferObject.get()));
@@ -562,7 +562,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 					mask, GL_NEAREST);
 				break;
 			}
-			GREM_CASE(Window * window) {
+			GREM_CASE(Window * window) { // NOLINT(misc-const-correctness)
 				unreachable();
 			}
 		}
@@ -663,7 +663,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 				object = std::move(renderbufferObject);
 				break;
 			}
-			GREM_CASE(Window * otherWindow) {
+			GREM_CASE(Window * otherWindow) { // NOLINT(misc-const-correctness)
 				unreachable();
 			}
 		}

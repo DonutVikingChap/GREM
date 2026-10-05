@@ -56,7 +56,7 @@ public:
 			}
 		}
 
-		const TriangleMeshShape<N>& triangleMeshShapeB = static_cast<const Shape<N>&>(colliderB.shape).template as<TriangleMeshShape<N>>();
+		const TriangleMeshShape<N>& triangleMeshShapeB = colliderB.shape.template as<TriangleMeshShape<N>>();
 
 		const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 		const InverseTransformation<N> inverseTransformationB = inverse(transformationB);

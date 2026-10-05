@@ -170,7 +170,7 @@ ArrayList<Task> buildSchedule(Span<const UnscheduledTask> tasks, // NOLINT(cppco
 	for (Task::GraphIndex taskIndex = 0; taskIndex < taskCount; ++taskIndex) {
 		GREM_ASSERT(!dependencies.hasEdgeToEarlierNode(taskIndex));
 
-		Node& node = graph[taskIndex];
+		const Node& node = graph[taskIndex];
 		const Task::Count level = node.level;
 
 		for (Task::GraphIndex dependentTaskIndex = taskIndex + 1; dependentTaskIndex < taskCount; ++dependentTaskIndex) {
@@ -192,7 +192,7 @@ ArrayList<Task> buildSchedule(Span<const UnscheduledTask> tasks, // NOLINT(cppco
 	for (Task::GraphIndex newTaskIndex = 0; newTaskIndex < taskCount; ++newTaskIndex) {
 		const Task::GraphIndex taskIndex = taskIndicesSortedByLevel[newTaskIndex];
 		const size_t parallelism{tasks[taskIndex].parallelism};
-		if (static_cast<size_t>(Limits<Task::GraphIndex>::MAX - newTaskOffset) < parallelism) {
+		if (static_cast<size_t>(Limits<Task::GraphIndex>::MAX - newTaskOffset) < parallelism) { // NOLINT(modernize-use-integer-sign-comparison)
 			throw std::length_error{"Maximum task count exceeded when expanding parallel tasks."};
 		}
 		const Task::GraphIndex newTaskIndicesEnd = static_cast<Task::GraphIndex>(static_cast<size_t>(newTaskOffset) + parallelism);

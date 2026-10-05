@@ -400,7 +400,7 @@ private:
 		const auto adb = cross(ad, ab);
 
 		using RegionFlags = uint8_t;
-		enum RegionFlag : RegionFlags {
+		enum RegionFlag : RegionFlags { // NOLINT(cppcoreguidelines-use-enum-class)
 			ENCLOSED = 0,
 			ABC = 1 << 0,
 			ACD = 1 << 1,

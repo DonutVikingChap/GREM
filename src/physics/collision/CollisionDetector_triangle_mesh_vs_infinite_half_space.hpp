@@ -6,6 +6,7 @@
 
 #include <GREM/build_config.hpp>
 
+#include <GREM/core/algorithms.hpp>
 #include <GREM/core/assertions.hpp>
 #include <GREM/core/data/Arena.hpp>
 #include <GREM/core/data/Array.hpp>
@@ -36,8 +37,8 @@ public:
 			return {};
 		}
 
-		const TriangleMeshShape<N>& triangleMeshShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<TriangleMeshShape<N>>();
-		GREM_ASSERT(static_cast<const Shape<N>&>(colliderB.shape).template is<InfiniteHalfSpaceShape<N>>());
+		const TriangleMeshShape<N>& triangleMeshShapeA = colliderA.shape.template as<TriangleMeshShape<N>>();
+		GREM_ASSERT(colliderB.shape.template is<InfiniteHalfSpaceShape<N>>());
 
 		const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 
@@ -57,13 +58,10 @@ public:
 						vertices[indices[indexOffset + 2]] * Length<N>::UNIT,
 					};
 
-					for (const Length<N> meshLocalTrianglePoint : meshLocalTrianglePoints) {
+					return anyOf(meshLocalTrianglePoints, [&](Length<N> meshLocalTrianglePoint) -> bool {
 						const Length1D signedDistance = dot(meshLocalTrianglePoint - meshLocalPlaneOffset, meshLocalPlaneNormal);
-						if (signedDistance <= maxCollisionDistance) {
-							return true;
-						}
-					}
-					return false;
+						return signedDistance <= maxCollisionDistance;
+					});
 				},
 				[&](const grem::Box<N, float>& meshLocalBoundingBox) -> bool {
 					const Length<N> meshLocalMin = meshLocalBoundingBox.min * Length<N>::UNIT;
@@ -73,7 +71,7 @@ public:
 					const Length<N> meshLocalNearPoint = meshLocalCenter + copysign(halfExtents, -meshLocalPlaneNormal);
 					const Length<N> meshLocalFarPoint = meshLocalCenter + copysign(halfExtents, meshLocalPlaneNormal);
 					return dot(meshLocalNearPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance ||
-			               dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance;
+					       dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance;
 				})) {
 			return filterTestResult;
 		}
@@ -89,8 +87,8 @@ public:
 			return;
 		}
 
-		const TriangleMeshShape<N>& triangleMeshShapeA = static_cast<const Shape<N>&>(colliderA.shape).template as<TriangleMeshShape<N>>();
-		GREM_ASSERT(static_cast<const Shape<N>&>(colliderB.shape).template is<InfiniteHalfSpaceShape<N>>());
+		const TriangleMeshShape<N>& triangleMeshShapeA = colliderA.shape.template as<TriangleMeshShape<N>>();
+		GREM_ASSERT(colliderB.shape.template is<InfiniteHalfSpaceShape<N>>());
 
 		const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 		const InverseTransformation<N> inverseTransformationB = inverse(transformationB);
@@ -137,7 +135,7 @@ public:
 				const Length<N> meshLocalNearPoint = meshLocalCenter + copysign(halfExtents, -meshLocalPlaneNormal);
 				const Length<N> meshLocalFarPoint = meshLocalCenter + copysign(halfExtents, meshLocalPlaneNormal);
 				return dot(meshLocalNearPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance ||
-			           dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance;
+				       dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance;
 			});
 	}
 };

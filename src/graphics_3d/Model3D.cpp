@@ -172,25 +172,39 @@ void uploadModelData(ArrayList<Model3D::Node>& nodes, RangeAllocation<uint32_t>&
 					GREM_PROFILE_BLOCK("Upload base color texture");
 					getTextureInfo(meshParameters.meshBaseColorMap, meshParameters.meshBaseColorMapTextureOffset, meshParameters.meshBaseColorMapTextureBasis,
 						material.baseColorMap,
-						{.transferFunction = Color::TransferFunction::SRGB,
+						{
+							.transferFunction = Color::TransferFunction::SRGB,
 							.convertToPremultipliedAlpha = (material.fragmentFlags & resource::Model::FRAGMENT_ALPHA_BLENDED) != 0,
-							.generateMipmap = true});
+							.generateMipmap = true,
+						});
 				}
 				{
 					GREM_PROFILE_BLOCK("Upload ORM texture");
 					getTextureInfo(meshParameters.meshOcclusionRoughnessMetallicMap, meshParameters.meshOcclusionRoughnessMetallicMapTextureOffset,
 						meshParameters.meshOcclusionRoughnessMetallicMapTextureBasis, material.occlusionRoughnessMetallicMap,
-						{.transferFunction = Color::TransferFunction::LINEAR, .convertToPremultipliedAlpha = false, .generateMipmap = true});
+						{
+							.transferFunction = Color::TransferFunction::LINEAR,
+							.convertToPremultipliedAlpha = false,
+							.generateMipmap = true,
+						});
 				}
 				{
 					GREM_PROFILE_BLOCK("Upload normal texture");
 					getTextureInfo(meshParameters.meshNormalMap, meshParameters.meshNormalMapTextureOffset, meshParameters.meshNormalMapTextureBasis, material.normalMap,
-						{.transferFunction = Color::TransferFunction::LINEAR, .convertToPremultipliedAlpha = false, .generateMipmap = true});
+						{
+							.transferFunction = Color::TransferFunction::LINEAR,
+							.convertToPremultipliedAlpha = false,
+							.generateMipmap = true,
+						});
 				}
 				{
 					GREM_PROFILE_BLOCK("Upload emissive texture");
 					getTextureInfo(meshParameters.meshEmissiveMap, meshParameters.meshEmissiveMapTextureOffset, meshParameters.meshEmissiveMapTextureBasis, material.emissiveMap,
-						{.transferFunction = Color::TransferFunction::SRGB, .convertToPremultipliedAlpha = false, .generateMipmap = true});
+						{
+							.transferFunction = Color::TransferFunction::SRGB,
+							.convertToPremultipliedAlpha = false,
+							.generateMipmap = true,
+						});
 				}
 			}
 
@@ -249,7 +263,7 @@ void uploadModelData(ArrayList<Model3D::Node>& nodes, RangeAllocation<uint32_t>&
 					data += jointIndices.size_bytes();
 					activeVertexAttributes[7] = true;
 					jointWeights = Span{std::launder(reinterpret_cast<const u8vec4norm*>(data)), vertexCount};
-					data += jointWeights.size_bytes();
+					data += jointWeights.size_bytes(); // NOLINT(clang-analyzer-deadcode.DeadStores)
 				}
 
 				GREM_PROFILE_BLOCK("Upload vertices and indices");

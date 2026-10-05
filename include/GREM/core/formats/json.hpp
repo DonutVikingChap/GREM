@@ -7162,13 +7162,13 @@ concept serializable_as_map =      //
 template <typename T>
 concept serializable_as_list =    //
 	derived_from_array_base<T> || //
-	requires(Reader& reader, Writer& writer, const T t) {
-		writer.serialize(*std::begin(t));
+	requires(Reader& reader, Writer& writer, const T input, T output) {
+		writer.serialize(*std::begin(input));
 
-		t.clear();
-		std::remove_cvref_t<decltype(*std::begin(t))>{};
-		reader.deserialize(*std::begin(t));
-		t.push_back(std::remove_cvref_t<decltype(*std::begin(t))>{});
+		output.clear();
+		std::remove_cvref_t<decltype(*std::begin(output))>{};
+		reader.deserialize(*std::begin(output));
+		output.push_back(std::remove_cvref_t<decltype(*std::begin(output))>{});
 	};
 
 template <typename T>
@@ -7423,12 +7423,16 @@ inline void Writer::serialize(const T& value, SerializerOverride serializerOverr
 			writeNumber(duration_cast<DurationBase<Number, Ratio<1, 1>>>(value).count());
 		} else if constexpr (detail::serializable_as_map<X>) {
 			writeObject(value, serializerOverride);
-		} else if constexpr (detail::serializable_as_list<X> || detail::serializable_as_array<X>) {
-			if constexpr (requires(const T t, const size_t i) {
-							  X::RANK;
-							  t[i] == t[i];
-						  } && !detail::serializable_as_array<std::remove_cvref_t<decltype(value[size_t{0}])>>) {
-				const auto& element = value[size_t{0}];
+		} else if constexpr (detail::serializable_as_list<X>) {
+			writeArray(value, serializerOverride);
+		} else if constexpr (detail::serializable_as_array<X>) {
+			using Element = std::remove_cvref_t<decltype(value[size_t{0}])>;
+			if constexpr (
+				requires(const T t, const size_t i) {
+					X::RANK;
+					t[i] == t[i];
+				} && !detail::serializable_as_array<Element> && requires(Element e) { X{e}; }) {
+				const Element& element = value[size_t{0}];
 				if (all(equal(value, X{element}))) {
 					serialize(element, serializerOverride);
 					return;
@@ -7473,35 +7477,26 @@ inline void Reader::deserialize(T& value, DeserializerOverride deserializerOverr
 	} else if constexpr (detail::serializable_as_array<X>) {
 		size_t index = 0;
 		const size_t size = std::size(value);
-		if constexpr (requires(const T t, const size_t i) {
-						  X::RANK;
-						  t[i] == t[i];
-					  } && !detail::serializable_as_array<std::remove_cvref_t<decltype(value[index])>>) {
-			if (nextIsArray()) {
-				const SourceLocation source = readCustomArray([&](const json::SourceLocation& source) -> void {
-					if (index >= size) {
-						throw json::Error{"Expected " + toString(size) + " array items.", source};
-					}
-					deserialize(value[index], deserializerOverride);
-					++index;
-				});
-				if (index != size) {
-					throw json::Error{"Expected " + toString(size) + " array items.", source};
-				}
-			} else {
+		using Element = std::remove_cvref_t<decltype(value[index])>;
+		if constexpr (
+			requires(const T t, const size_t i) {
+				X::RANK;
+				t[i] == t[i];
+			} && !detail::serializable_as_array<Element> && requires(Element e) { X{e}; }) {
+			if (!nextIsArray()) {
 				value = X{deserialize<std::remove_cvref_t<decltype(value[index])>>(deserializerOverride)};
+				return;
 			}
-		} else {
-			const SourceLocation source = readCustomArray([&](const json::SourceLocation& source) -> void {
-				if (index >= size) {
-					throw json::Error{"Expected " + toString(size) + " array items.", source};
-				}
-				deserialize(value[index], deserializerOverride);
-				++index;
-			});
-			if (index != size) {
+		}
+		const SourceLocation source = readCustomArray([&](const json::SourceLocation& source) -> void {
+			if (index >= size) {
 				throw json::Error{"Expected " + toString(size) + " array items.", source};
 			}
+			deserialize(value[index], deserializerOverride);
+			++index;
+		});
+		if (index != size) {
+			throw json::Error{"Expected " + toString(size) + " array items.", source};
 		}
 	} else if constexpr (detail::serializable_as_optional<X>) {
 		readOptional(value, deserializerOverride);

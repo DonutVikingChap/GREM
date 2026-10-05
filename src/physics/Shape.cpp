@@ -1286,13 +1286,13 @@ template class TriangleMeshShape<3>;
 
 template <size_t N>
 Volume LocallyTransformedShape<N>::calculateVolume() const {
-	return product(localScale) * ShapeView<N>{*shape}.calculateVolume();
+	return product(localScale) * shape->calculateVolume();
 }
 
 template <size_t N>
 PrincipalMomentsOfInertia<N> LocallyTransformedShape<N>::calculatePrincipalMomentsOfInertia(Mass mass) const {
 	if constexpr (N == 3) {
-		const PrincipalMomentsOfInertia3D principalMomentsOfInertia = ShapeView3D{*shape}.calculatePrincipalMomentsOfInertia(mass);
+		const PrincipalMomentsOfInertia3D principalMomentsOfInertia = shape->calculatePrincipalMomentsOfInertia(mass);
 		// Estimate by assuming that localOrientation is 0, since the result would be a non-diagonal matrix otherwise.
 		return {
 			localScale.getY() * localScale.getZ() * principalMomentsOfInertia.getX() + mass * length2(localOffset.get(Y, Z)),
@@ -1300,23 +1300,23 @@ PrincipalMomentsOfInertia<N> LocallyTransformedShape<N>::calculatePrincipalMomen
 			localScale.getX() * localScale.getY() * principalMomentsOfInertia.getZ() + mass * length2(localOffset.get(X, Y)),
 		};
 	} else {
-		return localScale.getX() * localScale.getY() * ShapeView<N>{*shape}.calculatePrincipalMomentsOfInertia(mass) + mass * length2(localOffset);
+		return localScale.getX() * localScale.getY() * shape->calculatePrincipalMomentsOfInertia(mass) + mass * length2(localOffset);
 	}
 }
 
 template <size_t N>
 Optional<Box<N>> LocallyTransformedShape<N>::getBoundingBox(const Transformation<N>& transformation) const {
-	return ShapeView<N>{*shape}.getBoundingBox(transformation * translateRotateScale(localOffset, localOrientation, localScale));
+	return shape->getBoundingBox(transformation * translateRotateScale(localOffset, localOrientation, localScale));
 }
 
 template <size_t N>
 Optional<Distance> LocallyTransformedShape<N>::getBoundingRadius(const Basis<N>& basis) const {
-	return ShapeView<N>{*shape}.getBoundingRadius(basis * rotateScale(localOrientation, localScale));
+	return shape->getBoundingRadius(basis * rotateScale(localOrientation, localScale));
 }
 
 template <size_t N>
 Optional<Area> LocallyTransformedShape<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
-	return ShapeView<N>{*shape}.getReferenceArea(basis * rotateScale(localOrientation, localScale), direction);
+	return shape->getReferenceArea(basis * rotateScale(localOrientation, localScale), direction);
 }
 
 template <size_t N>
@@ -1328,7 +1328,7 @@ RaycastResult<N> LocallyTransformedShape<N>::castLocalRay(Length<N> localRayOrig
 	const Distance maxShapeLocalRayDistance = length(shapeLocalRayVector);
 	const Direction<N> shapeLocalRayDirection = Direction<N>::reinterpret(shapeLocalRayVector / maxShapeLocalRayDistance);
 	GREM_ASSERT(maxShapeLocalRayDistance > Distance{});
-	GREM_MATCH(ShapeView<N>{*shape}.castLocalRay(shapeLocalRayOrigin, shapeLocalRayDirection, maxShapeLocalRayDistance)) {
+	GREM_MATCH(shape->castLocalRay(shapeLocalRayOrigin, shapeLocalRayDirection, maxShapeLocalRayDistance)) {
 		GREM_CASE(const RayMiss& miss) return RayMiss{};
 		GREM_CASE(const RayHit<N>& hit) {
 			return RayHit<N>{
@@ -1362,7 +1362,7 @@ template <size_t N>
 Volume CompoundColliderShape<N>::calculateVolume() const {
 	Volume result{};
 	for (const SubCollider<N>& subCollider : getSubColliders()) {
-		result += product(subCollider.localScale) * ShapeView<N>{subCollider.collider.shape}.calculateVolume();
+		result += product(subCollider.localScale) * subCollider.collider.shape.calculateVolume();
 	}
 	return result;
 }
@@ -1373,10 +1373,10 @@ PrincipalMomentsOfInertia<N> CompoundColliderShape<N>::calculatePrincipalMoments
 	const auto inverseTotalVolume = Coefficient{1} / totalVolume;
 	PrincipalMomentsOfInertia<N> result{};
 	for (const SubCollider<N>& subCollider : getSubColliders()) {
-		const Coefficient volumeAmount = product(subCollider.localScale) * ShapeView<N>{subCollider.collider.shape}.calculateVolume() * inverseTotalVolume;
+		const Coefficient volumeAmount = product(subCollider.localScale) * subCollider.collider.shape.calculateVolume() * inverseTotalVolume;
 		const Mass shapeMass = volumeAmount * mass;
 		if constexpr (N == 3) {
-			const PrincipalMomentsOfInertia<N> shapePrincipalMomentsOfInertia = ShapeView<N>{subCollider.collider.shape}.calculatePrincipalMomentsOfInertia(shapeMass);
+			const PrincipalMomentsOfInertia<N> shapePrincipalMomentsOfInertia = subCollider.collider.shape.calculatePrincipalMomentsOfInertia(shapeMass);
 			// Estimate by assuming that localOrientation is 0, since the result would be a non-diagonal matrix otherwise.
 			result[X] +=
 				subCollider.localScale.getY() * subCollider.localScale.getZ() * shapePrincipalMomentsOfInertia.getX() + shapeMass * length2(subCollider.localOffset.get(Y, Z));
@@ -1385,7 +1385,7 @@ PrincipalMomentsOfInertia<N> CompoundColliderShape<N>::calculatePrincipalMoments
 			result[Z] +=
 				subCollider.localScale.getX() * subCollider.localScale.getY() * shapePrincipalMomentsOfInertia.getZ() + shapeMass * length2(subCollider.localOffset.get(X, Y));
 		} else {
-			result += subCollider.localScale.getX() * subCollider.localScale.getY() * ShapeView<N>{subCollider.collider.shape}.calculatePrincipalMomentsOfInertia(shapeMass) +
+			result += subCollider.localScale.getX() * subCollider.localScale.getY() * subCollider.collider.shape.calculatePrincipalMomentsOfInertia(shapeMass) +
 			          shapeMass * length2(subCollider.localOffset);
 		}
 	}
@@ -1398,7 +1398,7 @@ Optional<Area> CompoundColliderShape<N>::getReferenceArea(const Basis<N>& basis,
 	Optional<Area> result{};
 	for (const SubCollider<N>& subCollider : getSubColliders()) {
 		if (const Optional<Area> shapeReferenceArea =
-				ShapeView<N>{subCollider.collider.shape}.getReferenceArea(basis * rotateScale(subCollider.localOrientation, subCollider.localScale), direction)) {
+				subCollider.collider.shape.getReferenceArea(basis * rotateScale(subCollider.localOrientation, subCollider.localScale), direction)) {
 			if (result) {
 				*result += *shapeReferenceArea;
 			} else {
@@ -1421,7 +1421,7 @@ RaycastResult<N> CompoundColliderShape<N>::castLocalRay(Length<N> localRayOrigin
 		const Distance maxSubLocalRayDistance = length(subLocalRayVector);
 		const Direction<N> subLocalRayDirection = Direction<N>::reinterpret(subLocalRayVector / maxSubLocalRayDistance);
 		GREM_ASSERT(maxSubLocalRayDistance > Distance{});
-		GREM_MATCH(ShapeView<N>{subCollider.collider.shape}.castLocalRay(subLocalRayOrigin, subLocalRayDirection, maxSubLocalRayDistance)) {
+		GREM_MATCH(subCollider.collider.shape.castLocalRay(subLocalRayOrigin, subLocalRayDirection, maxSubLocalRayDistance)) {
 			GREM_CASE(const RayMiss& miss) break;
 			GREM_CASE(const RayHit<N>& hit) {
 				const Distance distance = subLocalTransformation.getDistance(subLocalRayDirection * hit.distance);
@@ -1449,7 +1449,7 @@ template <size_t N>
 Optional<Box<N>> CompoundColliderShape<N>::calculateCompoundBoundingBox(Span<const SubCollider<N>> subColliders) noexcept {
 	Optional<Box<N>> result{};
 	for (const SubCollider<N>& subCollider : subColliders) {
-		if (const Optional<Box<N>> shapeBoundingBox = ShapeView<N>{subCollider.collider.shape}.getBoundingBox(
+		if (const Optional<Box<N>> shapeBoundingBox = subCollider.collider.shape.getBoundingBox(
 				Transformation<N>{0, translateRotateScale(subCollider.localOffset, subCollider.localOrientation, subCollider.localScale)})) {
 			if (result) {
 				result->min = min(result->min, shapeBoundingBox->min);
@@ -1466,8 +1466,7 @@ template <size_t N>
 Optional<Distance> CompoundColliderShape<N>::calculateCompoundBoundingRadius(Span<const SubCollider<N>> subColliders) noexcept {
 	Optional<Distance> result{};
 	for (const SubCollider<N>& subCollider : subColliders) {
-		if (const Optional<Distance> shapeBoundingRadius =
-				ShapeView<N>{subCollider.collider.shape}.getBoundingRadius(rotateScale(subCollider.localOrientation, subCollider.localScale))) {
+		if (const Optional<Distance> shapeBoundingRadius = subCollider.collider.shape.getBoundingRadius(rotateScale(subCollider.localOrientation, subCollider.localScale))) {
 			const Distance shapeBoundingExtent = length(subCollider.localOffset) + *shapeBoundingRadius;
 			if (result) {
 				result = max(*result, shapeBoundingExtent);
@@ -1483,33 +1482,43 @@ template class CompoundColliderShape<2>;
 template class CompoundColliderShape<3>;
 
 template <size_t N>
+bool ShapeView<N>::isConvexShapeType() const noexcept {
+	return match(*this)([&](const convex_shape<N> auto&) -> bool { return true; }, [&](const auto&) -> bool { return false; });
+}
+
+template <size_t N>
+bool ShapeView<N>::isConvexPolytopeShapeType() const noexcept {
+	return match(*this)([&](const convex_polytope_shape<N> auto&) -> bool { return true; }, [&](const auto&) -> bool { return false; });
+}
+
+template <size_t N>
 Volume ShapeView<N>::calculateVolume() const {
-	return match(shape)([](const auto& shape) -> Volume { return shape.calculateVolume(); });
+	return match(*this)([](const auto& shape) -> Volume { return shape.calculateVolume(); });
 }
 
 template <size_t N>
 PrincipalMomentsOfInertia<N> ShapeView<N>::calculatePrincipalMomentsOfInertia(Mass mass) const {
-	return match(shape)([mass](const auto& shape) -> PrincipalMomentsOfInertia<N> { return shape.calculatePrincipalMomentsOfInertia(mass); });
+	return match(*this)([mass](const auto& shape) -> PrincipalMomentsOfInertia<N> { return shape.calculatePrincipalMomentsOfInertia(mass); });
 }
 
 template <size_t N>
 Optional<Box<N>> ShapeView<N>::getBoundingBox(const Transformation<N>& transformation) const {
-	return match(shape)([&](const auto& shape) -> Optional<Box<N>> { return shape.getBoundingBox(transformation); });
+	return match(*this)([&](const auto& shape) -> Optional<Box<N>> { return shape.getBoundingBox(transformation); });
 }
 
 template <size_t N>
 Optional<Distance> ShapeView<N>::getBoundingRadius(const Basis<N>& basis) const {
-	return match(shape)([&](const auto& shape) -> Optional<Distance> { return shape.getBoundingRadius(basis); });
+	return match(*this)([&](const auto& shape) -> Optional<Distance> { return shape.getBoundingRadius(basis); });
 }
 
 template <size_t N>
 Optional<Area> ShapeView<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
-	return match(shape)([&](const auto& shape) -> Optional<Area> { return shape.getReferenceArea(basis, direction); });
+	return match(*this)([&](const auto& shape) -> Optional<Area> { return shape.getReferenceArea(basis, direction); });
 }
 
 template <size_t N>
 RaycastResult<N> ShapeView<N>::castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const {
-	return match(shape)([&](const auto& shape) -> RaycastResult<N> { return shape.castLocalRay(localRayOrigin, localRayDirection, maxLocalRayDistance); });
+	return match(*this)([&](const auto& shape) -> RaycastResult<N> { return shape.castLocalRay(localRayOrigin, localRayDirection, maxLocalRayDistance); });
 }
 
 template class ShapeView<2>;
@@ -1517,14 +1526,14 @@ template class ShapeView<3>;
 
 template <size_t N>
 bool ConvexShapeView<N>::containsLocalPoint(Length<N> localPoint) const {
-	return match(this->shape)(                                                                                       //
+	return match(*this)(                                                                                             //
 		[&](const convex_shape<N> auto& convexShape) -> bool { return convexShape.containsLocalPoint(localPoint); }, //
 		[&](const auto&) -> bool { throw BadVariantAccess{}; });
 }
 
 template <size_t N>
 Length<N> ConvexShapeView<N>::getLocalSupportPointOffset(Direction<N> localDirection) const {
-	return match(this->shape)(                                                                                                        //
+	return match(*this)(                                                                                                              //
 		[&](const convex_shape<N> auto& convexShape) -> Length<N> { return convexShape.getLocalSupportPointOffset(localDirection); }, //
 		[&](const auto&) -> Length<N> { throw BadVariantAccess{}; });
 }
@@ -1534,7 +1543,7 @@ template class ConvexShapeView<3>;
 
 template <size_t N>
 ConvexPolytopeVertexIndex ConvexPolytopeShapeView<N>::getLocalSupportPointVertexIndex(Direction<N> localDirection, ConvexPolytopeVertexIndex searchStartVertexIndex) const {
-	return match(this->shape)( //
+	return match(*this)( //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeVertexIndex {
 			return convexPolytopeShape.getLocalSupportPointVertexIndex(localDirection, searchStartVertexIndex);
 		}, //
@@ -1543,14 +1552,14 @@ ConvexPolytopeVertexIndex ConvexPolytopeShapeView<N>::getLocalSupportPointVertex
 
 template <size_t N>
 ConvexPolytopeVertexIndex ConvexPolytopeShapeView<N>::getVertexCount() const {
-	return match(this->shape)(                                                                                                                       //
+	return match(*this)(                                                                                                                             //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeVertexIndex { return convexPolytopeShape.getVertexCount(); }, //
 		[&](const auto&) -> ConvexPolytopeVertexIndex { throw BadVariantAccess{}; });
 }
 
 template <size_t N>
 ConvexPolytopeFaceIndex ConvexPolytopeShapeView<N>::getFaceCount() const {
-	return match(this->shape)(                                                                                                                   //
+	return match(*this)(                                                                                                                         //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeFaceIndex { return convexPolytopeShape.getFaceCount(); }, //
 		[&](const auto&) -> ConvexPolytopeFaceIndex { throw BadVariantAccess{}; });
 }
@@ -1558,7 +1567,7 @@ ConvexPolytopeFaceIndex ConvexPolytopeShapeView<N>::getFaceCount() const {
 template <size_t N>
 ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getEdgeCount() const requires(N == 3) {
 	if constexpr (N == 3) {
-		return match(this->shape)(                                                                                                                   //
+		return match(*this)(                                                                                                                         //
 			[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeEdgeIndex { return convexPolytopeShape.getEdgeCount(); }, //
 			[&](const auto&) -> ConvexPolytopeEdgeIndex { throw BadVariantAccess{}; });
 	} else {
@@ -1568,28 +1577,28 @@ ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getEdgeCount() const require
 
 template <size_t N>
 Length<N> ConvexPolytopeShapeView<N>::getLocalVertexOffset(ConvexPolytopeVertexIndex vertexIndex) const {
-	return match(this->shape)(                                                                                                                        //
+	return match(*this)(                                                                                                                              //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> Length<N> { return convexPolytopeShape.getLocalVertexOffset(vertexIndex); }, //
 		[&](const auto&) -> Length<N> { throw BadVariantAccess{}; });
 }
 
 template <size_t N>
 Length<N> ConvexPolytopeShapeView<N>::getLocalFaceOffset(ConvexPolytopeFaceIndex faceIndex) const {
-	return match(this->shape)(                                                                                                                    //
+	return match(*this)(                                                                                                                          //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> Length<N> { return convexPolytopeShape.getLocalFaceOffset(faceIndex); }, //
 		[&](const auto&) -> Length<N> { throw BadVariantAccess{}; });
 }
 
 template <size_t N>
 Direction<N> ConvexPolytopeShapeView<N>::getLocalFaceNormal(ConvexPolytopeFaceIndex faceIndex) const {
-	return match(this->shape)(                                                                                                                       //
+	return match(*this)(                                                                                                                             //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> Direction<N> { return convexPolytopeShape.getLocalFaceNormal(faceIndex); }, //
 		[&](const auto&) -> Direction<N> { throw BadVariantAccess{}; });
 }
 
 template <size_t N>
 ConvexPolytopeFaceIndex ConvexPolytopeShapeView<N>::getFaceIndexWithMostFittingLocalNormal(Direction<N> localDirection, ConvexPolytopeFaceIndex searchStartFaceIndex) const {
-	return match(this->shape)( //
+	return match(*this)( //
 		[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeFaceIndex {
 			return convexPolytopeShape.getFaceIndexWithMostFittingLocalNormal(localDirection, searchStartFaceIndex);
 		}, //
@@ -1599,7 +1608,7 @@ ConvexPolytopeFaceIndex ConvexPolytopeShapeView<N>::getFaceIndexWithMostFittingL
 template <size_t N>
 ConvexPolytopeVertexIndex ConvexPolytopeShapeView<N>::getFirstVertexIndexOfEdge(ConvexPolytopeEdgeIndex edgeIndex) const requires(N == 3) {
 	if constexpr (N == 3) {
-		return match(this->shape)(                                                                                                                                           //
+		return match(*this)(                                                                                                                                                 //
 			[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeVertexIndex { return convexPolytopeShape.getFirstVertexIndexOfEdge(edgeIndex); }, //
 			[&](const auto&) -> ConvexPolytopeVertexIndex { throw BadVariantAccess{}; });
 	} else {
@@ -1610,7 +1619,7 @@ ConvexPolytopeVertexIndex ConvexPolytopeShapeView<N>::getFirstVertexIndexOfEdge(
 template <size_t N>
 ConvexPolytopeFaceIndex ConvexPolytopeShapeView<N>::getFaceIndexOfEdge(ConvexPolytopeEdgeIndex edgeIndex) const requires(N == 3) {
 	if constexpr (N == 3) {
-		return match(this->shape)(                                                                                                                                  //
+		return match(*this)(                                                                                                                                        //
 			[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeFaceIndex { return convexPolytopeShape.getFaceIndexOfEdge(edgeIndex); }, //
 			[&](const auto&) -> ConvexPolytopeFaceIndex { throw BadVariantAccess{}; });
 	} else {
@@ -1621,7 +1630,7 @@ ConvexPolytopeFaceIndex ConvexPolytopeShapeView<N>::getFaceIndexOfEdge(ConvexPol
 template <size_t N>
 ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getNextEdgeIndex(ConvexPolytopeEdgeIndex edgeIndex) const requires(N == 3) {
 	if constexpr (N == 3) {
-		return match(this->shape)(                                                                                                                                //
+		return match(*this)(                                                                                                                                      //
 			[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeEdgeIndex { return convexPolytopeShape.getNextEdgeIndex(edgeIndex); }, //
 			[&](const auto&) -> ConvexPolytopeEdgeIndex { throw BadVariantAccess{}; });
 	} else {
@@ -1632,7 +1641,7 @@ ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getNextEdgeIndex(ConvexPolyt
 template <size_t N>
 ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getFirstEdgeIndexOfFace(ConvexPolytopeFaceIndex faceIndex) const requires(N == 3) {
 	if constexpr (N == 3) {
-		return match(this->shape)(                                                                                                                                       //
+		return match(*this)(                                                                                                                                             //
 			[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeEdgeIndex { return convexPolytopeShape.getFirstEdgeIndexOfFace(faceIndex); }, //
 			[&](const auto&) -> ConvexPolytopeEdgeIndex { throw BadVariantAccess{}; });
 	} else {
@@ -1643,7 +1652,7 @@ ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getFirstEdgeIndexOfFace(Conv
 template <size_t N>
 ConvexPolytopeEdgeIndex ConvexPolytopeShapeView<N>::getSomeEdgeIndexOfVertex(ConvexPolytopeVertexIndex vertexIndex) const requires(N == 3) {
 	if constexpr (N == 3) {
-		return match(this->shape)(                                                                                                                                          //
+		return match(*this)(                                                                                                                                                //
 			[&](const convex_polytope_shape<N> auto& convexPolytopeShape) -> ConvexPolytopeEdgeIndex { return convexPolytopeShape.getSomeEdgeIndexOfVertex(vertexIndex); }, //
 			[&](const auto&) -> ConvexPolytopeEdgeIndex { throw BadVariantAccess{}; });
 	} else {

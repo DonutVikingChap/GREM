@@ -51,7 +51,7 @@ public:
 			return kv.second->asset.use_count() <= 1;
 		};
 
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		erase_if(images, assetExpired);
 		erase_if(models, assetExpired);
 		erase_if(vertexShaders, assetExpired);
@@ -64,7 +64,7 @@ public:
 	}
 
 	void clear() noexcept {
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		images.clear();
 		models.clear();
 		vertexShaders.clear();
@@ -228,7 +228,7 @@ private:
 		SharedPointer<AssetStorage<Asset>> storage{};
 		bool shouldLoad = false;
 		{
-			ScopedLock lock{mutex};
+			const ScopedLock lock{mutex};
 			SharedPointer<AssetStorage<Asset>>& v = map[key];
 			if (!v) {
 				v = SharedPointer<AssetStorage<Asset>>::create();

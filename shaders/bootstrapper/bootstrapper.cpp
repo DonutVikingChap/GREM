@@ -148,6 +148,8 @@ public:
 			"RENDERER_3D_PBR_MODEL_3D_FRAGMENT_SHADER_CODE", "graphics_3d/renderer_3d_model_3d_pbr.frag");
 		writeShader<gfx::Renderer3D::DefaultSky3DVertexShader>( //
 			"RENDERER_3D_DEFAULT_SKY_3D_VERTEX_SHADER_CODE", "graphics_3d/renderer_3d_sky_3d_default.vert");
+		writeShader<gfx::Renderer3D::UnlitSky3DFragmentShader>( //
+			"RENDERER_3D_UNLIT_SKY_3D_FRAGMENT_SHADER_CODE", "graphics_3d/renderer_3d_sky_3d_unlit.frag");
 		writeShader<gfx::Renderer3D::PBRSky3DFragmentShader>( //
 			"RENDERER_3D_PBR_SKY_3D_FRAGMENT_SHADER_CODE", "graphics_3d/renderer_3d_sky_3d_pbr.frag");
 		writeShader<gfx::Renderer3D::ShadowMapModel3DFragmentShader>( //

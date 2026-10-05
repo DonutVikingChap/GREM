@@ -92,11 +92,11 @@ public:
 
 		{
 			GREM_PROFILE_BLOCK("Draw loading screen");
-			vec2 position = graphics.screenViewport.region.offset + graphics.screenViewport.region.size / 2;
+			Offset2D position = graphics.screenViewport.region.offset + graphics.screenViewport.region.size / 2;
 			graphics.put2DText(position, Color::LIGHT_GRAY, loadingMessageA, 2.0f, gfx::TextAlign::CENTER);
-			position.y -= 26.0f;
+			position.y -= 26;
 			graphics.put2DText(position, Color::LIGHT_GRAY, loadingMessageB, 2.0f, gfx::TextAlign::CENTER);
-			position.y -= 26.0f;
+			position.y -= 26;
 			graphics.put2DText(position, Color::LIGHT_GRAY, loadingMessageC, 2.0f, gfx::TextAlign::CENTER);
 			graphics.renderer2D.drawFrame(renderPass, {graphics.instances2D}, graphics.screenCamera);
 		}

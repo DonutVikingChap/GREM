@@ -20,7 +20,7 @@ template <size_t N>
 struct MinkowskiVertex : Pair<Position<N>> {
 	using Pair<Position<N>>::Pair;
 
-	constexpr MinkowskiVertex(Pair<Position<N>> points) noexcept
+	constexpr explicit MinkowskiVertex(Pair<Position<N>> points) noexcept
 		: Pair<Position<N>>(points) {}
 };
 using MinkowskiVertex2D = MinkowskiVertex<2>;

@@ -82,7 +82,7 @@ Pair<Font2D::RenderedGlyphInfo, bool> Font2D::renderGlyph(Device& device, uint32
 		const uint32_t height = static_cast<uint32_t>(gmetrics.minHeight);
 		const auto [offset, resized] = atlasPacker.insertRectangle(Extent2D{width, height});
 		if (!atlasTexture || resized) {
-			Texture oldAtlasTexture = std::move(atlasTexture);
+			const Texture oldAtlasTexture = std::move(atlasTexture);
 			atlasTexture = Texture::create(device, TextureType::TEXTURE_2D, TextureFormat::R8_UNORM, Extent2D{atlasPacker.getResolution()}, 1, ClearValues{},
 				TextureSamplerOptions{
 					.minificationFilter = (options.useLinearFiltering) ? TextureFilter::LINEAR : TextureFilter::NEAREST,

@@ -1101,11 +1101,32 @@ using std::round;
 using std::signbit;
 using std::sin;
 using std::sinh;
-using std::sqrt;
 using std::tan;
 using std::tanh;
 using std::tgamma;
 using std::trunc;
+
+/**
+ * Get the square root of a value.
+ *
+ * \param a value to get the square root of. Must be non-negative.
+ *
+ * \return the square root of `a`.
+ */
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL sqrt(T a) requires(floating_point<T>) {
+	GREM_ASSERT(a >= T{0});
+	if (std::is_constant_evaluated()) {
+		T previous{};
+		T current = a;
+		while (current != previous) {
+			previous = current;
+			current = T{0.5} * (current + a / current);
+		}
+		return current;
+	}
+	return std::sqrt(a);
+}
 
 /**
  * Get the reciprocal of the square root of a value.
@@ -1172,32 +1193,32 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL equal(T a, T b) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL equal(T a, T b) requires(strict_arithmetic<T>) {
 	return a == b;
 }
 
 template <typename T>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL notEqual(T a, T b) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL notEqual(T a, T b) requires(strict_arithmetic<T>) {
 	return a != b;
 }
 
 template <typename T>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL lessThan(T a, T b) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL lessThan(T a, T b) requires(strict_arithmetic<T>) {
 	return a < b;
 }
 
 template <typename T>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL lessThanEqual(T a, T b) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL lessThanEqual(T a, T b) requires(strict_arithmetic<T>) {
 	return a <= b;
 }
 
 template <typename T>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL greaterThan(T a, T b) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL greaterThan(T a, T b) requires(strict_arithmetic<T>) {
 	return a > b;
 }
 
 template <typename T>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL greaterThanEqual(T a, T b) {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool GREM_VECTORCALL greaterThanEqual(T a, T b) requires(strict_arithmetic<T>) {
 	return a >= b;
 }
 
@@ -3218,7 +3239,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE vec<2, T> GREM_VECTORCALL convertZDirectionToPitchYawAngles(vec<3, T> z) requires(floating_point<T>) {
 	GREM_ASSERT(length2(z) >= length2(0.9999f) && length2(z) <= length2(1.0001f));
-	return {asin(z.y), atan2(z.z, z.x)};
+	return {-asin(z.y), atan2(z.x, z.z)};
 }
 
 template <typename T>
@@ -3252,6 +3273,50 @@ template <typename T>
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE vec<3, T> GREM_VECTORCALL convertAnglesToForwardDirection(vec<2, T> pitchYawAngles) requires(floating_point<T>) {
 	return -convertPitchYawAnglesToZDirection(pitchYawAngles.x, pitchYawAngles.y);
+}
+
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE vec<3, T> GREM_VECTORCALL convertAnglesToForwardDirection(vec<3, T> pitchYawRollAngles) requires(floating_point<T>) {
+	return convertAnglesToForwardDirection(vec<2, T>{pitchYawRollAngles.x, pitchYawRollAngles.y});
+}
+
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE T GREM_VECTORCALL convertForwardDirectionToAngles(vec<2, T> forward) requires(floating_point<T>) {
+	return convertXDirectionToRollAngle(forward);
+}
+
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE vec<2, T> GREM_VECTORCALL convertForwardDirectionToAngles(vec<3, T> forward) requires(floating_point<T>) {
+	return convertZDirectionToPitchYawAngles(-forward);
+}
+
+/**
+ * Get the smallest signed angle between two absolute angles.
+ *
+ * \param a first angle, in radians.
+ * \param b second angle, in radians.
+ *
+ * \return the smallest signed angle from angle a to b, in the range [-pi, pi],
+ *         in radians.
+ */
+template <typename T>
+[[nodiscard]] inline T getAngleDifference(T a, T b) {
+	return wrap((b - a) + numbers::pi_v<T>, T{2} * numbers::pi_v<T>) - numbers::pi_v<T>;
+}
+
+/**
+ * Get the smallest signed angle around an axis between two relative vectors.
+ *
+ * \param axis axis to get the angle around. Must be a unit vector.
+ * \param a first vector.
+ * \param b second vector.
+ *
+ * \return the smallest signed angle around the given axis from the direction of
+ *         a to the direction of b.
+ */
+template <typename T>
+[[nodiscard]] inline T getAngleDifferenceAroundAxis(vec<3, T> axis, vec<3, T> a, vec<3, T> b) {
+	return atan2(dot(cross(a, b), axis), dot(a, b));
 }
 
 template <typename T>
@@ -3655,6 +3720,20 @@ template <typename T>
 }
 
 /**
+ * Linearly convert a value from a specific range to the [0, 1] range.
+ *
+ * \param value value to convert.
+ * \param minValue minimum value of the input range.
+ * \param maxValue maximum value of the output range.
+ *
+ * \return `(value - minValue) / (maxValue - minValue)`.
+ */
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL unlerp(T value, T minValue, T maxValue) requires(floating_point<T>) {
+	return (value - minValue) / (maxValue - minValue);
+}
+
+/**
  * Perform spherical linear interpolation (slerp) between two quaternions.
  *
  * \param a value to blend from.
@@ -3774,6 +3853,45 @@ template <typename T>
 }
 
 /**
+ * Get a vector flipped along the X axis.
+ *
+ * \param a vector to flip.
+ *
+ * \return the flipped vector.
+ */
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr vec<N, T> flipX(vec<N, T> a) {
+	a.x = -a.x;
+	return a;
+}
+
+/**
+ * Get a vector flipped along the Y axis.
+ *
+ * \param a vector to flip.
+ *
+ * \return the flipped vector.
+ */
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr vec<N, T> flipY(vec<N, T> a) requires(N >= 2) {
+	a.y = -a.y;
+	return a;
+}
+
+/**
+ * Get a vector flipped along the Z axis.
+ *
+ * \param a vector to flip.
+ *
+ * \return the flipped vector.
+ */
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr vec<N, T> flipZ(vec<N, T> a) requires(N >= 3) {
+	a.z = -a.z;
+	return a;
+}
+
+/**
  * Get a vector reflected against a plane with a given normal vector.
  *
  * \param a vector to reflect.
@@ -3877,6 +3995,45 @@ template <size_t N, typename T>
 		vector *= maxLength / sqrt(lengthSquared);
 	}
 	return vector;
+}
+
+/**
+ * Move a value linearly towards a target by some distance, without overshoot.
+ *
+ * \param value value to move.
+ * \param targetValue value to move towards.
+ * \param delta maximum distance to move by. Must be non-negative.
+ *
+ * \return the updated value.
+ */
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr T moveTowards(T value, T targetValue, T delta) requires(floating_point<T>) {
+	GREM_ASSERT(delta >= T{});
+	const T difference = targetValue - value;
+	if (abs(difference) <= delta) {
+		return targetValue;
+	}
+	return value + copysign(delta, difference);
+}
+
+/**
+ * Move a vector linearly towards a target by some distance, without overshoot.
+ *
+ * \param value vector to move.
+ * \param targetValue vector to move towards.
+ * \param delta maximum distance to move by. Must be non-negative.
+ *
+ * \return the updated vector.
+ */
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr vec<N, T> moveTowards(vec<N, T> value, vec<N, T> targetValue, T delta) requires(floating_point<T>) {
+	GREM_ASSERT(delta >= T{});
+	const vec<N, T> difference = targetValue - value;
+	const T distance = length(difference);
+	if (distance <= delta) {
+		return targetValue;
+	}
+	return value + difference * (delta / distance);
 }
 
 /**

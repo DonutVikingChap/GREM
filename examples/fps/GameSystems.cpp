@@ -33,7 +33,7 @@ namespace {
 	static HashMap<json::String, SharedLibrary> loadedLibraries{};
 	static Mutex loadedLibrariesMutex{};
 	try {
-		ScopedLock lock{loadedLibrariesMutex};
+		const ScopedLock lock{loadedLibrariesMutex};
 		SharedLibrary& sharedLibrary = loadedLibraries[name];
 		if (!sharedLibrary.is_open()) {
 			sharedLibrary.open(filesystem, formatString("systems/{}.{}", name, SharedLibrary::getLibraryFilenameExtension()));

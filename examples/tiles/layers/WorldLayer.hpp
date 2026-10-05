@@ -70,9 +70,9 @@ public:
 			messageString.push_back(' ');
 		}
 		graphics.instances2D.clear();
-		const vec2 screenCenter = vec2{graphics.renderSize / 2};
-		graphics.put2DText(screenCenter - vec2{0.0f, 4.0f}, Color::ORANGE, messageString, 2.0f, gfx::TextAlign::CENTER_HORIZONTALLY);
-		graphics.put2DText(screenCenter - vec2{0.0f, 32.0f}, Color::ORANGE, formatString("{} %", progressInPercent), 2.0f, gfx::TextAlign::CENTER_HORIZONTALLY);
+		const Offset2D screenCenter = static_cast<Offset2D>(graphics.renderSize / 2);
+		graphics.put2DText(screenCenter - Offset2D{0, 4}, Color::ORANGE, messageString, 2.0f, gfx::TextAlign::CENTER_HORIZONTALLY);
+		graphics.put2DText(screenCenter - Offset2D{0, 32}, Color::ORANGE, formatString("{} %", progressInPercent), 2.0f, gfx::TextAlign::CENTER_HORIZONTALLY);
 		graphics.renderer2D.drawFrame(renderPass, {graphics.instances2D}, graphics.camera2D);
 	}
 

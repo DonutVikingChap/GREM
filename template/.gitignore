@@ -6,6 +6,7 @@ CMakeLists.txt.user*
 *.autosave
 *.creator
 *.creator.user*
+*.blend[0-9]
 \#*\#
 .\#*
 *~

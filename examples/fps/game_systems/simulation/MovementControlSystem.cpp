@@ -60,7 +60,7 @@ private:
 			const phys::Time crouchDuration = clamp(movementState.timeSpentChangingCrouchAmount, movementDescription.crouchDurationMin, movementDescription.crouchDurationMax);
 			const phys::Coefficient crouchAmountDelta = ((crouching) ? deltaTime : -deltaTime) / crouchDuration;
 			const phys::Coefficient oldCrouchAmount = movementState.crouchAmount;
-			const phys::Box3D untransformedBoundingBox = phys::ShapeView{collider.shape}.getBoundingBox(phys::Transformation3D{}).value_or(phys::Box3D{.min{}, .max{}});
+			const phys::Box3D untransformedBoundingBox = collider.shape.getBoundingBox(phys::Transformation3D{}).value_or(phys::Box3D{.min{}, .max{}});
 			const phys::Distance baseHeight = untransformedBoundingBox.max.getY() - untransformedBoundingBox.min.getY();
 			const phys::Distance crouchHeight = baseHeight * movementDescription.crouchHeightScale;
 			const phys::Distance maxStepHeight = baseHeight * movementDescription.stepHeightCoefficient;
@@ -170,7 +170,7 @@ private:
 	}
 
 	static void jump(phys::LinearVelocity3D& linearVelocity, phys::LinearAcceleration1D gravityAcceleration, phys::Distance jumpHeight) {
-		linearVelocity[phys::Y] = sqrt(2_x * gravityAcceleration * jumpHeight);
+		linearVelocity.setY(sqrt(2_x * gravityAcceleration * jumpHeight));
 	}
 
 	static void updateCrouchAmount(phys::Coefficient& crouchAmount, phys::Position3D& position, phys::Orientation3D orientation, phys::Scale3D& scale, bool grounded,

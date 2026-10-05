@@ -14,7 +14,7 @@ set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(glslang
 	GIT_REPOSITORY https://github.com/KhronosGroup/glslang
-	GIT_TAG a8d28bd082bff18ffbe80996e922b012f915cf07 # 16.5.0
+	GIT_TAG e1b562a8bed273a02f30b59b66a5d499793cede5 # 16.6.0
 	EXCLUDE_FROM_ALL
 	SYSTEM)
 
@@ -28,9 +28,9 @@ file(READ "${glslang_SOURCE_DIR}/LICENSE.txt" GREM_GLSLANG_PREPROCESSOR_LICENSES
 string(REPLACE "\r\n" "\n" GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS "${GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS}")
 string(REGEX MATCH "The preprocessor has the core licenses stated above, plus additional licences:.*" GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS "${GREM_GLSLANG_PREPROCESSOR_LICENSES_FILE_CONTENTS}")
 
-set(GREM_GLSLANG_CORE_TITLE "glslang (16.5.0)" PARENT_SCOPE)
+set(GREM_GLSLANG_CORE_TITLE "glslang (16.6.0)" PARENT_SCOPE)
 set(GREM_GLSLANG_CORE_USE "Used by GREM." PARENT_SCOPE)
-set(GREM_GLSLANG_CORE_LINK "https://github.com/KhronosGroup/glslang/tree/a8d28bd082bff18ffbe80996e922b012f915cf07" PARENT_SCOPE)
+set(GREM_GLSLANG_CORE_LINK "https://github.com/KhronosGroup/glslang/tree/e1b562a8bed273a02f30b59b66a5d499793cede5" PARENT_SCOPE)
 set(GREM_GLSLANG_CORE_COPYRIGHT "\
 Copyright (C) 2015-2018 Google, Inc.\n\
 Copyright (C) <various other dates and companies>\n\
@@ -40,9 +40,9 @@ All rights reserved.\n\
 Copyright 2020 The Khronos Group Inc" PARENT_SCOPE)
 set(GREM_GLSLANG_CORE_LICENSES "${GREM_GLSLANG_CORE_LICENSES_FILE_CONTENTS}" PARENT_SCOPE)
 
-set(GREM_GLSLANG_PREPROCESSOR_TITLE "glslang preprocessor (16.5.0)" PARENT_SCOPE)
+set(GREM_GLSLANG_PREPROCESSOR_TITLE "glslang preprocessor (16.6.0)" PARENT_SCOPE)
 set(GREM_GLSLANG_PREPROCESSOR_USE "Part of glslang." PARENT_SCOPE)
-set(GREM_GLSLANG_PREPROCESSOR_LINK "https://github.com/KhronosGroup/glslang/tree/a8d28bd082bff18ffbe80996e922b012f915cf07/glslang/MachineIndependent/preprocessor" PARENT_SCOPE)
+set(GREM_GLSLANG_PREPROCESSOR_LINK "https://github.com/KhronosGroup/glslang/tree/e1b562a8bed273a02f30b59b66a5d499793cede5/glslang/MachineIndependent/preprocessor" PARENT_SCOPE)
 set(GREM_GLSLANG_PREPROCESSOR_COPYRIGHT "\
 Copyright (c) 2002, NVIDIA Corporation.\n\
 \n\

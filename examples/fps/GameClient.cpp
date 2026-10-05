@@ -335,7 +335,7 @@ void runPredictedTick(Audio& audio, Graphics& graphics, GameState& gameState, Pr
 	SnapshotBufferView predictionSnapshots, const TickCommand& tickCommand) {
 	GREM_PROFILE_FUNCTION();
 
-	EntityRegistry& registry = gameState.getRegistry();
+	const EntityRegistry& registry = gameState.getRegistry();
 	ResourceRegistry& resources = gameState.getResources();
 	Events& events = resources.getResource<Events>();
 	const TickIndex tickIndex = resources.getResource<TickIndex>();
@@ -369,7 +369,7 @@ void runUpcomingSubtickPrediction(Audio& audio, Graphics& graphics, GameState& g
 	SnapshotBufferView receivedSnapshots, SnapshotBufferView predictionSnapshots, const TickCommand& nextTickCommand, Duration oldTimeOffset, Duration newTimeOffset) {
 	GREM_PROFILE_FUNCTION();
 
-	EntityRegistry& registry = gameState.getRegistry();
+	const EntityRegistry& registry = gameState.getRegistry();
 	ResourceRegistry& resources = gameState.getResources();
 	Events& events = resources.getResource<Events>();
 	const TickIndex tickIndex = resources.getResource<TickIndex>();
@@ -507,9 +507,7 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 				const phys::Broadphase3D& broadphase = resources.getResource<phys::Broadphase3D>();
 				const MovementDescription& movementDescription = resources.getResource<Schema>().getMovementDescription(*playerMovementType);
 				const phys::Box3D playerBoundingBox =
-					phys::ShapeView{playerCollider->shape}
-						.getBoundingBox(translateRotateScale(*playerPosition, *playerOrientation, *playerScale))
-						.value_or(phys::Box3D{.min{}, .max{}});
+					playerCollider->shape.getBoundingBox(translateRotateScale(*playerPosition, *playerOrientation, *playerScale)).value_or(phys::Box3D{.min{}, .max{}});
 				const phys::Coefficient playerScaleExpansionFactor = 1.1_x;
 				const phys::Distance playerAdditionalExpansion =
 					movementDescription.baseSpeed * movementDescription.sprintSpeedCoefficient * movementDescription.accelerationDuration;
@@ -522,7 +520,7 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 					const phys::Direction3D direction = phys::Direction3D::reinterpret(*playerLinearVelocity / speed);
 					const phys::Distance maxDistance = speed * (static_cast<Duration::rep>(newTickIndex - tickIndex) * tickInterval);
 					broadphase.shapecast(
-						phys::ConvexShapeView{playerCollider->shape}, playerCollider->filter, transformation, direction, maxDistance, registry,
+						phys::ConvexShapeView3D{playerCollider->shape}, playerCollider->filter, transformation, direction, maxDistance, registry,
 						resources.getResource<phys::SimulationOptions3D>().collisionAlgorithmOptions, phys::CollisionFilterTest::RESPONSE,
 						[&](const phys::Broadphase3D::ShapecastResult& hit) -> bool {
 							if (phys::Collider3D* const hitObjectCollider = registry.findComponent<phys::Collider3D>(hit.objectID)) {
@@ -884,7 +882,13 @@ public:
 							if (!localPlayers.empty()) {
 								if (localPlayers.front().controllerID == *eventControllerID) {
 									localPlayers.front().inputManager.handleEvent(evt::Event{
-										evt::ControllerRemovedEvent{evt::ControllerEventBase{evt::InputEventBase{evt::EventBase{Clock::now()}, 0}, *eventControllerID}}});
+										evt::ControllerRemovedEvent{
+											evt::ControllerEventBase{
+												evt::InputEventBase{evt::EventBase{Clock::now()}, 0},
+												*eventControllerID,
+											},
+										},
+									});
 									localPlayers.front().controllerID.reset();
 									addLocalPlayer(*eventControllerID);
 									return;
@@ -936,7 +940,7 @@ public:
 	}
 
 	void update(const app::FrameInfo& frameInfo, size_t lastSecondFrameCount, Duration latestServerPhysicsTime, phys::DebugVisualization3D* physicsDebugVisualization) {
-		EntityRegistry& registry = gameState.getRegistry();
+		const EntityRegistry& registry = gameState.getRegistry();
 		ResourceRegistry& resources = gameState.getResources();
 
 		performanceStats.frameTimeSampleBuffer.update(frameInfo.deltaTime);
@@ -949,7 +953,9 @@ public:
 		audioStats.leftOutputVolume = audio.soundStage.getOutputChannelVolumeStatistics(0);
 		audioStats.rightOutputVolume = audio.soundStage.getOutputChannelVolumeStatistics(1);
 
-		receiveIncomingPackets(socket, endpoint, connection, connectionStats, [&]<typename Message>(Message&& message) -> void { handleMessage(std::forward<Message>(message)); });
+		receiveIncomingPackets(socket, endpoint, connection, connectionStats, [&]<typename Message>(Message&& message) -> void { // NOLINT(cppcoreguidelines-missing-std-forward)
+			handleMessage(std::forward<Message>(message));
+		});
 
 		for (LocalPlayer& localPlayer : localPlayers) {
 			localPlayer.inputManager.pollOutputEvents();
@@ -998,8 +1004,10 @@ public:
 				connectionStats.predictionTimeSpeedup = phys::Time{dilatedDeltaTime} / phys::Time{frameInfo.deltaTime};
 				connectionStats.predictionTimeAdjustmentTimeRemaining = max(connectionStats.predictionTimeAdjustmentTimeRemaining - frameInfo.deltaTime, Duration{});
 
-				const Duration receiveInterpolationAdjustment{connectionStats.receiveInterpolationOffsetAdjustmentRate *
-															  phys::Time{min(frameInfo.deltaTime, connectionStats.receiveInterpolationOffsetAdjustmentTimeRemaining)}};
+				const Duration receiveInterpolationAdjustment{
+					connectionStats.receiveInterpolationOffsetAdjustmentRate *
+						phys::Time{min(frameInfo.deltaTime, connectionStats.receiveInterpolationOffsetAdjustmentTimeRemaining)},
+				};
 				connectionStats.receiveInterpolationOffset += receiveInterpolationAdjustment;
 				connectionStats.receiveInterpolationOffsetAdjustmentTimeRemaining =
 					max(connectionStats.receiveInterpolationOffsetAdjustmentTimeRemaining - frameInfo.deltaTime, Duration{});
@@ -1114,7 +1122,7 @@ public:
 				const Timestamp subtickTimestamp{tickIndex, prediction.subtickBeginTimeOffset, tickInterval};
 				const Timestamp receivedInterpolationTimestamp =
 					(paused) ? Timestamp{receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex()}
-							 : min(subtickTimestamp.withTimeAdded(-connectionStats.receiveInterpolationOffset, tickInterval),
+					         : min(subtickTimestamp.withTimeAdded(-connectionStats.receiveInterpolationOffset, tickInterval),
 								   Timestamp{receivedSnapshotBuffer.getLatestReceivedSnapshotTickIndex(), MAX_EXTRAPOLATION_TIME, tickInterval});
 				const Timestamp predictionInterpolationTimestamp = (paused) ? Timestamp{tickIndex.getPrevious()} : subtickTimestamp.withTicksAdded(-1);
 				return {
@@ -1173,7 +1181,7 @@ public:
 
 		gameState.prepareToRender3DGraphics(graphics, isSplitScreen);
 
-		for (LocalPlayer& localPlayer : localPlayers) {
+		for (const LocalPlayer& localPlayer : localPlayers) {
 			gameState.stageLocalPlayer3DGraphics(graphics, worldView, localPlayer.localPlayerID, localPlayer.viewport, localPlayer.camera);
 			gameState.stageLocalPlayer2DGraphics(graphics, worldView, localPlayer.localPlayerID, localPlayer.viewRegion);
 
@@ -1867,21 +1875,17 @@ private:
 
 	void setHasControl(gfx::Window& window, bool newHasControl) {
 		if (newHasControl != controlling) {
-			if (controlling) {
-				try {
-					window.setRelativeMouseMode(false);
-				} catch (...) {
-				}
+			try {
+				window.setRelativeMouseMode(newHasControl);
+			} catch (...) {
+			}
+			if (newHasControl) {
+				ImGui::SetWindowFocus(nullptr);
+				openingChat = false;
+			} else {
 				for (LocalPlayer& localPlayer : localPlayers) {
 					localPlayer.inputManager.releaseAll(Clock::now());
 				}
-			} else {
-				try {
-					window.setRelativeMouseMode(true);
-				} catch (...) {
-				}
-				ImGui::SetWindowFocus(nullptr);
-				openingChat = false;
 			}
 			controlling = newHasControl;
 		}
@@ -2281,8 +2285,7 @@ private:
 				}
 			});
 
-			nextTickLocalPlayerCommand.desiredDirectionScale =
-				phys::Orientation2D{0 - localPlayer.visualAimAngles.getY()}(phys::Scale2D{movementInputScale.getX(), -movementInputScale.getY()});
+			nextTickLocalPlayerCommand.desiredDirectionScale = phys::Orientation2D{0 - localPlayer.visualAimAngles.getY()}(flipY(movementInputScale));
 		}
 	}
 

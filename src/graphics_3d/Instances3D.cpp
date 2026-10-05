@@ -604,7 +604,7 @@ void Instances3D::putShadedFlatModelInstanceImplementation(SharedPointer<ShaderP
 	for (const Model2D::Node& node : model.getNodes()) {
 		transparent2DDrawCommands.push_back(Transparent2DDrawCommand{
 			.transformation = instance.transformation,
-			.shaderPipelineHandle = std::move(shaderPipelineHandle),
+			.shaderPipelineHandle = shaderPipelineHandle,
 			.meshHandle = node.mesh.lock(),
 			.textureHandle = texture.lock(),
 			.instanceOffset = instanceOffset,

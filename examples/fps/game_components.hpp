@@ -61,7 +61,7 @@ struct FlashlightState {
 };
 
 struct MovementState {
-	enum Flag : uint8_t {
+	enum Flag : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class)
 		JUMPING = 1 << 0,
 		ALREADY_JUMPED = 1 << 1,
 		CROUCHING = 1 << 2,
@@ -124,7 +124,7 @@ struct ProjectileState {
 };
 
 struct WeaponState {
-	enum Flag : uint8_t {
+	enum Flag : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class)
 		PULLING_TRIGGER = 1 << 0,
 		TRIGGER_CLICKED = 1 << 1,
 		FIRING = 1 << 2,

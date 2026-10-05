@@ -17,15 +17,15 @@
 
 namespace grem::resource {
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_KHR_DESCRIPTORTYPE_BASICFORMAT = 0,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_VENDORID_KHRONOS = 0,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_MODEL_RGBSDA = 1,
 	KHR_DF_MODEL_ASTC = 162,
 	KHR_DF_MODEL_BC1A = 128,
@@ -38,7 +38,7 @@ enum : uint32_t { // NOLINT(performance-enum-size)
 	KHR_DF_MODEL_PVRTC = 164,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_CHANNEL_ASTC_DATA = 0,
 	KHR_DF_CHANNEL_BC1A_COLOR = 0,
 	KHR_DF_CHANNEL_BC3_ALPHA = 15,
@@ -55,27 +55,27 @@ enum : uint32_t { // NOLINT(performance-enum-size)
 	KHR_DF_CHANNEL_PVRTC_COLOR = 0,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_PRIMARIES_BT709 = 1,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_TRANSFER_LINEAR = 1,
 	KHR_DF_TRANSFER_SRGB = 2,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_FLAG_ALPHA_STRAIGHT = 0,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_CHANNEL_RGBSDA_RED = 0,
 	KHR_DF_CHANNEL_RGBSDA_GREEN = 1,
 	KHR_DF_CHANNEL_RGBSDA_BLUE = 2,
 	KHR_DF_CHANNEL_RGBSDA_ALPHA = 15,
 };
 
-enum : uint32_t { // NOLINT(performance-enum-size)
+enum : uint32_t { // NOLINT(cppcoreguidelines-use-enum-class, performance-enum-size)
 	KHR_DF_SAMPLE_DATATYPE_LINEAR = 1 << 4,
 	KHR_DF_SAMPLE_DATATYPE_SIGNED = 1 << 6,
 	KHR_DF_SAMPLE_DATATYPE_FLOAT = 1 << 7,

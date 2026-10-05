@@ -36,13 +36,15 @@ struct GameOptions {
 	gfx::SwapchainOptions swap{};
 	Extent2D renderSize{640, 480};
 	Region2D worldViewportRenderRegion{.offset{32, 32}, .size{576, 416}};
-	CStringView schemaFilepath = "schema.json5";
+	String schemaFilepath = "schema.json5";
 	Extent2D maxTilesetSizeInPixels{1024};
 	Optional<Schema::WorldSeed> worldSeed{};
 };
 
 class Game final : public app::Application {
 public:
+	static constexpr CStringView GAME_CONFIGURATION_FILEPATH = "configuration/game.json";
+
 	Game(Filesystem& filesystem, const GameOptions& options)
 		: app::Application(options.app)
 		, filesystem(filesystem)

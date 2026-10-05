@@ -173,24 +173,28 @@ public:
 			}
 
 			if (buffers.stagingBuffer) {
-				const Array copyRegions{VkBufferCopy{
-					.srcOffset = 0,
-					.dstOffset = 0,
-					.size = static_cast<VkDeviceSize>(bufferSize),
-				}};
+				const Array copyRegions{
+					VkBufferCopy{
+						.srcOffset = 0,
+						.dstOffset = 0,
+						.size = static_cast<VkDeviceSize>(bufferSize),
+					},
+				};
 				vkCmdCopyBuffer(commandBuffer, buffers.stagingBuffer.get(), buffers.deviceLocalBuffer.get(), static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 				if (destinationPipelineStages != VkPipelineStageFlags{}) {
-					const Array bufferMemoryBarriers{VkBufferMemoryBarrier{
-						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-						.pNext = nullptr,
-						.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-						.dstAccessMask = destinationAccessMask,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = buffers.deviceLocalBuffer.get(),
-						.offset = 0,
-						.size = static_cast<VkDeviceSize>(bufferSize),
-					}};
+					const Array bufferMemoryBarriers{
+						VkBufferMemoryBarrier{
+							.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+							.pNext = nullptr,
+							.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+							.dstAccessMask = destinationAccessMask,
+							.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+							.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+							.buffer = buffers.deviceLocalBuffer.get(),
+							.offset = 0,
+							.size = static_cast<VkDeviceSize>(bufferSize),
+						},
+					};
 					vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, destinationPipelineStages, VkDependencyFlags{}, 0, nullptr,
 						static_cast<uint32_t>(bufferMemoryBarriers.size()), bufferMemoryBarriers.data(), 0, nullptr);
 				}
@@ -232,7 +236,7 @@ private:
 				};
 				const VmaAllocationCreateInfo deviceLocalBufferAllocationCreateInfo{
 					.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-				             VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+					         VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
 					.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
 					.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					.preferredFlags = VkMemoryPropertyFlags{},

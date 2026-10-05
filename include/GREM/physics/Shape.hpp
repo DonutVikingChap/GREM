@@ -281,14 +281,13 @@ struct CollisionFilter {
  * Result of a CollisionFilterTest.
  */
 struct CollisionFilterTestResult {
-	using TestSet = uint8_t;
-
-	enum : TestSet {
+	using TestFlags = uint8_t;
+	enum TestFlag : TestFlags {         // NOLINT(cppcoreguidelines-use-enum-class)
 		DETECTS_COLLISION = 1 << 0,     ///< Both colliders wanted to detect collisions with each other on at least one of the tested layers.
 		RESPONDS_TO_COLLISION = 1 << 1, ///< Both colliders wanted to respond to collisions with each other on at least one of the tested layers.
 	};
 
-	TestSet passed{}; ///< Set of filter tests that passed.
+	TestFlags passed{}; ///< Set of filter tests that passed.
 
 	/**
 	 * Check if both colliders wanted to detect or respond to collisions on any
@@ -365,11 +364,11 @@ struct CollisionFilterTest {
 		const bool wantsResponseB = responseLayersB != CollisionLayers{} && noResponseLayersB == CollisionLayers{};
 		const bool detectsCollision = wantsDetectionA && wantsDetectionB;
 		const bool respondsToCollision = wantsResponseA && wantsResponseB;
-		CollisionFilterTestResult::TestSet passed{};
+		CollisionFilterTestResult::TestFlags passed{};
 		static_assert(CollisionFilterTestResult::DETECTS_COLLISION == 1 << 0);
-		passed |= static_cast<CollisionFilterTestResult::TestSet>(detectsCollision);
+		passed |= static_cast<CollisionFilterTestResult::TestFlags>(detectsCollision);
 		static_assert(CollisionFilterTestResult::RESPONDS_TO_COLLISION == 1 << 1);
-		passed |= static_cast<CollisionFilterTestResult::TestSet>(static_cast<CollisionFilterTestResult::TestSet>(respondsToCollision) << 1);
+		passed |= static_cast<CollisionFilterTestResult::TestFlags>(static_cast<CollisionFilterTestResult::TestFlags>(respondsToCollision) << 1);
 		return {.passed = passed};
 	}
 };
@@ -2598,7 +2597,7 @@ static_assert(shape_3d<CompoundColliderShape3D>);
  */
 template <>
 struct Shape<2>
-	: Variant<PointShape2D, LineSegmentShape2D, InfiniteLineShape2D, InfiniteHalfSpaceShape2D, RectangleShape2D, SquareShape2D, EllipseShape2D, CircleShape2D, CapsuleShape2D,
+    : Variant<PointShape2D, LineSegmentShape2D, InfiniteLineShape2D, InfiniteHalfSpaceShape2D, RectangleShape2D, SquareShape2D, EllipseShape2D, CircleShape2D, CapsuleShape2D,
 		  TaperedCapsuleShape2D, ConvexPolytopeShape2D, TriangleMeshShape2D, LocallyTransformedShape2D, CompoundColliderShape2D> {
 	using value_type = Variant;
 
@@ -2623,6 +2622,74 @@ struct Shape<2>
 	[[nodiscard]] bool isConvexPolytopeShapeType() const {
 		return match(*this)([&](const convex_polytope_shape_2d auto&) -> bool { return true; }, [&](const auto&) -> bool { return false; });
 	}
+
+	/**
+	 * Calculate an estimate of the volume of the shape.
+	 *
+	 * \return the estimated volume of the shape.
+	 */
+	[[nodiscard]] Volume calculateVolume() const;
+
+	/**
+	 * Calculate an estimate of the local moment of inertia of the shape given
+	 * a certain mass.
+	 *
+	 * \param mass assumed mass of the shape.
+	 *
+	 * \return the estimated moment of inertia in shape-local space.
+	 */
+	[[nodiscard]] PrincipalMomentsOfInertia2D calculatePrincipalMomentsOfInertia(Mass mass) const;
+
+	/**
+	 * Get the axis-aligned bounding box of the shape given its position and
+	 * orientation in the world.
+	 *
+	 * \param transformation transformation of the shape in world space.
+	 *
+	 * \return an axis-aligned bounding box in world space that would contain
+	 *         the entire shape if the shape was at the given position and
+	 *         orientation in the world, or an empty optional if the shape
+	 *         extends infinitely and cannot be fit inside a finite box.
+	 */
+	[[nodiscard]] Optional<Box2D> getBoundingBox(const Transformation2D& transformation) const;
+
+	/**
+	 * Get the radius of the bounding sphere of the shape.
+	 *
+	 * \param basis transformation basis of the shape in world space.
+	 *
+	 * \return the maximum distance from the origin of any point on the shape,
+	 *         or an empty optional if the shape extends infinitely and cannot
+	 *         be fit inside a finite sphere.
+	 */
+	[[nodiscard]] Optional<Distance> getBoundingRadius(const Basis2D& basis) const;
+
+	/**
+	 * Get an estimate of the reference area of the shape for a certain
+	 * direction, typically calculated as the area of the largest cross section
+	 * orthogonal to the given direction.
+	 *
+	 * \param basis transformation basis of the shape in world space.
+	 * \param direction direction to get the reference area for.
+	 *
+	 * \return the reference area, or an empty optional if an area cannot be
+	 *         determined, e.g.\ because the shape is infinite.
+	 */
+	[[nodiscard]] Optional<Area> getReferenceArea(const Basis2D& basis, Direction2D direction) const;
+
+	/**
+	 * Find the closest intersection of this shape with a given ray in local
+	 * space.
+	 *
+	 * \param localRayOrigin offset of the ray origin in shape-local space.
+	 * \param localRayDirection unit direction vector of the ray in shape-local
+	 *        space. Must be a unit vector.
+	 * \param maxLocalRayDistance maximum hit distance of the ray in shape-local
+	 *        space. Must be non-negative.
+	 *
+	 * \return the result of the raycast.
+	 */
+	[[nodiscard]] RaycastResult2D castLocalRay(Length2D localRayOrigin, Direction2D localRayDirection, Distance maxLocalRayDistance) const;
 };
 
 /**
@@ -2630,7 +2697,7 @@ struct Shape<2>
  */
 template <>
 struct Shape<3>
-	: Variant<PointShape3D, LineSegmentShape3D, InfiniteLineShape3D, InfiniteHalfSpaceShape3D, InfinitePlaneShape3D, BoxShape3D, CubeShape3D, EllipsoidShape3D, SphereShape3D,
+    : Variant<PointShape3D, LineSegmentShape3D, InfiniteLineShape3D, InfiniteHalfSpaceShape3D, InfinitePlaneShape3D, BoxShape3D, CubeShape3D, EllipsoidShape3D, SphereShape3D,
 		  CapsuleShape3D, TaperedCapsuleShape3D, CylinderShape3D, TaperedCylinderShape3D, ConvexPolytopeShape3D, TriangleMeshShape3D, LocallyTransformedShape3D,
 		  CompoundColliderShape3D> {
 	using value_type = Variant;
@@ -2656,6 +2723,74 @@ struct Shape<3>
 	[[nodiscard]] bool isConvexPolytopeShapeType() const {
 		return match(*this)([&](const convex_polytope_shape_3d auto&) -> bool { return true; }, [&](const auto&) -> bool { return false; });
 	}
+
+	/**
+	 * Calculate an estimate of the volume of the shape.
+	 *
+	 * \return the estimated volume of the shape.
+	 */
+	[[nodiscard]] Volume calculateVolume() const;
+
+	/**
+	 * Calculate an estimate of the local moment of inertia of the shape given
+	 * a certain mass.
+	 *
+	 * \param mass assumed mass of the shape.
+	 *
+	 * \return the estimated moment of inertia in shape-local space.
+	 */
+	[[nodiscard]] PrincipalMomentsOfInertia3D calculatePrincipalMomentsOfInertia(Mass mass) const;
+
+	/**
+	 * Get the axis-aligned bounding box of the shape given its position and
+	 * orientation in the world.
+	 *
+	 * \param transformation transformation of the shape in world space.
+	 *
+	 * \return an axis-aligned bounding box in world space that would contain
+	 *         the entire shape if the shape was at the given position and
+	 *         orientation in the world, or an empty optional if the shape
+	 *         extends infinitely and cannot be fit inside a finite box.
+	 */
+	[[nodiscard]] Optional<Box3D> getBoundingBox(const Transformation3D& transformation) const;
+
+	/**
+	 * Get the radius of the bounding sphere of the shape.
+	 *
+	 * \param basis transformation basis of the shape in world space.
+	 *
+	 * \return the maximum distance from the origin of any point on the shape,
+	 *         or an empty optional if the shape extends infinitely and cannot
+	 *         be fit inside a finite sphere.
+	 */
+	[[nodiscard]] Optional<Distance> getBoundingRadius(const Basis3D& basis) const;
+
+	/**
+	 * Get an estimate of the reference area of the shape for a certain
+	 * direction, typically calculated as the area of the largest cross section
+	 * orthogonal to the given direction.
+	 *
+	 * \param basis transformation basis of the shape in world space.
+	 * \param direction direction to get the reference area for.
+	 *
+	 * \return the reference area, or an empty optional if an area cannot be
+	 *         determined, e.g.\ because the shape is infinite.
+	 */
+	[[nodiscard]] Optional<Area> getReferenceArea(const Basis3D& basis, Direction3D direction) const;
+
+	/**
+	 * Find the closest intersection of this shape with a given ray in local
+	 * space.
+	 *
+	 * \param localRayOrigin offset of the ray origin in shape-local space.
+	 * \param localRayDirection unit direction vector of the ray in shape-local
+	 *        space. Must be a unit vector.
+	 * \param maxLocalRayDistance maximum hit distance of the ray in shape-local
+	 *        space. Must be non-negative.
+	 *
+	 * \return the result of the raycast.
+	 */
+	[[nodiscard]] RaycastResult3D castLocalRay(Length3D localRayOrigin, Direction3D localRayDirection, Distance maxLocalRayDistance) const;
 };
 using Shape2D = Shape<2>; ///< Generic shape in 2-dimensional space.
 using Shape3D = Shape<3>; ///< Generic shape in 3-dimensional space.
@@ -2689,22 +2824,147 @@ struct SubCollider {
 template <size_t N>
 class ShapeView {
 public:
+	/** Underling shape variant type. */
+	using value_type = typename Shape<N>::value_type;
+
+	/** Index type used to encode the active shape type. */
+	using index_type = value_type::index_type;
+
 	/**
 	 * Construct a shape view.
 	 *
 	 * \param shape reference to the shape to construct the view over. Must
 	 *        outlive its use in the view.
 	 */
-	GREM_ALWAYS_INLINE constexpr ShapeView(const Shape<N>& shape) noexcept
-		: shape(shape) {}
+	template <typename T>
+	GREM_ALWAYS_INLINE constexpr ShapeView(const T& shape) noexcept requires(same_as<T, Shape<N>>)
+		: shapeData(match(shape)([](const auto& s) -> const void* { return &s; }))
+		, shapeTypeIndex(shape.index()) {}
 
 	/**
-	 * Get a reference to the underlying shape.
+	 * Construct a shape view.
 	 *
-	 * \return a read-only reference to the underlying shape.
+	 * \param shape reference to the shape to construct the view over. Must
+	 *        outlive its use in the view.
 	 */
-	GREM_ALWAYS_INLINE constexpr operator const Shape<N>&() const noexcept {
-		return shape;
+	template <typename T>
+	GREM_ALWAYS_INLINE constexpr ShapeView(const T& shape) noexcept requires(!same_as<T, Shape<N>> && variant_has_alternative_v<T, value_type>)
+		: shapeData(&shape)
+		, shapeTypeIndex(variant_index_v<T, value_type>) {}
+
+	/**
+	 * Get an untyped pointer to the data of the underlying shape.
+	 *
+	 * \return a non-owning read-only pointer to the data of the underlying
+	 *         shape alternative.
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr const void* data() const noexcept {
+		return shapeData;
+	}
+
+	/**
+	 * Get the type index of the underlying shape.
+	 *
+	 * \return the type index of the underlying Shape<N> variant.
+	 */
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr index_type index() const noexcept {
+		return shapeTypeIndex;
+	}
+
+	/**
+	 * Check if the shape view is in the valueless by exception state.
+	 *
+	 * \return true if the shape view is in the valueless by exception state,
+	 *         false otherwise.
+	 */
+	[[nodiscard]] constexpr bool valueless_by_exception() const noexcept {
+		return shapeTypeIndex == Shape<N>::value_type::npos;
+	}
+
+	/**
+	 * Check if the shape view currently references the alternative with the
+	 * given type.
+	 *
+	 * \tparam T alternative type to check for. Must be one of Shape<N>'s listed
+	 *         alternative types.
+	 *
+	 * \return true if the shape view references a value of the given type,
+	 *         false otherwise.
+	 */
+	template <typename T>
+	[[nodiscard]] constexpr bool is() const noexcept requires(variant_has_alternative_v<T, value_type>) {
+		return shapeTypeIndex == variant_index_v<T, value_type>;
+	}
+
+	/**
+	 * Access the underlying value with the given type without a safety check.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of
+	 *         Shape<N>'s listed alternative types.
+	 *
+	 * \return a read-only reference to the value referenced by the shape view.
+	 *
+	 * \warning The behavior of accessing the underlying value using the
+	 *          incorrect alternative type which is not currently active is
+	 *          undefined. The active alternative type must be known in advance
+	 *          in order to use this function safely, for example by checking if
+	 *          the shape view contains the expected alternative using the is()
+	 *          function.
+	 *
+	 * \remark Rather than using this function in conjunction with is(), it is
+	 *         usually more appropriate to use get() or to call get_if() and
+	 *         make sure that the returned pointer is not nullptr. This function
+	 *         is only meant for the cases where it is absolutely certain which
+	 *         alternative the shape view currently references.
+	 *
+	 * \sa get()
+	 * \sa get_if()
+	 */
+	template <typename T>
+	[[nodiscard]] constexpr const T& as() const& noexcept requires(variant_has_alternative_v<T, value_type>) {
+		GREM_ASSERT(is<T>());
+		return *static_cast<const T*>(shapeData);
+	}
+
+	/**
+	 * Access the underlying value with the given type.
+	 *
+	 * \tparam T type of the currently active value to get. Must be one of
+	 *         Shape<N>'s listed alternative types.
+	 *
+	 * \return a read-only reference to the value referenced by the shape view.
+	 *
+	 * \throws BadVariantAccess if the shape view does not currently reference a
+	 *         value of the given type.
+	 *
+	 * \sa as()
+	 * \sa get_if()
+	 */
+	template <typename T>
+	[[nodiscard]] constexpr const T& get() const& requires(variant_has_alternative_v<T, value_type>) {
+		if (!is<T>()) {
+			throw BadVariantAccess{};
+		}
+		return as<T>();
+	}
+
+	/**
+	 * Access the underlying shape with the given type if it is the currently
+	 * active alternative.
+	 *
+	 * \tparam T type of the value to get. Must be one of Shape<N>'s listed
+	 *         alternative types.
+	 *
+	 * \return a non-owning read-only pointer to the value referenced by the
+	 *         shape view, or nullptr if the shape view does not currently
+	 *         reference a value of the given type.
+	 *
+	 * \sa as()
+	 * \sa get()
+	 */
+	template <typename T>
+	[[nodiscard]] constexpr const T* get_if() const noexcept requires(variant_has_alternative_v<T, value_type>) {
+		return (is<T>()) ? &as<T>() : nullptr;
 	}
 
 	/**
@@ -2713,9 +2973,7 @@ public:
 	 * \return true if the underlying shape satisfies the convex_shape concept,
 	 *         false otherwise.
 	 */
-	[[nodiscard]] bool isConvexShapeType() const noexcept {
-		return shape.isConvexShapeType();
-	}
+	[[nodiscard]] bool isConvexShapeType() const noexcept;
 
 	/**
 	 * Check if the shape held by this wrapper is a convex polytope shape type.
@@ -2723,9 +2981,7 @@ public:
 	 * \return true if the underlying shape satisfies the convex_polytope_shape
 	 *         concept, false otherwise.
 	 */
-	[[nodiscard]] bool isConvexPolytopeShapeType() const noexcept {
-		return shape.isConvexPolytopeShapeType();
-	}
+	[[nodiscard]] bool isConvexPolytopeShapeType() const noexcept;
 
 	/**
 	 * Calculate an estimate of the volume of the shape.
@@ -2795,8 +3051,9 @@ public:
 	 */
 	[[nodiscard]] GREM_API(physics) RaycastResult<N> castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const;
 
-protected:
-	const Shape<N>& shape;
+private:
+	const void* shapeData;
+	index_type shapeTypeIndex;
 };
 extern template class ShapeView<2>;
 extern template class ShapeView<3>;
@@ -2806,6 +3063,78 @@ static_assert(shape_2d<ShapeView2D>);
 static_assert(shape_3d<ShapeView3D>);
 
 /**
+ * Call a visitor functor with a reference to the currently active underlying
+ * shape of a ShapeView.
+ *
+ * \param visitor callable object that is overloaded to accept any of the
+ *        Shape alternatives as a parameter.
+ * \param shape shape view whose underlying value to pass to the visitor.
+ *
+ * \return the result of calling the visitor with the currently active shape
+ *         alternative value.
+ *
+ * \throws BadVariantAccess if the shape view is in the valueless by exception
+ *         state.
+ * \throws any exception thrown by the visitor.
+ */
+template <typename Visitor, size_t N>
+constexpr decltype(auto) visit(Visitor&& visitor, ShapeView<N> shape) { // NOLINT(cppcoreguidelines-missing-std-forward)
+	return Shape<N>::value_type::visitIndex(shape.index(),
+		Overloaded{
+			[&]<typename T>(std::in_place_type_t<T>) -> decltype(auto) { return visitor(*static_cast<const T*>(shape.data())); },
+			[&]() -> decltype(visitor(std::declval<const PointShape<N>&>())) { throw BadVariantAccess{}; },
+		});
+}
+
+inline Volume Shape<2>::calculateVolume() const {
+	return ShapeView2D{*this}.calculateVolume();
+}
+
+inline PrincipalMomentsOfInertia2D Shape<2>::calculatePrincipalMomentsOfInertia(Mass mass) const {
+	return ShapeView2D{*this}.calculatePrincipalMomentsOfInertia(mass);
+}
+
+inline Optional<Box2D> Shape<2>::getBoundingBox(const Transformation2D& transformation) const {
+	return ShapeView2D{*this}.getBoundingBox(transformation);
+}
+
+inline Optional<Distance> Shape<2>::getBoundingRadius(const Basis2D& basis) const {
+	return ShapeView2D{*this}.getBoundingRadius(basis);
+}
+
+inline Optional<Area> Shape<2>::getReferenceArea(const Basis2D& basis, Direction2D direction) const {
+	return ShapeView2D{*this}.getReferenceArea(basis, direction);
+}
+
+inline RaycastResult2D Shape<2>::castLocalRay(Length2D localRayOrigin, Direction2D localRayDirection, Distance maxLocalRayDistance) const {
+	return ShapeView2D{*this}.castLocalRay(localRayOrigin, localRayDirection, maxLocalRayDistance);
+}
+
+inline Volume Shape<3>::calculateVolume() const {
+	return ShapeView3D{*this}.calculateVolume();
+}
+
+inline PrincipalMomentsOfInertia3D Shape<3>::calculatePrincipalMomentsOfInertia(Mass mass) const {
+	return ShapeView3D{*this}.calculatePrincipalMomentsOfInertia(mass);
+}
+
+inline Optional<Box3D> Shape<3>::getBoundingBox(const Transformation3D& transformation) const {
+	return ShapeView3D{*this}.getBoundingBox(transformation);
+}
+
+inline Optional<Distance> Shape<3>::getBoundingRadius(const Basis3D& basis) const {
+	return ShapeView3D{*this}.getBoundingRadius(basis);
+}
+
+inline Optional<Area> Shape<3>::getReferenceArea(const Basis3D& basis, Direction3D direction) const {
+	return ShapeView3D{*this}.getReferenceArea(basis, direction);
+}
+
+inline RaycastResult3D Shape<3>::castLocalRay(Length3D localRayOrigin, Direction3D localRayDirection, Distance maxLocalRayDistance) const {
+	return ShapeView3D{*this}.castLocalRay(localRayOrigin, localRayDirection, maxLocalRayDistance);
+}
+
+/**
  * View of a generic convex shape.
  *
  * \tparam N number of dimensions of the world space (must be 2 or 3).
@@ -2813,13 +3142,27 @@ static_assert(shape_3d<ShapeView3D>);
 template <size_t N>
 class ConvexShapeView : public ShapeView<N> {
 public:
+	using typename ShapeView<N>::value_type;
+	using typename ShapeView<N>::index_type;
+
 	/**
-	 * Construct a shape view.
+	 * Construct a convex shape view.
 	 *
 	 * \param shape reference to the shape to construct the view over. Must
 	 *        outlive its use in the view.
 	 */
-	GREM_ALWAYS_INLINE constexpr explicit ConvexShapeView(const Shape<N>& shape)
+	template <typename T>
+	GREM_ALWAYS_INLINE constexpr explicit ConvexShapeView(const T& shape) noexcept requires(same_as<T, Shape<N>>)
+		: ShapeView<N>(shape) {}
+
+	/**
+	 * Construct a convex shape view.
+	 *
+	 * \param shape reference to the shape to construct the view over. Must
+	 *        outlive its use in the view.
+	 */
+	template <typename T>
+	GREM_ALWAYS_INLINE constexpr ConvexShapeView(const T& shape) noexcept requires(!same_as<T, Shape<N>> && variant_has_alternative_v<T, value_type> && convex_shape<T, N>)
 		: ShapeView<N>(shape) {}
 
 	/**
@@ -2872,13 +3215,28 @@ static_assert(convex_shape_3d<ConvexShapeView3D>);
 template <size_t N>
 class ConvexPolytopeShapeView : public ConvexShapeView<N> {
 public:
+	using typename ShapeView<N>::value_type;
+	using typename ShapeView<N>::index_type;
+
 	/**
-	 * Construct a shape view.
+	 * Construct a convex polytope shape view.
 	 *
 	 * \param shape reference to the shape to construct the view over. Must
 	 *        outlive its use in the view.
 	 */
-	GREM_ALWAYS_INLINE constexpr explicit ConvexPolytopeShapeView(const Shape<N>& shape)
+	template <typename T>
+	GREM_ALWAYS_INLINE constexpr explicit ConvexPolytopeShapeView(const T& shape) noexcept requires(same_as<T, Shape<N>>)
+		: ConvexShapeView<N>(shape) {}
+
+	/**
+	 * Construct a convex polytope shape view.
+	 *
+	 * \param shape reference to the shape to construct the view over. Must
+	 *        outlive its use in the view.
+	 */
+	template <typename T>
+	GREM_ALWAYS_INLINE constexpr ConvexPolytopeShapeView(const T& shape) noexcept
+		requires(!same_as<T, Shape<N>> && variant_has_alternative_v<T, value_type> && convex_polytope_shape<T, N>)
 		: ConvexShapeView<N>(shape) {}
 
 	/**

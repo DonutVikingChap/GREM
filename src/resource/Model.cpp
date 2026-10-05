@@ -818,7 +818,7 @@ private:
 	void traverseRootNodes(auto visitNode) {
 		if (!glTFAsset.scenes.empty()) {
 			for (const gltf::NodeIndex glTFRootNodeIndex : glTFAsset.scenes[glTFAsset.scene.value_or(0)].nodes) {
-				auto visitNodeCopy = visitNode;
+				const auto visitNodeCopy = visitNode;
 				visitNodeCopy(glTFRootNodeIndex);
 			}
 		}
@@ -1557,7 +1557,7 @@ void GlTFModelLoader::initializeBufferContents() {
 						glTFBufferContents[glTFBufferIndex] = ownedBufferData.back();
 						break;
 					}
-					GREM_CASE(Span<const byte> bufferData) {
+					GREM_CASE(const Span<const byte> bufferData) {
 						glTFBufferContents[glTFBufferIndex] = bufferData;
 						break;
 					}
@@ -1973,9 +1973,9 @@ void GlTFModelLoader::loadSkins() {
 		GREM_ASSERT(skinDataByteOffset % 4 == 0);
 		skinData.skinDataOffset = static_cast<Model::ValueOffset>(skinDataByteOffset / 4);
 
-		StridedSpan<byte> inverseBindPoseMatrixData{model.skinData.data() + skinDataByteOffset, totalJointCount, SKIN_STRIDE_BYTES};
+		const StridedSpan<byte> inverseBindPoseMatrixData{model.skinData.data() + skinDataByteOffset, totalJointCount, SKIN_STRIDE_BYTES};
 		fillWithValues<mat4>(inverseBindPoseMatrixData, mat4{1.0f});
-		StridedSpan<mat4> inverseBindPoseMatrices{std::launder(reinterpret_cast<mat4*>(inverseBindPoseMatrixData.base())), totalJointCount, SKIN_STRIDE_BYTES};
+		const StridedSpan<mat4> inverseBindPoseMatrices{std::launder(reinterpret_cast<mat4*>(inverseBindPoseMatrixData.base())), totalJointCount, SKIN_STRIDE_BYTES};
 
 		Model::JointIndex dynamicJointIndex = model.staticJointCount;
 		traverseRootNodes([&, &skinData = skinData](gltf::NodeIndex glTFRootNodeIndex) -> void {
@@ -2090,8 +2090,8 @@ void GlTFModelLoader::loadMaterials() {
 			.metallicFactor = glTFMaterial.pbrMetallicRoughness.metallicFactor,
 			.normalScale = (glTFMaterial.normalTexture) ? glTFMaterial.normalTexture->scale : 1.0f,
 			.emissiveFactor = (glTFMaterial.extensions.KHR_materials_emissive_strength)
-		                          ? glTFMaterial.emissiveFactor * glTFMaterial.extensions.KHR_materials_emissive_strength->emissiveStrength
-		                          : glTFMaterial.emissiveFactor,
+			                      ? glTFMaterial.emissiveFactor * glTFMaterial.extensions.KHR_materials_emissive_strength->emissiveStrength
+			                      : glTFMaterial.emissiveFactor,
 			.alphaCutoff = glTFMaterial.alphaCutoff,
 			.indexOfRefraction = (glTFMaterial.extensions.KHR_materials_ior) ? glTFMaterial.extensions.KHR_materials_ior->ior : 1.5f,
 			.baseColorMap = defaultTextureInfo,
@@ -2137,13 +2137,13 @@ void GlTFModelLoader::loadMaterials() {
 
 				textureCoordinatesChannel =
 					(glTFMaterial.occlusionTexture->extensions.KHR_texture_transform && glTFMaterial.occlusionTexture->extensions.KHR_texture_transform->textureCoordinatesChannel)
-						? *glTFMaterial.occlusionTexture->extensions.KHR_texture_transform->textureCoordinatesChannel
-						: glTFMaterial.occlusionTexture->textureCoordinatesChannel;
+				        ? *glTFMaterial.occlusionTexture->extensions.KHR_texture_transform->textureCoordinatesChannel
+				        : glTFMaterial.occlusionTexture->textureCoordinatesChannel;
 				const size_t metallicRoughnessTextureCoordinatesChannel =
 					(glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture->extensions.KHR_texture_transform &&
 						glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture->extensions.KHR_texture_transform->textureCoordinatesChannel)
-						? *glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture->extensions.KHR_texture_transform->textureCoordinatesChannel
-						: glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture->textureCoordinatesChannel;
+				        ? *glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture->extensions.KHR_texture_transform->textureCoordinatesChannel
+				        : glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture->textureCoordinatesChannel;
 				if (textureCoordinatesChannel != metallicRoughnessTextureCoordinatesChannel) {
 					throw resource::Error{"The occlusion and occlusion-roughness-metallic textures have incompatible texture coordinate channels."};
 				}
@@ -2252,11 +2252,7 @@ void GlTFModelLoader::loadMeshes() {
 				.max{(*glTFPositionAccessor.max)[0], (*glTFPositionAccessor.max)[1], (*glTFPositionAccessor.max)[2]},
 			};
 			const Span<const vec3> positions{std::launder(reinterpret_cast<const vec3*>(positionData.data())), vertexCount};
-			float boundingRadiusSquared = length2(positions.front());
-			for (const vec3 position : positions.subspan(1)) {
-				boundingRadiusSquared = max(boundingRadiusSquared, length2(position));
-			}
-			mesh.boundingRadius = sqrt(boundingRadiusSquared);
+			mesh.boundingRadius = calculateBoundingRadius<3, float>(positions);
 
 			const Span<byte> normalData = Span{model.meshData}.subspan(meshDataByteOffset, vertexCount * sizeof(iA2B10G10R10vec4norm));
 			meshDataByteOffset += normalData.size_bytes();
@@ -2309,8 +2305,8 @@ void GlTFModelLoader::loadMeshes() {
 			                                                                                : ((mesh.vertexFlags & Model::VERTEX_TEXTURED_ON_CHANNEL_0) != 0);
 			const bool hasMorphedNormalTextureCoordinates =
 				(normalTextureCoordinatesChannel == 1)
-					? ((mesh.vertexFlags & Model::VERTEX_MORPHED_TEXTURE_COORDINATES_CHANNEL_1) != 0)
-					: ((mesh.vertexFlags & Model::VERTEX_MORPHED_TEXTURE_COORDINATES_CHANNEL_0) != 0);
+			        ? ((mesh.vertexFlags & Model::VERTEX_MORPHED_TEXTURE_COORDINATES_CHANNEL_1) != 0)
+			        : ((mesh.vertexFlags & Model::VERTEX_MORPHED_TEXTURE_COORDINATES_CHANNEL_0) != 0);
 
 			constexpr iA2B10G10R10vec4norm DEFAULT_NORMAL{1.0f, 0.0f, 0.0f, 0.0f};
 			constexpr iA2B10G10R10vec4norm DEFAULT_TANGENT{0.0f, 1.0f, 0.0f, 1.0f};
@@ -2643,7 +2639,7 @@ void GlTFModelLoader::loadNodes() {
 
 						model.instances[instanceIndex] = {
 							.materialIndex = (glTFMeshPrimitive.material) ? static_cast<Model::MaterialIndex>(*glTFMeshPrimitive.material)
-					                                                      : static_cast<Model::MaterialIndex>(model.materials.size()),
+							                                              : static_cast<Model::MaterialIndex>(model.materials.size()),
 							.meshIndex = meshIndex,
 							.skinDataOffset = skinDataOffset,
 							.morphTargetWeightOffset = morphTargetWeightIndex,
@@ -2837,8 +2833,13 @@ void GlTFModelLoader::loadAnimations() {
 					const Span<byte> rotationData{model.keyframeOutputValueData.data() + keyframeOutputValueDataByteOffset, outputCount * sizeof(vec4)};
 					keyframeOutputValueDataByteOffset += rotationData.size_bytes();
 					readAccessorValues<vec4>(rotationData, "output",
-						{gltf::Accessor::ComponentType::F32, gltf::Accessor::ComponentType::I8, gltf::Accessor::ComponentType::U8, gltf::Accessor::ComponentType::I16,
-							gltf::Accessor::ComponentType::U16},
+						{
+							gltf::Accessor::ComponentType::F32,
+							gltf::Accessor::ComponentType::I8,
+							gltf::Accessor::ComponentType::U8,
+							gltf::Accessor::ComponentType::I16,
+							gltf::Accessor::ComponentType::U16,
+						},
 						{gltf::Accessor::Type::VEC4}, glTFOutputAccessor);
 					break;
 				}
@@ -2858,8 +2859,13 @@ void GlTFModelLoader::loadAnimations() {
 					const Span<byte> weightData{model.keyframeOutputValueData.data() + keyframeOutputValueDataByteOffset, outputCount * sizeof(float)};
 					keyframeOutputValueDataByteOffset += weightData.size_bytes();
 					readAccessorValues<float>(weightData, "output",
-						{gltf::Accessor::ComponentType::F32, gltf::Accessor::ComponentType::I8, gltf::Accessor::ComponentType::U8, gltf::Accessor::ComponentType::I16,
-							gltf::Accessor::ComponentType::U16},
+						{
+							gltf::Accessor::ComponentType::F32,
+							gltf::Accessor::ComponentType::I8,
+							gltf::Accessor::ComponentType::U8,
+							gltf::Accessor::ComponentType::I16,
+							gltf::Accessor::ComponentType::U16,
+						},
 						{gltf::Accessor::Type::SCALAR}, glTFOutputAccessor);
 					break;
 				}
@@ -3538,19 +3544,6 @@ void OBJModelLoader::loadMeshes() {
 				throw std::length_error{"Too many vertices in mesh."};
 			}
 
-			Box<3, float> boundingBox{};
-			float boundingRadius = 0.0f;
-			if (!positions.empty()) {
-				boundingBox = {.min{vec3{positions.front()}}, .max{vec3{positions.front()}}};
-				float boundingRadiusSquared = length2(vec3{positions.front()});
-				for (const vec3 position : Span{positions}.subspan(1)) {
-					boundingBox.min = min(boundingBox.min, position);
-					boundingBox.max = max(boundingBox.max, position);
-					boundingRadiusSquared = max(boundingRadiusSquared, length2(position));
-				}
-				boundingRadius = sqrt(boundingRadiusSquared);
-			}
-
 			GREM_ASSERT(meshData.size() % 4 == 0);
 
 			model.meshes[meshIndex] = {
@@ -3561,8 +3554,8 @@ void OBJModelLoader::loadMeshes() {
 				.morphedVertexStride = 0,
 				.meshDataOffset = static_cast<Model::ValueOffset>(meshData.size() / 4),
 				.morphTargetDataOffset = 0,
-				.boundingBox = boundingBox,
-				.boundingRadius = boundingRadius,
+				.boundingBox = calculateBoundingBox<3, float>(positions),
+				.boundingRadius = calculateBoundingRadius<3, float>(positions),
 				.vertexFlags = Model::VERTEX_TEXTURED_ON_CHANNEL_0,
 			};
 
@@ -3735,13 +3728,13 @@ void OBJModelLoader::loadMaterials() {
 					material.emissiveFactor = objMaterial.emissiveColor;
 					material.occlusionStrength =
 						(objMaterial.occlusionRoughnessMetallicMapName.empty())
-							? clamp(objMaterial.ambientColor.x * objMaterial.ambientColor.y * objMaterial.ambientColor.z, 0.0f, 1.0f)
-							: 1.0f;
+					        ? clamp(objMaterial.ambientColor.x * objMaterial.ambientColor.y * objMaterial.ambientColor.z, 0.0f, 1.0f)
+					        : 1.0f;
 					material.roughnessFactor =
 						(objMaterial.roughnessFactor) ? *objMaterial.roughnessFactor
 						: (objMaterial.occlusionRoughnessMetallicMapName.empty())
-							? 1.0f - clamp(0.25f * pow(objMaterial.specularExponent, 0.2f), 0.0f, 1.0f)
-							: 1.0f;
+					        ? 1.0f - clamp(0.25f * pow(objMaterial.specularExponent, 0.2f), 0.0f, 1.0f)
+					        : 1.0f;
 					material.metallicFactor = (objMaterial.metallicFactor) ? *objMaterial.metallicFactor : (objMaterial.occlusionRoughnessMetallicMapName.empty()) ? 0.0f : 1.0f;
 
 					if (!objMaterial.diffuseMapName.empty()) {
@@ -3795,12 +3788,14 @@ void OBJModelLoader::loadNodes() {
 	Model::MaterialIndex materialIndex = 0;
 	Model::InstanceIndex instanceIndex = 0;
 
-	model.bindPose.localJoints = {{
-		.translation = options.rootTranslation,
-		.rotation = options.rootRotation,
-		.scale = options.rootScale,
-		.visible = true,
-	}};
+	model.bindPose.localJoints = {
+		{
+			.translation = options.rootTranslation,
+			.rotation = options.rootRotation,
+			.scale = options.rootScale,
+			.visible = true,
+		},
+	};
 	model.jointParentIndices = {0};
 	model.jointColliders = {nullopt};
 	model.jointPhysicsObjectIndices = {Limits<Model::PhysicsObjectIndex>::MAX};
@@ -4218,7 +4213,7 @@ ModelFileType Model::determineFileType(Span<const byte> fileContents) noexcept {
 	if (fileContentsAsString.starts_with("glTF")) {
 		return ModelFileType::GLTF_BINARY;
 	}
-	for (char32_t codePoint : unicode::UTF8View{fileContentsAsString}) {
+	for (const char32_t codePoint : unicode::UTF8View{fileContentsAsString}) {
 		if (!json::isWhitespace(codePoint)) {
 			if (codePoint == char32_t{'{'}) {
 				return ModelFileType::GLTF;
@@ -4337,51 +4332,51 @@ void Model::assign(StridedSpan<const vec3> positions, StridedSpan<const uint32_t
 
 		if (!colors.empty()) {
 			writeValues(meshDataPointer, colors);
-			meshDataPointer += vertexCount * sizeof(u8vec4norm);
+			meshDataPointer += vertexCount * sizeof(u8vec4norm); // NOLINT(clang-analyzer-deadcode.DeadStores)
 			vertexFlags |= VERTEX_COLORED;
 		}
 
-		boundingBox = {.min{positions.front()}, .max{positions.front()}};
-		float boundingRadiusSquared = length2(positions.front());
-		for (const vec3 position : positions.subspan(1)) {
-			boundingBox.min = min(boundingBox.min, position);
-			boundingBox.max = max(boundingBox.max, position);
-			boundingRadiusSquared = max(boundingRadiusSquared, length2(position));
-		}
-		boundingRadius = sqrt(boundingRadiusSquared);
+		boundingBox = calculateBoundingBox<3, float>(positions);
+		boundingRadius = calculateBoundingRadius<3, float>(positions);
 	}
 
-	bindPose.localJoints = {{
-		.translation{0.0f, 0.0f, 0.0f},
-		.rotation{0.0f, 0.0f, 0.0f, 1.0f},
-		.scale{1.0f, 1.0f, 1.0f},
-		.visible = true,
-	}};
+	bindPose.localJoints = {
+		{
+			.translation{0.0f, 0.0f, 0.0f},
+			.rotation{0.0f, 0.0f, 0.0f, 1.0f},
+			.scale{1.0f, 1.0f, 1.0f},
+			.visible = true,
+		},
+	};
 	jointParentIndices = {0};
 	jointColliders = {nullopt};
 	jointPhysicsObjectIndices = {Limits<Model::PhysicsObjectIndex>::MAX};
 	staticJointCount = 1;
 
-	meshes = {{
-		.primitiveType = PrimitiveType::TRIANGLES,
-		.indexCount = static_cast<IndexCount>(indexCount),
-		.vertexCount = static_cast<VertexCount>(vertexCount),
-		.morphTargetCount = 0,
-		.morphedVertexStride = 0,
-		.meshDataOffset = 0,
-		.morphTargetDataOffset = 0,
-		.boundingBox = boundingBox,
-		.boundingRadius = boundingRadius,
-		.vertexFlags = vertexFlags,
-	}};
-	instances = {{
-		.materialIndex = 0,
-		.meshIndex = 0,
-		.skinDataOffset = 0,
-		.morphTargetWeightOffset = 0,
-		.jointIndex = 0,
-		.instanceFlags{},
-	}};
+	meshes = {
+		{
+			.primitiveType = PrimitiveType::TRIANGLES,
+			.indexCount = static_cast<IndexCount>(indexCount),
+			.vertexCount = static_cast<VertexCount>(vertexCount),
+			.morphTargetCount = 0,
+			.morphedVertexStride = 0,
+			.meshDataOffset = 0,
+			.morphTargetDataOffset = 0,
+			.boundingBox = boundingBox,
+			.boundingRadius = boundingRadius,
+			.vertexFlags = vertexFlags,
+		},
+	};
+	instances = {
+		{
+			.materialIndex = 0,
+			.meshIndex = 0,
+			.skinDataOffset = 0,
+			.morphTargetWeightOffset = 0,
+			.jointIndex = 0,
+			.instanceFlags{},
+		},
+	};
 	if (material) {
 		materials = {*material};
 	}

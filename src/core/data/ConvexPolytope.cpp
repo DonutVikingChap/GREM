@@ -107,7 +107,7 @@ detail::ConvexPolytopeData<2> detail::buildConvexHull2D(Span<const ConvexPolytop
 		result.vertices[i] = vec2{transformation * vec3{vertices[i], 1.0f}};
 	}
 
-	const Box<2, float> fullBoundingBox = detail::calculateBoundingBox<2>(result.vertices);
+	const Box<2, float> fullBoundingBox = calculateBoundingBox<2, float>(result.vertices);
 	const float epsilon = length(fullBoundingBox.max - fullBoundingBox.min) * 0.001f;
 	const float epsilonSquared = length2(epsilon);
 
@@ -196,7 +196,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		result.vertices[i] = vec3{transformation * vec4{vertices[i], 1.0f}};
 	}
 
-	const Box<3, float> fullBoundingBox = detail::calculateBoundingBox<3>(result.vertices);
+	const Box<3, float> fullBoundingBox = calculateBoundingBox<3, float>(result.vertices);
 	const float epsilon = length(fullBoundingBox.max - fullBoundingBox.min) * 0.001f;
 
 	// References:

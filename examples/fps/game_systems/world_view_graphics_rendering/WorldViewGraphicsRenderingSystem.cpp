@@ -175,9 +175,9 @@ public:
 			if (settings.graphics.showPerformanceStats) {
 				GREM_PROFILE_BLOCK("Record 2D performance stats");
 				const gfx::FeatureSupport supportedFeatures = graphics.device.getSupportedFeatures();
-				const vec2 position{
-					static_cast<float>(graphics.screenViewport.region.offset.x) + 15.0f + 2.0f,
-					static_cast<float>(graphics.screenViewport.region.offset.y) + static_cast<float>(graphics.screenViewport.region.size.height) - 15.0f - 120.0f,
+				const Offset2D position{
+					graphics.screenViewport.region.offset.x + 15 + 2,
+					graphics.screenViewport.region.offset.y + static_cast<int32_t>(graphics.screenViewport.region.size.height) - 15 - 120,
 				};
 				graphics.put2DText(position, Color::WHITE,
 					formatSmallString<256>("Graphics API: {} {}\nForward 3D Render Pass Statistics:\n  Vertices: {}\n  Indices: {}\n  Instances: {}\n  Draw Calls: {}",

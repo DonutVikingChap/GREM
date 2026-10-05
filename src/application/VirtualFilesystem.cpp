@@ -115,7 +115,7 @@ void VirtualFilesystem::mountInputArchivesInMountedDirectory(CStringView filepat
 				throw File::Error{
 					String{"Failed to get the real directory of archive \""} + virtualArchiveFilepath + "\":\n" + PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()) + "\n"};
 			}
-			String archiveFilepath = String{realDirectory} + PHYSFS_getDirSeparator() + context.directoryFilepath.c_str() + PHYSFS_getDirSeparator() + fname;
+			const String archiveFilepath = String{realDirectory} + PHYSFS_getDirSeparator() + context.directoryFilepath.c_str() + PHYSFS_getDirSeparator() + fname;
 			context.filesystem.mountInputArchive(archiveFilepath.c_str(), context.priority);
 			context.callback(archiveFilepath);
 			return PHYSFS_ENUM_OK;
@@ -263,9 +263,9 @@ void VirtualFilesystem::createEmptyOutputFile(CStringView filepath) {
 	if (errorCode) {
 		throw File::Error{String{"Failed to create file \""} + filepath.c_str() + "\" for writing:\n" + errorCode.message()};
 	}
-	VirtualOutputFile result{PHYSFS_openWrite(filepath.c_str()), std::move(lock)};
+	const VirtualOutputFile result{PHYSFS_openWrite(filepath.c_str()), std::move(lock)};
 #else
-	VirtualOutputFile result{PHYSFS_openWrite(filepath.c_str())};
+	const VirtualOutputFile result{PHYSFS_openWrite(filepath.c_str())};
 #endif
 	if (!result) {
 		throw File::Error{String{"Failed to create file \""} + filepath.c_str() + "\" for writing:\n" + PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())};
@@ -293,7 +293,7 @@ OutputFileHandle VirtualFilesystem::openOutputFileForAppending(CStringView filep
 VirtualFilesystem::FileLock::~FileLock() {
 	if (lock.owns_lock()) {
 		lock.unlock();
-		ScopedLock fileMutexesSetLock{filesystem->fileMutexesSetMutex};
+		const ScopedLock fileMutexesSetLock{filesystem->fileMutexesSetMutex};
 		if (fileMutex.value.use_count() <= 2) {
 			filesystem->fileMutexes.erase(fileMutex.value->canonicalFilepath);
 		}
@@ -322,7 +322,7 @@ VirtualFilesystem::FileLock VirtualFilesystem::lockInputFile(CStringView filepat
 	}
 	SharedFileMutex fileMutex{};
 	{
-		ScopedLock fileMutexesSetLock{fileMutexesSetMutex};
+		const ScopedLock fileMutexesSetLock{fileMutexesSetMutex};
 		fileMutex = *fileMutexes.emplace(std::move(canonicalFilepath)).first;
 	}
 	return FileLock{*this, std::move(fileMutex)};
@@ -341,7 +341,7 @@ VirtualFilesystem::FileLock VirtualFilesystem::lockOutputFile(CStringView filepa
 	}
 	SharedFileMutex fileMutex{};
 	{
-		ScopedLock fileMutexesSetLock{fileMutexesSetMutex};
+		const ScopedLock fileMutexesSetLock{fileMutexesSetMutex};
 		fileMutex = *fileMutexes.emplace(std::move(canonicalFilepath)).first;
 	}
 	return FileLock{*this, std::move(fileMutex)};

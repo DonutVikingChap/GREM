@@ -270,7 +270,7 @@ void Window::stopTextInput() { // NOLINT(readability-make-member-function-const)
 }
 
 bool Window::isTextInputActive() const {
-	return SDL_TextInputActive(static_cast<SDL_Window*>(get()));
+	return SDL_TextInputActive(static_cast<SDL_Window*>(const_cast<void*>(get())));
 }
 
 bool Window::hasScreenKeyboardSupport() const {
@@ -278,36 +278,36 @@ bool Window::hasScreenKeyboardSupport() const {
 }
 
 bool Window::isScreenKeyboardShown() const {
-	return SDL_ScreenKeyboardShown(static_cast<SDL_Window*>(get()));
+	return SDL_ScreenKeyboardShown(static_cast<SDL_Window*>(const_cast<void*>(get())));
 }
 
 bool Window::isHighPixelDensity() const {
-	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(get()));
+	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	return (flags & SDL_WINDOW_HIGH_PIXEL_DENSITY) != 0;
 }
 
 bool Window::hasFocus() const {
-	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(get()));
+	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	return (flags & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
 bool Window::isMinimized() const {
-	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(get()));
+	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	return (flags & SDL_WINDOW_MINIMIZED) != 0;
 }
 
 bool Window::isResizable() const {
-	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(get()));
+	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	return (flags & SDL_WINDOW_RESIZABLE) != 0;
 }
 
 bool Window::isFullscreen() const {
-	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(get()));
+	const SDL_WindowFlags flags = SDL_GetWindowFlags(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	return (flags & SDL_WINDOW_FULLSCREEN) != 0;
 }
 
 Window* Window::getParent() const {
-	if (SDL_Window* const parentSDLWindow = SDL_GetWindowParent(static_cast<SDL_Window*>(get()))) {
+	if (SDL_Window* const parentSDLWindow = SDL_GetWindowParent(static_cast<SDL_Window*>(const_cast<void*>(get())))) {
 		const SDL_PropertiesID parentWindowProperties = SDL_GetWindowProperties(parentSDLWindow);
 		if (parentWindowProperties != 0) {
 			void* const parentWindow = SDL_GetPointerProperty(parentWindowProperties, "GREM.window", nullptr);
@@ -322,7 +322,7 @@ Window* Window::getParent() const {
 Offset2D Window::getPosition() const {
 	int x = 0;
 	int y = 0;
-	if (!SDL_GetWindowPosition(static_cast<SDL_Window*>(get()), &x, &y)) {
+	if (!SDL_GetWindowPosition(static_cast<SDL_Window*>(const_cast<void*>(get())), &x, &y)) {
 		throw graphics::Error{String{"Failed to get window position:\n"} + SDL_GetError()};
 	}
 	return Offset2D{.x = static_cast<int32_t>(x), .y = static_cast<int32_t>(y)};
@@ -331,7 +331,7 @@ Offset2D Window::getPosition() const {
 Extent2D Window::getSize() const {
 	int width = 0;
 	int height = 0;
-	if (!SDL_GetWindowSize(static_cast<SDL_Window*>(get()), &width, &height)) {
+	if (!SDL_GetWindowSize(static_cast<SDL_Window*>(const_cast<void*>(get())), &width, &height)) {
 		throw graphics::Error{String{"Failed to get window size:\n"} + SDL_GetError()};
 	}
 	return Extent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)};
@@ -340,14 +340,14 @@ Extent2D Window::getSize() const {
 Extent2D Window::getDrawableSize() const {
 	int width = 0;
 	int height = 0;
-	if (!SDL_GetWindowSizeInPixels(static_cast<SDL_Window*>(get()), &width, &height)) {
+	if (!SDL_GetWindowSizeInPixels(static_cast<SDL_Window*>(const_cast<void*>(get())), &width, &height)) {
 		throw graphics::Error{String{"Failed to get window drawable size:\n"} + SDL_GetError()};
 	}
 	return Extent2D{.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)};
 }
 
 float Window::getDisplayScale() const {
-	const float displayScale = SDL_GetWindowDisplayScale(static_cast<SDL_Window*>(get()));
+	const float displayScale = SDL_GetWindowDisplayScale(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	if (displayScale == 0.0f) {
 		throw graphics::Error{String{"Failed to get window display scale:\n"} + SDL_GetError()};
 	}
@@ -355,7 +355,7 @@ float Window::getDisplayScale() const {
 }
 
 float Window::getOpacity() const {
-	const float opacity = SDL_GetWindowOpacity(static_cast<SDL_Window*>(get()));
+	const float opacity = SDL_GetWindowOpacity(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	if (opacity == -1.0f) {
 		throw graphics::Error{String{"Failed to get window opacity:\n"} + SDL_GetError()};
 	}
@@ -363,7 +363,7 @@ float Window::getOpacity() const {
 }
 
 Display Window::getDisplay() const {
-	const SDL_DisplayID displayID = SDL_GetDisplayForWindow(static_cast<SDL_Window*>(get()));
+	const SDL_DisplayID displayID = SDL_GetDisplayForWindow(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	if (displayID == 0) {
 		throw graphics::Error{String{"Failed to get window display:\n"} + SDL_GetError()};
 	}
@@ -371,7 +371,7 @@ Display Window::getDisplay() const {
 }
 
 Optional<DisplayMode> Window::getFullscreenDisplayMode() const {
-	const SDL_DisplayMode* const mode = SDL_GetWindowFullscreenMode(static_cast<SDL_Window*>(get()));
+	const SDL_DisplayMode* const mode = SDL_GetWindowFullscreenMode(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	if (!mode) {
 		return {};
 	}
@@ -381,16 +381,16 @@ Optional<DisplayMode> Window::getFullscreenDisplayMode() const {
 }
 
 uint32_t Window::getID() const {
-	const SDL_WindowID id = SDL_GetWindowID(static_cast<SDL_Window*>(get()));
+	const SDL_WindowID id = SDL_GetWindowID(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	if (id == 0) {
 		throw graphics::Error{String{"Failed to get window ID:\n"} + SDL_GetError()};
 	}
 	return id;
 }
 
-void* Window::getNativeHandle() const {
+void* Window::getNativeHandle() {
 #if defined(_WIN32) && !defined(__WINRT__)
-	const SDL_PropertiesID properties = SDL_GetWindowProperties(static_cast<SDL_Window*>(get()));
+	const SDL_PropertiesID properties = SDL_GetWindowProperties(static_cast<SDL_Window*>(const_cast<void*>(get())));
 	if (properties == 0) {
 		throw graphics::Error{String{"Failed to get window properties:\n"} + SDL_GetError()};
 	}

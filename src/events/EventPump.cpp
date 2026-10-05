@@ -72,6 +72,7 @@ constexpr Array<ControllerButton, SDL_GAMEPAD_BUTTON_COUNT> CONTROLLER_BUTTON_MA
 		case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT: return ControllerType::SWITCH_JOYCON_RIGHT;
 		case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_PAIR: return ControllerType::SWITCH_JOYCON_PAIR;
 		case SDL_GAMEPAD_TYPE_GAMECUBE: return ControllerType::GAMECUBE;
+		case SDL_GAMEPAD_TYPE_STEAM: return ControllerType::STEAM;
 		default: break;
 	}
 	return ControllerType::UNKNOWN;
@@ -97,197 +98,502 @@ constexpr Array<ControllerButton, SDL_GAMEPAD_BUTTON_COUNT> CONTROLLER_BUTTON_MA
 	Optional<Event> result{};
 	switch (event.type) {
 		case SDL_EVENT_QUIT:
-			result = Event{ApplicationQuitRequestedEvent{ApplicationEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.quit.timestamp)}}}};
+			result = Event{
+				ApplicationQuitRequestedEvent{
+					ApplicationEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.quit.timestamp)}},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_ORIENTATION:
-			result =
-				Event{DisplayOrientationChangedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
-					static_cast<int32_t>(event.display.data1)}};
+			result = Event{
+				DisplayOrientationChangedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+					static_cast<int32_t>(event.display.data1),
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_ADDED:
-			result = Event{DisplayAddedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayAddedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_REMOVED:
-			result = Event{DisplayRemovedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayRemovedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_MOVED:
-			result = Event{DisplayMovedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayMovedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_DESKTOP_MODE_CHANGED:
-			result =
-				Event{DisplayDesktopModeChangedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayDesktopModeChangedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
-			result =
-				Event{DisplayCurrentModeChangedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayCurrentModeChangedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
-			result =
-				Event{DisplayContentScaleChangedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayContentScaleChangedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED:
-			result =
-				Event{DisplayUsableBoundsChangedEvent{DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID}}};
+			result = Event{
+				DisplayUsableBoundsChangedEvent{
+					DisplayEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.display.timestamp)}, event.display.displayID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_SHOWN:
-			result = Event{WindowShownEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowShownEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_HIDDEN:
-			result = Event{WindowHiddenEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowHiddenEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_EXPOSED:
-			result = Event{WindowExposedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowExposedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_MOVED:
-			result = Event{WindowMovedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
-				{static_cast<int32_t>(event.window.data1), static_cast<int32_t>(event.window.data2)}}};
+			result = Event{
+				WindowMovedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+					{static_cast<int32_t>(event.window.data1), static_cast<int32_t>(event.window.data2)},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_RESIZED:
-			result = Event{WindowResizedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
-				{static_cast<uint32_t>(event.window.data1), static_cast<uint32_t>(event.window.data2)}}};
+			result = Event{
+				WindowResizedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+					{static_cast<uint32_t>(event.window.data1), static_cast<uint32_t>(event.window.data2)},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-			result = Event{WindowDrawableSizeChangedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
-				{static_cast<uint32_t>(event.window.data1), static_cast<uint32_t>(event.window.data2)}}};
+			result = Event{
+				WindowDrawableSizeChangedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+					{static_cast<uint32_t>(event.window.data1), static_cast<uint32_t>(event.window.data2)},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_MINIMIZED:
-			result = Event{WindowMinimizedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowMinimizedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_MAXIMIZED:
-			result = Event{WindowMaximizedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowMaximizedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_RESTORED:
-			result = Event{WindowRestoredEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowRestoredEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_MOUSE_ENTER:
-			result = Event{WindowMouseFocusGainedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowMouseFocusGainedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-			result = Event{WindowMouseFocusLostEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowMouseFocusLostEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_GAINED:
-			result = Event{WindowKeyboardFocusGainedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowKeyboardFocusGainedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_LOST:
-			result = Event{WindowKeyboardFocusLostEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowKeyboardFocusLostEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-			result = Event{WindowCloseRequestedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowCloseRequestedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
-			result = Event{WindowDisplayChangedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
-				static_cast<uint32_t>(event.window.data1)}};
+			result = Event{
+				WindowDisplayChangedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+					static_cast<uint32_t>(event.window.data1),
+				},
+			};
 			break;
 		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-			result = Event{WindowDisplayScaleChangedEvent{WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID}}};
+			result = Event{
+				WindowDisplayScaleChangedEvent{
+					WindowEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.window.timestamp)}, event.window.windowID},
+				},
+			};
 			break;
 		case SDL_EVENT_KEY_DOWN:
 			if (event.key.repeat == 0) {
-				result = Event{KeyPressedEvent{KeyEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.key.timestamp)}, event.key.windowID},
-					static_cast<Scancode>(static_cast<uint16_t>(event.key.scancode)), static_cast<KeyCode>(event.key.key), translateKeyModifiers(event.key.mod)}}};
+				result = Event{
+					KeyPressedEvent{
+						KeyEventBase{
+							InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.key.timestamp)}, event.key.windowID},
+							static_cast<Scancode>(static_cast<uint16_t>(event.key.scancode)),
+							static_cast<KeyCode>(event.key.key),
+							translateKeyModifiers(event.key.mod),
+						},
+					},
+				};
 			} else {
-				result = Event{KeyPressRepeatedEvent{KeyEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.key.timestamp)}, event.key.windowID},
-					static_cast<Scancode>(static_cast<uint16_t>(event.key.scancode)), static_cast<KeyCode>(event.key.key), translateKeyModifiers(event.key.mod)}}};
+				result = Event{
+					KeyPressRepeatedEvent{
+						KeyEventBase{
+							InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.key.timestamp)}, event.key.windowID},
+							static_cast<Scancode>(static_cast<uint16_t>(event.key.scancode)),
+							static_cast<KeyCode>(event.key.key),
+							translateKeyModifiers(event.key.mod),
+						},
+					},
+				};
 			}
 			break;
 		case SDL_EVENT_KEY_UP:
-			result = Event{KeyReleasedEvent{KeyEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.key.timestamp)}, event.key.windowID},
-				static_cast<Scancode>(static_cast<uint16_t>(event.key.scancode)), static_cast<KeyCode>(event.key.key), translateKeyModifiers(event.key.mod)}}};
+			result = Event{
+				KeyReleasedEvent{
+					KeyEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.key.timestamp)}, event.key.windowID},
+						static_cast<Scancode>(static_cast<uint16_t>(event.key.scancode)),
+						static_cast<KeyCode>(event.key.key),
+						translateKeyModifiers(event.key.mod),
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_TEXT_EDITING:
-			result = Event{TextInputEditedEvent{
-				TextInputEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.edit.timestamp)}, event.edit.windowID}, event.edit.text},
-				event.edit.start, event.edit.length}};
+			result = Event{
+				TextInputEditedEvent{
+					TextInputEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.edit.timestamp)}, event.edit.windowID},
+						event.edit.text,
+					},
+					event.edit.start,
+					event.edit.length,
+				},
+			};
 			break;
 		case SDL_EVENT_TEXT_INPUT:
-			result = Event{TextInputSubmittedEvent{
-				TextInputEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.text.timestamp)}, event.text.windowID}, event.text.text}}};
+			result = Event{
+				TextInputSubmittedEvent{
+					TextInputEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.text.timestamp)}, event.text.windowID},
+						event.text.text,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_MOUSE_MOTION:
-			result = Event{MouseMovedEvent{MouseEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.motion.timestamp)}, event.motion.windowID},
-				event.motion.which, {event.motion.x, event.motion.y}, {event.motion.xrel, event.motion.yrel}}}};
+			result = Event{
+				MouseMovedEvent{
+					MouseEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.motion.timestamp)}, event.motion.windowID},
+						event.motion.which,
+						{event.motion.x, event.motion.y},
+						{event.motion.xrel, event.motion.yrel},
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
-			result = Event{MouseButtonPressedEvent{
-				MouseButtonEventBase{MouseEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.button.timestamp)}, event.button.windowID},
-										 event.button.which, {event.button.x, event.button.y}, {0, 0}},
-					static_cast<MouseButton>(event.button.button), event.button.clicks}}};
+			result = Event{
+				MouseButtonPressedEvent{
+					MouseButtonEventBase{
+						MouseEventBase{
+							InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.button.timestamp)}, event.button.windowID},
+							event.button.which,
+							{event.button.x, event.button.y},
+							{0, 0},
+						},
+						static_cast<MouseButton>(event.button.button),
+						event.button.clicks,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_MOUSE_BUTTON_UP:
-			result = Event{MouseButtonReleasedEvent{
-				MouseButtonEventBase{MouseEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.button.timestamp)}, event.button.windowID},
-										 event.button.which, {event.button.x, event.button.y}, {0, 0}},
-					static_cast<MouseButton>(event.button.button), event.button.clicks}}};
+			result = Event{
+				MouseButtonReleasedEvent{
+					MouseButtonEventBase{
+						MouseEventBase{
+							InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.button.timestamp)}, event.button.windowID},
+							event.button.which,
+							{event.button.x, event.button.y},
+							{0, 0},
+						},
+						static_cast<MouseButton>(event.button.button),
+						event.button.clicks,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_MOUSE_WHEEL: {
 			const float direction = (event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED) ? -1.0f : 1.0f;
-			result =
-				Event{MouseWheelScrolledEvent{MouseEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.wheel.timestamp)}, event.wheel.windowID},
-												  event.wheel.which, {event.wheel.mouse_x, event.wheel.mouse_y}, {0, 0}},
-					{event.wheel.x * direction, event.wheel.y * direction}}};
+			result = Event{
+				MouseWheelScrolledEvent{
+					MouseEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.wheel.timestamp)}, event.wheel.windowID},
+						event.wheel.which,
+						{event.wheel.mouse_x, event.wheel.mouse_y},
+						{0, 0},
+					},
+					{event.wheel.x * direction, event.wheel.y * direction},
+				},
+			};
 			break;
 		}
 		case SDL_EVENT_GAMEPAD_ADDED:
 			result = Event{
-				ControllerAddedEvent{ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gdevice.timestamp)}, 0}, event.gdevice.which}}};
+				ControllerAddedEvent{
+					ControllerEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gdevice.timestamp)}, 0},
+						event.gdevice.which,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_GAMEPAD_REMOVED:
-			result = Event{ControllerRemovedEvent{
-				ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gdevice.timestamp)}, 0}, event.gdevice.which}}};
+			result = Event{
+				ControllerRemovedEvent{
+					ControllerEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gdevice.timestamp)}, 0},
+						event.gdevice.which,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_GAMEPAD_REMAPPED:
-			result = Event{ControllerRemappedEvent{
-				ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gdevice.timestamp)}, 0}, event.gdevice.which}}};
+			result = Event{
+				ControllerRemappedEvent{
+					ControllerEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gdevice.timestamp)}, 0},
+						event.gdevice.which,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-			result = Event{ControllerAxisMovedEvent{
-				ControllerAxisEventBase{ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gaxis.timestamp)}, 0}, event.gaxis.which},
-					static_cast<ControllerAxis>(event.gaxis.axis), event.gaxis.value}}};
+			result = Event{
+				ControllerAxisMovedEvent{
+					ControllerAxisEventBase{
+						ControllerEventBase{
+							InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gaxis.timestamp)}, 0},
+							event.gaxis.which,
+						},
+						static_cast<ControllerAxis>(event.gaxis.axis),
+						event.gaxis.value,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-			result = Event{ControllerButtonPressedEvent{ControllerButtonEventBase{
-				ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gbutton.timestamp)}, 0}, event.gbutton.which},
-				CONTROLLER_BUTTON_MAP[event.gbutton.button]}}};
+			result = Event{
+				ControllerButtonPressedEvent{
+					ControllerButtonEventBase{
+						ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gbutton.timestamp)}, 0}, event.gbutton.which},
+						CONTROLLER_BUTTON_MAP[event.gbutton.button],
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_GAMEPAD_BUTTON_UP:
-			result = Event{ControllerButtonReleasedEvent{ControllerButtonEventBase{
-				ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gbutton.timestamp)}, 0}, event.gbutton.which},
-				CONTROLLER_BUTTON_MAP[event.gbutton.button]}}};
+			result = Event{
+				ControllerButtonReleasedEvent{
+					ControllerButtonEventBase{
+						ControllerEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.gbutton.timestamp)}, 0}, event.gbutton.which},
+						CONTROLLER_BUTTON_MAP[event.gbutton.button],
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_FINGER_MOTION:
-			result = Event{TouchMovedEvent{TouchEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.tfinger.timestamp)}, event.tfinger.windowID},
-				event.tfinger.touchID, event.tfinger.fingerID, {event.tfinger.x, event.tfinger.y}, {event.tfinger.dx, event.tfinger.dy}, event.tfinger.pressure}}};
+			result = Event{
+				TouchMovedEvent{
+					TouchEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.tfinger.timestamp)}, event.tfinger.windowID},
+						event.tfinger.touchID,
+						event.tfinger.fingerID,
+						{event.tfinger.x, event.tfinger.y},
+						{event.tfinger.dx, event.tfinger.dy},
+						event.tfinger.pressure,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_FINGER_DOWN:
-			result = Event{TouchPressedEvent{TouchEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.tfinger.timestamp)}, event.tfinger.windowID},
-				event.tfinger.touchID, event.tfinger.fingerID, {event.tfinger.x, event.tfinger.y}, {event.tfinger.dx, event.tfinger.dy}, event.tfinger.pressure}}};
+			result = Event{
+				TouchPressedEvent{
+					TouchEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.tfinger.timestamp)}, event.tfinger.windowID},
+						event.tfinger.touchID,
+						event.tfinger.fingerID,
+						{event.tfinger.x, event.tfinger.y},
+						{event.tfinger.dx, event.tfinger.dy},
+						event.tfinger.pressure,
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_FINGER_UP:
-			result =
-				Event{TouchReleasedEvent{TouchEventBase{InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.tfinger.timestamp)}, event.tfinger.windowID},
-					event.tfinger.touchID, event.tfinger.fingerID, {event.tfinger.x, event.tfinger.y}, {event.tfinger.dx, event.tfinger.dy}, event.tfinger.pressure}}};
+			result = Event{
+				TouchReleasedEvent{
+					TouchEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.tfinger.timestamp)}, event.tfinger.windowID},
+						event.tfinger.touchID,
+						event.tfinger.fingerID,
+						{event.tfinger.x, event.tfinger.y},
+						{event.tfinger.dx, event.tfinger.dy},
+						event.tfinger.pressure,
+					},
+				},
+			};
 			break;
-		case SDL_EVENT_KEYMAP_CHANGED: result = Event{KeymapChangedEvent{KeymapEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.common.timestamp)}}}}; break;
+		case SDL_EVENT_PINCH_BEGIN:
+			result = Event{
+				PinchBeginEvent{
+					PinchEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.pinch.timestamp)}, event.pinch.windowID},
+						event.pinch.scale,
+					},
+				},
+			};
+			break;
+		case SDL_EVENT_PINCH_UPDATE:
+			result = Event{
+				PinchUpdateEvent{
+					PinchEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.pinch.timestamp)}, event.pinch.windowID},
+						event.pinch.scale,
+					},
+				},
+			};
+			break;
+		case SDL_EVENT_PINCH_END:
+			result = Event{
+				PinchEndEvent{
+					PinchEventBase{
+						InputEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.pinch.timestamp)}, event.pinch.windowID},
+						event.pinch.scale,
+					},
+				},
+			};
+			break;
+		case SDL_EVENT_KEYMAP_CHANGED:
+			result = Event{
+				KeymapChangedEvent{
+					KeymapEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.common.timestamp)}},
+				},
+			};
+			break;
 		case SDL_EVENT_CLIPBOARD_UPDATE:
-			result = Event{ClipboardUpdatedEvent{ClipboardEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.common.timestamp)}}}};
+			result = Event{
+				ClipboardUpdatedEvent{
+					ClipboardEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.common.timestamp)}},
+				},
+			};
 			break;
 		case SDL_EVENT_DROP_FILE:
-			result = Event{DroppedFileEvent{DropEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)}, event.drop.windowID,
-												{event.drop.x, event.drop.y}, (event.drop.source) ? String{event.drop.source} : String{}},
-				event.drop.data}};
+			result = Event{
+				DroppedFileEvent{
+					DropEventBase{
+						EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)},
+						event.drop.windowID,
+						{event.drop.x, event.drop.y},
+						(event.drop.source) ? String{event.drop.source} : String{},
+					},
+					event.drop.data,
+				},
+			};
 			break;
 		case SDL_EVENT_DROP_TEXT:
-			result = Event{DroppedTextEvent{DropEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)}, event.drop.windowID,
-												{event.drop.x, event.drop.y}, (event.drop.source) ? String{event.drop.source} : String{}},
-				event.drop.data}};
+			result = Event{
+				DroppedTextEvent{
+					DropEventBase{
+						EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)},
+						event.drop.windowID,
+						{event.drop.x, event.drop.y},
+						(event.drop.source) ? String{event.drop.source} : String{},
+					},
+					event.drop.data,
+				},
+			};
 			break;
 		case SDL_EVENT_DROP_BEGIN:
-			result = Event{DropStartedEvent{DropEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)}, event.drop.windowID,
-				{event.drop.x, event.drop.y}, (event.drop.source) ? String{event.drop.source} : String{}}}};
+			result = Event{
+				DropStartedEvent{
+					DropEventBase{
+						EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)},
+						event.drop.windowID,
+						{event.drop.x, event.drop.y},
+						(event.drop.source) ? String{event.drop.source} : String{},
+					},
+				},
+			};
 			break;
 		case SDL_EVENT_DROP_COMPLETE:
-			result = Event{DropCompletedEvent{DropEventBase{EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)}, event.drop.windowID,
-				{event.drop.x, event.drop.y}, (event.drop.source) ? String{event.drop.source} : String{}}}};
+			result = Event{
+				DropCompletedEvent{
+					DropEventBase{
+						EventBase{getTimestamp(baseTickNanoseconds, baseTime, event.drop.timestamp)},
+						event.drop.windowID,
+						{event.drop.x, event.drop.y},
+						(event.drop.source) ? String{event.drop.source} : String{},
+					},
+				},
+			};
 			break;
 		default: break;
 	}

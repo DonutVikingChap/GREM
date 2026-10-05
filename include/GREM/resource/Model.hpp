@@ -168,7 +168,7 @@ struct Model {
 	using VertexFlags = uint16_t;
 
 	/** Single flag in a set of VertexFlags, specifying vertex attribute usage. */
-	enum VertexFlag : VertexFlags {
+	enum VertexFlag : VertexFlags {                            // NOLINT(cppcoreguidelines-use-enum-class)
 		VERTEX_TEXTURED_ON_CHANNEL_0 = 1 << 0,                 ///< Texture coordinate channel 0 is used to sample materials.
 		VERTEX_TEXTURED_ON_CHANNEL_1 = 1 << 1,                 ///< Texture coordinate channel 1 is used to sample materials.
 		VERTEX_COLORED = 1 << 2,                               ///< The vertex color component is used to tint the fragment color.
@@ -185,7 +185,7 @@ struct Model {
 	using FragmentFlags = uint16_t;
 
 	/** Single flag in a set of FragmentFlags, specifying fragment shader usage. */
-	enum FragmentFlag : FragmentFlags {
+	enum FragmentFlag : FragmentFlags {                           // NOLINT(cppcoreguidelines-use-enum-class)
 		FRAGMENT_ALPHA_MASKED = 1 << 0,                           ///< Fragments with alpha less than the alpha cutoff are discarded.
 		FRAGMENT_ALPHA_BLENDED = 1 << 1,                          ///< Fragments are alpha blended.
 		FRAGMENT_DOUBLE_SIDED = 1 << 2,                           ///< Fragments are double-sided.
@@ -205,7 +205,7 @@ struct Model {
 	using InstanceFlags = uint8_t;
 
 	/** Single flag in a set of InstanceFlags, specifying information about a model mesh instance. */
-	enum InstanceFlag : InstanceFlags {
+	enum InstanceFlag : InstanceFlags {          // NOLINT(cppcoreguidelines-use-enum-class)
 		INSTANCE_REVERSE_WINDING_ORDER = 1 << 0, ///< Consider mesh faces with clockwise winding order as front-facing for this instance. \hideinitializer
 	};
 
@@ -1498,6 +1498,19 @@ struct Model {
 
 	/**
 	 * Get the animation with a specific name.
+	 *
+	 * \param name name of the animation to search for.
+	 *
+	 * \return a non-owning read-only view over the given animation.
+	 *
+	 * \throws std::out_of_range if the animation wasn't found.
+	 */
+	[[nodiscard]] AnimationView getAnimation(StringView name) const {
+		return getAnimationAtIndex(getAnimationIndex(name));
+	}
+
+	/**
+	 * Try to get the animation with a specific name.
 	 *
 	 * \param name name of the animation to search for.
 	 *

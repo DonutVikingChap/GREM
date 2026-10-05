@@ -451,8 +451,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 
 			const uint32_t minImageCount =
 				(surfaceCapabilities.maxImageCount > 0)
-					? clamp(static_cast<uint32_t>(2 + options.maxBufferedFrameCount), surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount)
-					: max(static_cast<uint32_t>(2 + options.maxBufferedFrameCount), surfaceCapabilities.minImageCount);
+			        ? clamp(static_cast<uint32_t>(2 + options.maxBufferedFrameCount), surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount)
+			        : max(static_cast<uint32_t>(2 + options.maxBufferedFrameCount), surfaceCapabilities.minImageCount);
 
 			const VkFormat colorFormat = physicalDevice.surfaceFormat.format;
 			const VkColorSpaceKHR colorSpace = physicalDevice.surfaceFormat.colorSpace;
@@ -512,8 +512,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 				.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
 				.pQueueFamilyIndices = queueFamilyIndices.data(),
 				.preTransform = ((surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) != 0)
-			                        ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
-			                        : surfaceCapabilities.currentTransform,
+				                    ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
+				                    : surfaceCapabilities.currentTransform,
 				.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 				.presentMode = presentMode,
 				.clipped = VK_TRUE,
@@ -1320,92 +1320,100 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			const int32_t mipWidth = static_cast<int32_t>(mipLevelSize.width);
 			const int32_t mipHeight = static_cast<int32_t>(mipLevelSize.height);
 
-			const Array preBlitImageMemoryBarriers{VkImageMemoryBarrier{
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-				.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = resources.image,
-				.subresourceRange{
-					.aspectMask = aspectMask,
-					.baseMipLevel = previousMipLevel,
-					.levelCount = 1,
-					.baseArrayLayer = 0,
-					.layerCount = size.depth,
+			const Array preBlitImageMemoryBarriers{
+				VkImageMemoryBarrier{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+					.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = resources.image,
+					.subresourceRange{
+						.aspectMask = aspectMask,
+						.baseMipLevel = previousMipLevel,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = size.depth,
+					},
 				},
-			}};
+			};
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 				static_cast<uint32_t>(preBlitImageMemoryBarriers.size()), preBlitImageMemoryBarriers.data());
 
-			const Array imageBlitRegions{VkImageBlit{
-				.srcSubresource{
-					.aspectMask = aspectMask,
-					.mipLevel = previousMipLevel,
-					.baseArrayLayer = 0,
-					.layerCount = size.depth,
+			const Array imageBlitRegions{
+				VkImageBlit{
+					.srcSubresource{
+						.aspectMask = aspectMask,
+						.mipLevel = previousMipLevel,
+						.baseArrayLayer = 0,
+						.layerCount = size.depth,
+					},
+					.srcOffsets{
+						{.x = 0, .y = 0, .z = 0},
+						{.x = previousMipWidth, .y = previousMipHeight, .z = 1},
+					},
+					.dstSubresource{
+						.aspectMask = aspectMask,
+						.mipLevel = mipLevel,
+						.baseArrayLayer = 0,
+						.layerCount = size.depth,
+					},
+					.dstOffsets{
+						{.x = 0, .y = 0, .z = 0},
+						{.x = mipWidth, .y = mipHeight, .z = 1},
+					},
 				},
-				.srcOffsets{
-					{.x = 0, .y = 0, .z = 0},
-					{.x = previousMipWidth, .y = previousMipHeight, .z = 1},
-				},
-				.dstSubresource{
-					.aspectMask = aspectMask,
-					.mipLevel = mipLevel,
-					.baseArrayLayer = 0,
-					.layerCount = size.depth,
-				},
-				.dstOffsets{
-					{.x = 0, .y = 0, .z = 0},
-					{.x = mipWidth, .y = mipHeight, .z = 1},
-				},
-			}};
+			};
 			vkCmdBlitImage(commandBuffer, resources.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				static_cast<uint32_t>(imageBlitRegions.size()), imageBlitRegions.data(), VK_FILTER_LINEAR);
 
-			const Array postBlitImageMemoryBarriers{VkImageMemoryBarrier{
+			const Array postBlitImageMemoryBarriers{
+				VkImageMemoryBarrier{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
+					.dstAccessMask = dstAccessMask,
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.newLayout = preferredImageLayout,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = resources.image,
+					.subresourceRange{
+						.aspectMask = aspectMask,
+						.baseMipLevel = previousMipLevel,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = size.depth,
+					},
+				},
+			};
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
+				static_cast<uint32_t>(postBlitImageMemoryBarriers.size()), postBlitImageMemoryBarriers.data());
+		}
+
+		const Array postBlitImageMemoryBarriers{
+			VkImageMemoryBarrier{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
+				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
 				.dstAccessMask = dstAccessMask,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.newLayout = preferredImageLayout,
 				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.image = resources.image,
 				.subresourceRange{
 					.aspectMask = aspectMask,
-					.baseMipLevel = previousMipLevel,
+					.baseMipLevel = mipLevelCount - 1,
 					.levelCount = 1,
 					.baseArrayLayer = 0,
 					.layerCount = size.depth,
 				},
-			}};
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
-				static_cast<uint32_t>(postBlitImageMemoryBarriers.size()), postBlitImageMemoryBarriers.data());
-		}
-
-		const Array postBlitImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstAccessMask = dstAccessMask,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.newLayout = preferredImageLayout,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = mipLevelCount - 1,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(postBlitImageMemoryBarriers.size()), postBlitImageMemoryBarriers.data());
 		imageLayout = preferredImageLayout;
@@ -1427,40 +1435,44 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		const VkCommandBuffer commandBuffer = device.getGraphicsCommandBuffer();
 		const VkImageAspectFlags aspectMask = getAspectMask(format);
 
-		const Array preCopyImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = imageLayout,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array preCopyImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.oldLayout = imageLayout,
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preCopyImageMemoryBarriers.size()), preCopyImageMemoryBarriers.data());
 
-		const Array imageCopyRegions{VkBufferImageCopy{
-			.bufferOffset = 0,
-			.bufferRowLength = size.width,
-			.bufferImageHeight = size.height,
-			.imageSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = 0,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array imageCopyRegions{
+			VkBufferImageCopy{
+				.bufferOffset = 0,
+				.bufferRowLength = size.width,
+				.bufferImageHeight = size.height,
+				.imageSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = 0,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
+				.imageOffset{.x = 0, .y = 0, .z = 0},
+				.imageExtent{.width = size.width, .height = size.height, .depth = 1},
 			},
-			.imageOffset{.x = 0, .y = 0, .z = 0},
-			.imageExtent{.width = size.width, .height = size.height, .depth = 1},
-		}};
+		};
 		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.get(), resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(imageCopyRegions.size()),
 			imageCopyRegions.data());
 
@@ -1486,24 +1498,26 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		const VkCommandBuffer commandBuffer = device.getGraphicsCommandBuffer();
 		const VkImageAspectFlags aspectMask = getAspectMask(format);
 
-		const Array preCopyImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = imageLayout,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array preCopyImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.oldLayout = imageLayout,
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preCopyImageMemoryBarriers.size()), preCopyImageMemoryBarriers.data());
 
@@ -1530,24 +1544,26 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.get(), resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(regions.size()), regions.data());
 
 		const auto [preferredImageLayout, dstStageMask, dstAccessMask] = getPreferredLayoutInfo();
-		const Array postCopyImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstAccessMask = dstAccessMask,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.newLayout = preferredImageLayout,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array postCopyImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.dstAccessMask = dstAccessMask,
+				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.newLayout = preferredImageLayout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(postCopyImageMemoryBarriers.size()), postCopyImageMemoryBarriers.data());
 		imageLayout = preferredImageLayout;
@@ -1569,40 +1585,44 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		const VkCommandBuffer commandBuffer = device.getGraphicsCommandBuffer();
 		const VkImageAspectFlags aspectMask = getAspectMask(format);
 
-		const Array preCopyImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = imageLayout,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array preCopyImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.oldLayout = imageLayout,
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preCopyImageMemoryBarriers.size()), preCopyImageMemoryBarriers.data());
 
-		const Array imageCopyRegions{VkBufferImageCopy{
-			.bufferOffset = 0,
-			.bufferRowLength = sourceExtent.width,
-			.bufferImageHeight = sourceExtent.height,
-			.imageSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = 0,
-				.baseArrayLayer = static_cast<uint32_t>(destinationOffset.z),
-				.layerCount = sourceExtent.depth,
+		const Array imageCopyRegions{
+			VkBufferImageCopy{
+				.bufferOffset = 0,
+				.bufferRowLength = sourceExtent.width,
+				.bufferImageHeight = sourceExtent.height,
+				.imageSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = 0,
+					.baseArrayLayer = static_cast<uint32_t>(destinationOffset.z),
+					.layerCount = sourceExtent.depth,
+				},
+				.imageOffset{.x = destinationOffset.x, .y = static_cast<int32_t>(size.height) - destinationOffset.y - static_cast<int32_t>(sourceExtent.height), .z = 0},
+				.imageExtent{.width = sourceExtent.width, .height = sourceExtent.height, .depth = 1},
 			},
-			.imageOffset{.x = destinationOffset.x, .y = static_cast<int32_t>(size.height) - destinationOffset.y - static_cast<int32_t>(sourceExtent.height), .z = 0},
-			.imageExtent{.width = sourceExtent.width, .height = sourceExtent.height, .depth = 1},
-		}};
+		};
 		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.get(), resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(imageCopyRegions.size()),
 			imageCopyRegions.data());
 
@@ -1674,51 +1694,55 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preCopyImageMemoryBarriers.size()), preCopyImageMemoryBarriers.data());
 
-		const Array imageBlitRegions{VkImageBlit{
-			.srcSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = 0,
-				.baseArrayLayer = static_cast<uint32_t>(sourceRegion.offset.z),
-				.layerCount = sourceRegion.size.depth,
+		const Array imageBlitRegions{
+			VkImageBlit{
+				.srcSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = 0,
+					.baseArrayLayer = static_cast<uint32_t>(sourceRegion.offset.z),
+					.layerCount = sourceRegion.size.depth,
+				},
+				.srcOffsets{
+					{.x = sourceRegion.offset.x, .y = static_cast<int32_t>(source.size.height) - sourceRegion.offset.y - static_cast<int32_t>(sourceRegion.size.height), .z = 0},
+					{.x = sourceRegion.offset.x + static_cast<int32_t>(sourceRegion.size.width), .y = static_cast<int32_t>(source.size.height) - sourceRegion.offset.y, .z = 1},
+				},
+				.dstSubresource{
+					.aspectMask = aspectMask,
+					.mipLevel = 0,
+					.baseArrayLayer = static_cast<uint32_t>(destinationOffset.z),
+					.layerCount = sourceRegion.size.depth,
+				},
+				.dstOffsets{
+					{.x = destinationOffset.x, .y = static_cast<int32_t>(size.height) - destinationOffset.y - static_cast<int32_t>(sourceRegion.size.height), .z = 0},
+					{.x = destinationOffset.x + static_cast<int32_t>(sourceRegion.size.width), .y = static_cast<int32_t>(size.height) - destinationOffset.y, .z = 1},
+				},
 			},
-			.srcOffsets{
-				{.x = sourceRegion.offset.x, .y = static_cast<int32_t>(source.size.height) - sourceRegion.offset.y - static_cast<int32_t>(sourceRegion.size.height), .z = 0},
-				{.x = sourceRegion.offset.x + static_cast<int32_t>(sourceRegion.size.width), .y = static_cast<int32_t>(source.size.height) - sourceRegion.offset.y, .z = 1},
-			},
-			.dstSubresource{
-				.aspectMask = aspectMask,
-				.mipLevel = 0,
-				.baseArrayLayer = static_cast<uint32_t>(destinationOffset.z),
-				.layerCount = sourceRegion.size.depth,
-			},
-			.dstOffsets{
-				{.x = destinationOffset.x, .y = static_cast<int32_t>(size.height) - destinationOffset.y - static_cast<int32_t>(sourceRegion.size.height), .z = 0},
-				{.x = destinationOffset.x + static_cast<int32_t>(sourceRegion.size.width), .y = static_cast<int32_t>(size.height) - destinationOffset.y, .z = 1},
-			},
-		}};
+		};
 		vkCmdBlitImage(commandBuffer, otherResources.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			static_cast<uint32_t>(imageBlitRegions.size()), imageBlitRegions.data(), VK_FILTER_NEAREST);
 
 		const auto [otherPreferredImageLayout, otherDstStageMask, otherDstAccessMask] = source.getPreferredLayoutInfo();
 		if (mipLevelCount > 1) {
-			const Array postCopyImageMemoryBarriers{VkImageMemoryBarrier{
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-				.dstAccessMask = otherDstAccessMask,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.newLayout = otherPreferredImageLayout,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = otherResources.image,
-				.subresourceRange{
-					.aspectMask = aspectMask,
-					.baseMipLevel = 0,
-					.levelCount = 1,
-					.baseArrayLayer = static_cast<uint32_t>(sourceRegion.offset.z),
-					.layerCount = sourceRegion.size.depth,
+			const Array postCopyImageMemoryBarriers{
+				VkImageMemoryBarrier{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+					.dstAccessMask = otherDstAccessMask,
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.newLayout = otherPreferredImageLayout,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = otherResources.image,
+					.subresourceRange{
+						.aspectMask = aspectMask,
+						.baseMipLevel = 0,
+						.levelCount = 1,
+						.baseArrayLayer = static_cast<uint32_t>(sourceRegion.offset.z),
+						.layerCount = sourceRegion.size.depth,
+					},
 				},
-			}};
+			};
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, otherDstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 				static_cast<uint32_t>(postCopyImageMemoryBarriers.size()), postCopyImageMemoryBarriers.data());
 			source.imageLayout = otherPreferredImageLayout;
@@ -1786,37 +1810,41 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		detail::TextureResources& resources = object.get<detail::TextureResources>();
 		const VkCommandBuffer commandBuffer = resources.device.get()->getGraphicsCommandBuffer();
 
-		const Array preFillImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = imageLayout,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array preFillImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.oldLayout = imageLayout,
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preFillImageMemoryBarriers.size()), preFillImageMemoryBarriers.data());
 
 		if ((aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) != 0) {
 			const vec4 clearColor = values.color.toLinearRGBA();
 			const VkClearColorValue clearColorValue{.float32{clearColor.x, clearColor.y, clearColor.z, clearColor.w}};
-			const Array clearRanges{VkImageSubresourceRange{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
-			}};
+			const Array clearRanges{
+				VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
+			};
 			vkCmdClearColorImage(commandBuffer, resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, static_cast<uint32_t>(clearRanges.size()),
 				clearRanges.data());
 		}
@@ -1825,36 +1853,40 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 				.depth = values.depth,
 				.stencil = static_cast<uint32_t>(values.stencil),
 			};
-			const Array clearRanges{VkImageSubresourceRange{
-				.aspectMask = aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT),
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
-			}};
+			const Array clearRanges{
+				VkImageSubresourceRange{
+					.aspectMask = aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT),
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
+			};
 			vkCmdClearDepthStencilImage(commandBuffer, resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearDepthStencilValue, static_cast<uint32_t>(clearRanges.size()),
 				clearRanges.data());
 		}
 
 		const auto [preferredImageLayout, dstStageMask, dstAccessMask] = getPreferredLayoutInfo();
-		const Array postFillImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstAccessMask = dstAccessMask,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.newLayout = preferredImageLayout,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = mipLevelCount,
-				.baseArrayLayer = 0,
-				.layerCount = size.depth,
+		const Array postFillImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.dstAccessMask = dstAccessMask,
+				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.newLayout = preferredImageLayout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = 0,
+					.levelCount = mipLevelCount,
+					.baseArrayLayer = 0,
+					.layerCount = size.depth,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(postFillImageMemoryBarriers.size()), postFillImageMemoryBarriers.data());
 		imageLayout = preferredImageLayout;
@@ -1871,37 +1903,41 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		detail::TextureResources& resources = object.get<detail::TextureResources>();
 		const VkCommandBuffer commandBuffer = resources.device.get()->getGraphicsCommandBuffer();
 
-		const Array preFillImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = imageLayout,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = subresource.mipLevel,
-				.levelCount = 1,
-				.baseArrayLayer = subresource.layer,
-				.layerCount = 1,
+		const Array preFillImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.oldLayout = imageLayout,
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = subresource.mipLevel,
+					.levelCount = 1,
+					.baseArrayLayer = subresource.layer,
+					.layerCount = 1,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preFillImageMemoryBarriers.size()), preFillImageMemoryBarriers.data());
 
 		if ((aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) != 0) {
 			const vec4 clearColor = values.color.toLinearRGBA();
 			const VkClearColorValue clearColorValue{.float32{clearColor.x, clearColor.y, clearColor.z, clearColor.w}};
-			const Array clearRanges{VkImageSubresourceRange{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = subresource.mipLevel,
-				.levelCount = 1,
-				.baseArrayLayer = subresource.layer,
-				.layerCount = 1,
-			}};
+			const Array clearRanges{
+				VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = subresource.mipLevel,
+					.levelCount = 1,
+					.baseArrayLayer = subresource.layer,
+					.layerCount = 1,
+				},
+			};
 			vkCmdClearColorImage(commandBuffer, resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, static_cast<uint32_t>(clearRanges.size()),
 				clearRanges.data());
 		}
@@ -1910,36 +1946,40 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 				.depth = values.depth,
 				.stencil = static_cast<uint32_t>(values.stencil),
 			};
-			const Array clearRanges{VkImageSubresourceRange{
-				.aspectMask = aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT),
-				.baseMipLevel = subresource.mipLevel,
-				.levelCount = 1,
-				.baseArrayLayer = subresource.layer,
-				.layerCount = 1,
-			}};
+			const Array clearRanges{
+				VkImageSubresourceRange{
+					.aspectMask = aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT),
+					.baseMipLevel = subresource.mipLevel,
+					.levelCount = 1,
+					.baseArrayLayer = subresource.layer,
+					.layerCount = 1,
+				},
+			};
 			vkCmdClearDepthStencilImage(commandBuffer, resources.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearDepthStencilValue, static_cast<uint32_t>(clearRanges.size()),
 				clearRanges.data());
 		}
 
 		const auto [preferredImageLayout, dstStageMask, dstAccessMask] = getPreferredLayoutInfo();
-		const Array postFillImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstAccessMask = dstAccessMask,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.newLayout = preferredImageLayout,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange{
-				.aspectMask = aspectMask,
-				.baseMipLevel = subresource.mipLevel,
-				.levelCount = 1,
-				.baseArrayLayer = subresource.layer,
-				.layerCount = 1,
+		const Array postFillImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.dstAccessMask = dstAccessMask,
+				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.newLayout = preferredImageLayout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange{
+					.aspectMask = aspectMask,
+					.baseMipLevel = subresource.mipLevel,
+					.levelCount = 1,
+					.baseArrayLayer = subresource.layer,
+					.layerCount = 1,
+				},
 			},
-		}};
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(postFillImageMemoryBarriers.size()), postFillImageMemoryBarriers.data());
 		imageLayout = preferredImageLayout;
@@ -1986,7 +2026,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 		vmaSetAllocationName(allocator, allocationHandle, "DownloadBuffer");
 #endif
 		const detail::VulkanBuffer buffer{bufferHandle, detail::VulkanBufferDeleter{allocator, allocationHandle}};
-		void* const mappedData = allocationInfo.pMappedData;
+		const void* const mappedData = allocationInfo.pMappedData;
 		GREM_ASSERT(mappedData);
 
 		const VkCommandBuffer commandBuffer = resources.device.get()->getGraphicsCommandBuffer();
@@ -2006,49 +2046,55 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			.layerCount = size.depth,
 		};
 
-		const Array preReadImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-			.oldLayout = imageLayout,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange = layoutTransitionSubresourceRange,
-		}};
+		const Array preReadImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+				.oldLayout = imageLayout,
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange = layoutTransitionSubresourceRange,
+			},
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(preReadImageMemoryBarriers.size()), preReadImageMemoryBarriers.data());
 
-		const Array imageCopyRegions{VkBufferImageCopy{
-			.bufferOffset = 0,
-			.bufferRowLength = layerSize.width,
-			.bufferImageHeight = layerSize.height,
-			.imageSubresource{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel = mipLevel,
-				.baseArrayLayer = layer,
-				.layerCount = 1,
+		const Array imageCopyRegions{
+			VkBufferImageCopy{
+				.bufferOffset = 0,
+				.bufferRowLength = layerSize.width,
+				.bufferImageHeight = layerSize.height,
+				.imageSubresource{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.mipLevel = mipLevel,
+					.baseArrayLayer = layer,
+					.layerCount = 1,
+				},
+				.imageOffset{.x = 0, .y = 0, .z = 0},
+				.imageExtent{.width = layerSize.width, .height = layerSize.height, .depth = 1},
 			},
-			.imageOffset{.x = 0, .y = 0, .z = 0},
-			.imageExtent{.width = layerSize.width, .height = layerSize.height, .depth = 1},
-		}};
+		};
 		vkCmdCopyImageToBuffer(commandBuffer, resources.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer.get(), static_cast<uint32_t>(imageCopyRegions.size()),
 			imageCopyRegions.data());
 
-		const Array postReadImageMemoryBarriers{VkImageMemoryBarrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
-			.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-			.dstAccessMask = dstAccessMask,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			.newLayout = preferredImageLayout,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = resources.image,
-			.subresourceRange = layoutTransitionSubresourceRange,
-		}};
+		const Array postReadImageMemoryBarriers{
+			VkImageMemoryBarrier{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+				.dstAccessMask = dstAccessMask,
+				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.newLayout = preferredImageLayout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = resources.image,
+				.subresourceRange = layoutTransitionSubresourceRange,
+			},
+		};
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, VkDependencyFlags{}, 0, nullptr, 0, nullptr,
 			static_cast<uint32_t>(postReadImageMemoryBarriers.size()), postReadImageMemoryBarriers.data());
 		imageLayout = preferredImageLayout;

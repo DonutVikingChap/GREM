@@ -300,10 +300,13 @@ public:
 		: output(&output) {}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE operator Writer() const {
-		return Writer{output, [](void* context, Span<const byte> data, bool thenFlush) -> size_t {
-						  Span<byte>& output = *static_cast<Span<byte>*>(context);
-						  return SpanWriter{output}.writeSome(data, thenFlush);
-					  }};
+		return Writer{
+			output,
+			[](void* context, Span<const byte> data, bool thenFlush) -> size_t {
+				Span<byte>& output = *static_cast<Span<byte>*>(context);
+				return SpanWriter{output}.writeSome(data, thenFlush);
+			},
+		};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE size_t writeSome(Span<const byte> data, bool thenFlush = false) {
@@ -383,10 +386,13 @@ public:
 		: output(&output) {}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE operator Writer() const {
-		return Writer{output, [](void* context, Span<const byte> data, bool thenFlush) -> size_t {
-						  size_t& output = *static_cast<size_t*>(context);
-						  return SizeCountingWriter{output}.writeSome(data, thenFlush);
-					  }};
+		return Writer{
+			output,
+			[](void* context, Span<const byte> data, bool thenFlush) -> size_t {
+				size_t& output = *static_cast<size_t*>(context);
+				return SizeCountingWriter{output}.writeSome(data, thenFlush);
+			},
+		};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE size_t writeSome(Span<const byte> data, bool thenFlush = false) {

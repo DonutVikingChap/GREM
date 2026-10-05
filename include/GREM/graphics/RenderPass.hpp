@@ -795,7 +795,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] RenderPassImplementation* get() const noexcept {
+	[[nodiscard]] RenderPassImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const RenderPassImplementation* get() const noexcept {
 		return implementation.get();
 	}
 

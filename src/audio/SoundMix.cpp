@@ -27,33 +27,42 @@ SoundMix::SoundMix(const SoundMixOptions& options, const SoundOptions& soundOpti
 
 SoundInstanceID SoundMix::playSound(const Sound& sound, float volume) {
 	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
-	return SoundInstanceID{bus.play(*static_cast<SoLoud::AudioSource*>(sound.get()), volume)};
+	const SoLoud::result result = bus.play(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundMix::play3DSound(const Sound& sound, vec3 position, vec3 velocity, float volume) {
 	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
-	return SoundInstanceID{bus.play3d(*static_cast<SoLoud::AudioSource*>(sound.get()), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume)};
+	const SoLoud::result result =
+		bus.play3d(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundMix::createPausedSound(const Sound& sound, float volume) {
 	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
-	return SoundInstanceID{bus.play(*static_cast<SoLoud::AudioSource*>(sound.get()), volume, 0.0f, true)};
+	const SoLoud::result result = bus.play(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume, 0.0f, true);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundMix::createPaused3DSound(const Sound& sound, vec3 position, vec3 velocity, float volume) {
 	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
-	return SoundInstanceID{bus.play3d(*static_cast<SoLoud::AudioSource*>(sound.get()), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume, true)};
+	const SoLoud::result result =
+		bus.play3d(*static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume, true);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundMix::playSoundClocked(Duration time, const Sound& sound, float volume) {
 	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
-	return SoundInstanceID{bus.playClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(sound.get()), volume)};
+	const SoLoud::result result =
+		bus.playClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())), volume);
+	return SoundInstanceID{result};
 }
 
 SoundInstanceID SoundMix::play3DSoundClocked(Duration time, const Sound& sound, vec3 position, vec3 velocity, float volume) {
 	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
-	return SoundInstanceID{bus.play3dClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(sound.get()), position.x, position.y,
-		position.z, velocity.x, velocity.y, velocity.z, volume)};
+	const SoLoud::result result = bus.play3dClocked(duration_cast<DurationBase<SoLoud::time>>(time).count(), *static_cast<SoLoud::AudioSource*>(const_cast<void*>(sound.get())),
+		position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, volume);
+	return SoundInstanceID{result};
 }
 
 void SoundMix::setVolume(float volume) {
@@ -67,7 +76,7 @@ void SoundMix::setStatisticsEnabled(bool newEnableStatistics) {
 }
 
 Array<float, 256> SoundMix::calculateOutputFastFourierTransformStatistics() const {
-	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
+	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(const_cast<void*>(get()));
 	const float* const fft = bus.calcFFT();
 	Array<float, 256> result;
 	copy(Span{fft, result.size()}, result.begin());
@@ -75,7 +84,7 @@ Array<float, 256> SoundMix::calculateOutputFastFourierTransformStatistics() cons
 }
 
 Array<float, 256> SoundMix::getOutputWaveStatistics() const {
-	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
+	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(const_cast<void*>(get()));
 	const float* const wave = bus.getWave();
 	Array<float, 256> result;
 	copy(Span{wave, result.size()}, result.begin());
@@ -86,7 +95,7 @@ float SoundMix::getOutputChannelVolumeStatistics(uint32_t channelIndex) const {
 	if (channelIndex > size_t{Limits<unsigned>::MAX}) {
 		return 0.0f;
 	}
-	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(get());
+	SoLoud::Bus& bus = *static_cast<SoLoud::Bus*>(const_cast<void*>(get()));
 	return bus.getApproximateVolume(static_cast<unsigned>(channelIndex));
 }
 

@@ -314,9 +314,9 @@ struct Graphics {
 		}
 	}
 
-	float put2DText(vec2 position, Color color, StringView string, float scale = 1.0f, gfx::TextAlign alignment = {}) {
+	float put2DText(Offset2D position, Color color, StringView string, float scale = 1.0f, gfx::TextAlign alignment = {}) {
 		temporaryText.assign(*mainFont, TEXT_CHARACTER_SIZE, string, {0.0f, 0.0f}, vec2{scale});
-		instances2D.putTextInstance(temporaryText, {.position = position + vec2{1.0f, -1.0f}, .alignment = alignment, .color = Color::BLACK});
+		instances2D.putTextInstance(temporaryText, {.position = position + Offset2D{1, -1}, .alignment = alignment, .color = Color::BLACK});
 		instances2D.putTextInstance(temporaryText, {.position = position, .alignment = alignment, .color = color});
 		return temporaryText.getNextLineOffset().y;
 	}

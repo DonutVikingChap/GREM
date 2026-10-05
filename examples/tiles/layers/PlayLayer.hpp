@@ -95,28 +95,12 @@ public:
 				break;
 			}
 			GREM_CASE(const evt::MouseWheelScrolledEvent& scrolled) {
-				constexpr float MIN_ZOOM_AMOUNT = -8.0f;
-				constexpr float MAX_ZOOM_AMOUNT = 8.0f;
-				constexpr float ZOOM_AMOUNT_SNAP_STEP = 1.0f;
 				const float relativeZoomAmount = scrolled.scrollAmount.y * 0.125f;
-				float newZoomAmount = clamp(zoomAmount + relativeZoomAmount, MIN_ZOOM_AMOUNT, MAX_ZOOM_AMOUNT);
-				if (newZoomAmount != zoomAmount) {
-					for (float snapZoomAmount = MIN_ZOOM_AMOUNT; snapZoomAmount <= MAX_ZOOM_AMOUNT; snapZoomAmount += ZOOM_AMOUNT_SNAP_STEP) {
-						if ((newZoomAmount < snapZoomAmount && zoomAmount > snapZoomAmount) || (newZoomAmount > snapZoomAmount && zoomAmount < snapZoomAmount)) {
-							newZoomAmount = snapZoomAmount;
-						}
-					}
-					if (paintingMouseCoordinates) {
-						const Map::VisibleRegion startVisibleRegion = getVisibleRegion(graphics, 1.0f);
-						zoomAmount = newZoomAmount;
-						const Map::VisibleRegion endVisibleRegion = getVisibleRegion(graphics, 1.0f);
-						const Offset2D startPosition = convertScreenToTileCoordinates(graphics, startVisibleRegion, *paintingMouseCoordinates);
-						const Offset2D endPosition = convertScreenToTileCoordinates(graphics, endVisibleRegion, *paintingMouseCoordinates);
-						paintLine(startPosition, endPosition);
-					} else {
-						zoomAmount = newZoomAmount;
-					}
-				}
+				setZoomAmount(zoomAmount + relativeZoomAmount, graphics);
+				break;
+			}
+			GREM_CASE(const evt::PinchUpdateEvent& pinchUpdated) {
+				setZoomAmount(zoomAmount * pinchUpdated.scale, graphics);
 				break;
 			}
 			GREM_CASE_DEFAULT(const auto& other) break;
@@ -192,10 +176,12 @@ public:
 
 		{
 			GREM_PROFILE_BLOCK("Draw world");
-			const gfx::Viewport worldViewport{.region{
-				.offset = graphics.viewport.region.offset + graphics.worldViewportRenderRegion.offset * graphics.viewportScale,
-				.size = graphics.worldViewportRenderRegion.size * graphics.viewportScale,
-			}};
+			const gfx::Viewport worldViewport{
+				.region{
+					.offset = graphics.viewport.region.offset + graphics.worldViewportRenderRegion.offset * graphics.viewportScale,
+					.size = graphics.worldViewportRenderRegion.size * graphics.viewportScale,
+				},
+			};
 			renderPass.setViewport(worldViewport);
 			worldRenderer.drawWorld(device, renderPass, world, visibleRegion, zoomScale, duration_cast<FloatSeconds>(animationTime).count(), tickInterpolationAlpha);
 		}
@@ -209,25 +195,25 @@ public:
 			const int32_t fullWidth = static_cast<int32_t>(graphics.renderSize.width);
 			const int32_t fullHeight = static_cast<int32_t>(graphics.renderSize.height);
 			const Color fpsColor = (fps < 60) ? Color::RED : (fps < 120) ? Color::YELLOW : (fps < 240) ? Color::GRAY : Color::LIME;
-			graphics.put2DText(Offset2D{x + 4, fullHeight - y + 4}, fpsColor, formatString("FPS: {}", fps));
+			graphics.put2DText({x + 4, fullHeight - y + 4}, fpsColor, formatString("FPS: {}", fps));
 #ifndef NDEBUG
-			graphics.put2DText(Offset2D{x + width - 4, fullHeight - y + 4}, Color::RED, "DEBUG BUILD", 1.0f, gfx::TextAlign::RIGHT);
+			graphics.put2DText({x + width - 4, fullHeight - y + 4}, Color::RED, "DEBUG BUILD", 1.0f, gfx::TextAlign::RIGHT);
 #endif
-			graphics.put2DText(Offset2D{x + 4, y + 4 + 14}, (1.0f / zoomScale.y > 16.0f) ? Color::ORANGE : Color::WHITE,
+			graphics.put2DText({x + 4, y + 4 + 14}, (1.0f / zoomScale.y > 16.0f) ? Color::ORANGE : Color::WHITE,
 				(zoomScale.y < 1.0f) ? formatString("Zoom: 1/{:.4f} X", 1.0f / zoomScale.y) : formatString("Zoom: {:.4f} X", zoomScale.y));
 			if (!players.empty()) {
 				if (const Optional<World::Position> playerDisplayPosition = world.getEntityDisplayPosition(players.front().entityID, tickInterpolationAlpha)) {
-					graphics.put2DText(Offset2D{x + 4, y + 4}, Color::WHITE, formatString("Pos.: {:>7}", playerDisplayPosition->coordinates));
+					graphics.put2DText({x + 4, y + 4}, Color::WHITE, formatString("Pos.: {:>7}", playerDisplayPosition->coordinates));
 				}
 			}
 			const Schema& schema = world.resources.getResource<Schema>();
 			if (selectedPaintableBrushIndex < schema.paintableBrushes.size()) {
 				const Schema::PaintableBrush& paintableBrush = schema.paintableBrushes[selectedPaintableBrushIndex];
-				graphics.put2DText(Offset2D{x + width - 4, y + 4}, paintableBrush.previewColor, formatString("Brush: {}", paintableBrush.name), 1.0f, gfx::TextAlign::RIGHT);
+				graphics.put2DText({x + width - 4, y + 4}, paintableBrush.previewColor, formatString("Brush: {}", paintableBrush.name), 1.0f, gfx::TextAlign::RIGHT);
 			}
-			graphics.put2DText(Offset2D{fullWidth / 2, 4 + 14}, Color::WHITE, "W/A/S/D: Move | Scroll: Zoom | Shift: Sprint | LMB: Paint | RMB: Switch", 1.0f,
+			graphics.put2DText({fullWidth / 2, 4 + 14}, Color::WHITE, "W/A/S/D: Move | Scroll: Zoom | Shift: Sprint | LMB: Paint | RMB: Switch", 1.0f,
 				gfx::TextAlign::CENTER_HORIZONTALLY);
-			graphics.put2DText(Offset2D{fullWidth / 2, 4}, Color::WHITE, "F4: Uncap FPS | F5: Reload shaders | F10: Quit | F11: Toggle fullscreen", 1.0f,
+			graphics.put2DText({fullWidth / 2, 4}, Color::WHITE, "F4: Uncap FPS | F5: Reload shaders | F10: Quit | F11: Toggle fullscreen", 1.0f,
 				gfx::TextAlign::CENTER_HORIZONTALLY);
 			renderPass.setViewport(graphics.viewport);
 			graphics.renderer2D.drawFrame(renderPass, {graphics.instances2D}, graphics.camera2D);
@@ -247,6 +233,30 @@ private:
 
 	[[nodiscard]] vec2 getZoomScale() const {
 		return vec2{exp2(zoomAmount)};
+	}
+
+	void setZoomAmount(float newZoomAmount, const Graphics& graphics) {
+		constexpr float MIN_ZOOM_AMOUNT = -8.0f;
+		constexpr float MAX_ZOOM_AMOUNT = 8.0f;
+		constexpr float ZOOM_AMOUNT_SNAP_STEP = 1.0f;
+		newZoomAmount = clamp(newZoomAmount, MIN_ZOOM_AMOUNT, MAX_ZOOM_AMOUNT);
+		if (newZoomAmount != zoomAmount) {
+			for (float snapZoomAmount = MIN_ZOOM_AMOUNT; snapZoomAmount <= MAX_ZOOM_AMOUNT; snapZoomAmount += ZOOM_AMOUNT_SNAP_STEP) {
+				if ((newZoomAmount < snapZoomAmount && zoomAmount > snapZoomAmount) || (newZoomAmount > snapZoomAmount && zoomAmount < snapZoomAmount)) {
+					newZoomAmount = snapZoomAmount;
+				}
+			}
+			if (paintingMouseCoordinates) {
+				const Map::VisibleRegion startVisibleRegion = getVisibleRegion(graphics, 1.0f);
+				zoomAmount = newZoomAmount;
+				const Map::VisibleRegion endVisibleRegion = getVisibleRegion(graphics, 1.0f);
+				const Offset2D startPosition = convertScreenToTileCoordinates(graphics, startVisibleRegion, *paintingMouseCoordinates);
+				const Offset2D endPosition = convertScreenToTileCoordinates(graphics, endVisibleRegion, *paintingMouseCoordinates);
+				paintLine(startPosition, endPosition);
+			} else {
+				zoomAmount = newZoomAmount;
+			}
+		}
 	}
 
 	[[nodiscard]] Map::VisibleRegion getVisibleRegion(const Graphics& graphics, float tickInterpolationAlpha) const {

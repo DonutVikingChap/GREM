@@ -290,7 +290,7 @@ private:
 				return;
 			}
 
-			WeaponIntermediateState* const weaponIntermediateState = registry.findComponent<WeaponIntermediateState>(weaponEntityID);
+			const WeaponIntermediateState* const weaponIntermediateState = registry.findComponent<WeaponIntermediateState>(weaponEntityID);
 			const WeaponType* const weaponType = registry.findComponent<WeaponType>(weaponEntityID);
 			const WeaponState* const weaponState = registry.findComponent<WeaponState>(weaponEntityID);
 			if (!weaponIntermediateState || !weaponType || !weaponState) {

@@ -40,7 +40,7 @@ struct SpriteOptions {
 	/**
 	 * Flag values for Flip that describe how a sprite is flipped when rendered.
 	 */
-	enum FlipAxis : Flip {
+	enum FlipAxis : Flip {          // NOLINT(cppcoreguidelines-use-enum-class)
 		NO_FLIP = 0,                ///< Do not flip the sprite.
 		FLIP_HORIZONTALLY = 1 << 0, ///< Flip the sprite along the X axis.
 		FLIP_VERTICALLY = 1 << 1,   ///< Flip the sprite along the Y axis.

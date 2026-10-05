@@ -67,7 +67,7 @@ struct SimulationOptions {
 	 *       executor that the simulation is executed on, which can be queried
 	 *       with execution::Executor::getMaxParallelism().
 	 */
-	execution::Task::ParallelCount targetParallelism = static_cast<execution::Task::ParallelCount>(clamp(Thread::hardware_concurrency(), 2u, 32u) - 1);
+	execution::Task::ParallelCount targetParallelism = static_cast<execution::Task::ParallelCount>(clamp(Thread::hardware_concurrency(), 2u, 16u) - 1);
 
 	/**
 	 * How many sub-steps of the constraint solver to run in the simulation step.
@@ -957,6 +957,24 @@ struct Simulation {
 	GREM_API(physics) explicit Simulation(const SimulationOptions<N>& options, const ScheduleStepOptions<N>& scheduleStepOptions = {});
 
 	/**
+	 * Construct a physics simulation with all required resources added, with an
+	 * entirely custom schedule.
+	 *
+	 * \param options initial configuration options of the simulation, see
+	 *        SimulationOptions.
+	 * \param scheduleStep callback function that builds and returns the custom
+	 *        schedule of the simulation.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the callback function.
+	 */
+	GREM_API(physics)
+	explicit Simulation(const SimulationOptions<N>& options,
+		FunctionView<Schedule<N>(EntityRegistry<N>& registry, ResourceRegistry<N>& resources, const SimulationOptions<N>& simulationOptions)> scheduleStep);
+
+	/**
 	 * Create a new simulated object entity and add it to the simulation.
 	 *
 	 * \param options configuration of the object to create, see ObjectOptions.
@@ -1232,6 +1250,8 @@ struct Simulation {
 	 * \throws std::length_error if an internal size limit was exceeded.
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by custom tasks in the simulation's step
+	 *         schedule.
 	 *
 	 * \note When creating a Simulation, its
 	 *       SimulationOptions::targetParallelism value should roughly
@@ -1248,6 +1268,8 @@ struct Simulation {
 	 * \throws std::length_error if an internal size limit was exceeded.
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by custom tasks in the simulation's step
+	 *         schedule.
 	 *
 	 * \note When creating a Simulation with the intent of using this basic
 	 *       sequential step() overload, the simulation's

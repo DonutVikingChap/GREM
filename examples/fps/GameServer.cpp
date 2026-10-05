@@ -164,7 +164,7 @@ public:
 					}
 
 					// If we've received the requested tick command, and it hasn't been used yet, use it.
-					ReceivedTickCommand& tickCommand = tickCommands[index];
+					const ReceivedTickCommand& tickCommand = tickCommands[index];
 					if (tickCommands[index].received && !tickCommands[index].used) {
 						tickCommands[index].used = true;
 						applyTickCommand(tickCommand);
@@ -263,7 +263,7 @@ using Clients = OrderedMap<net::Endpoint, Client>;
 void runTick(GameState& gameState, Clients& clients) {
 	GREM_PROFILE_FUNCTION();
 
-	EntityRegistry& registry = gameState.getRegistry();
+	const EntityRegistry& registry = gameState.getRegistry();
 	ResourceRegistry& resources = gameState.getResources();
 	Events& events = resources.getResource<Events>();
 	const TickIndex tickIndex = resources.getResource<TickIndex>();
@@ -649,7 +649,9 @@ private:
 			const auto& [packet, sender] = *received;
 			if (const auto it = clients.find(sender); it != clients.end()) {
 				Client& client = it->second;
-				client.connection.receive(packet, [&]<typename Message>(Message&& message) -> void { handleMessage(client, std::forward<Message>(message)); });
+				client.connection.receive(packet, [&]<typename Message>(Message&& message) -> void { // NOLINT(cppcoreguidelines-missing-std-forward)
+					handleMessage(client, std::forward<Message>(message));
+				});
 				continue;
 			}
 
@@ -725,9 +727,9 @@ private:
 			const TickDifference oldSnapshotReverseOffset = newTickIndex - client.player->latestAcknowledgedSnapshotTickIndex;
 			GREM_ASSERT(oldSnapshotReverseOffset >= 1);
 			const TickIndex oldTickIndex =
-				(oldSnapshotReverseOffset > static_cast<TickDifference>(client.player->snapshots.size() - 1))
-					? TickIndex{}
-					: newTickIndex.getPrevious(static_cast<TickCount>(oldSnapshotReverseOffset));
+				(oldSnapshotReverseOffset > static_cast<TickDifference>(client.player->snapshots.size() - 1)) // NOLINT(modernize-use-integer-sign-comparison)
+			        ? TickIndex{}
+			        : newTickIndex.getPrevious(static_cast<TickCount>(oldSnapshotReverseOffset));
 			const Snapshot& oldSnapshot =
 				(oldTickIndex == TickIndex{}) ? initialSnapshot : client.player->snapshots[client.player->snapshots.size() - 1 - static_cast<size_t>(oldSnapshotReverseOffset)];
 			const Snapshot& newSnapshot = client.player->snapshots.back();

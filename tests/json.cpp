@@ -555,14 +555,16 @@ TEST_CASE("Output to ASCII string", "[json]") {
 	SECTION("Small object with large nested objects") {
 		const String string = json::Value{
 			json::Object{
-				{"nested",
+				{
+					"nested",
 					json::Object{
 						{"a", 1},
 						{"b", 2},
 						{"c", 3},
 						{"d", 4},
 						{"e", 5},
-					}},
+					},
+				},
 			}}.toString();
 		constexpr StringView EXPECTED_STRING =
 			"{\r\n"

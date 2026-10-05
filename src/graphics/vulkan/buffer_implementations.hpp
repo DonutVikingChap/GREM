@@ -443,13 +443,15 @@ private:
 		const VkDevice deviceHandle = device.get()->logicalDevice.get();
 		detail::VulkanDescriptorSetLayout& descriptorSetLayout = device.get()->bufferDescriptorSetLayoutMap[bufferLayout.nameCRC32];
 		if (!descriptorSetLayout) {
-			const Array bindings{VkDescriptorSetLayoutBinding{
-				.binding = 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-				.pImmutableSamplers = nullptr,
-			}};
+			const Array bindings{
+				VkDescriptorSetLayoutBinding{
+					.binding = 0,
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+					.pImmutableSamplers = nullptr,
+				},
+			};
 			const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 				.pNext = nullptr,
@@ -951,18 +953,20 @@ struct InstanceBufferImplementation : detail::ReusableCopyOnWriteResourceBase<In
 				.offset = 0,
 				.range = instanceBuffer.capacity(),
 			};
-			const Array descriptorWrites{VkWriteDescriptorSet{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = nullptr,
-				.dstSet = descriptorSet,
-				.dstBinding = 0,
-				.dstArrayElement = 0,
-				.descriptorCount = 1,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.pImageInfo = nullptr,
-				.pBufferInfo = &descriptorBufferInfo,
-				.pTexelBufferView = nullptr,
-			}};
+			const Array descriptorWrites{
+				VkWriteDescriptorSet{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = descriptorSet,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pImageInfo = nullptr,
+					.pBufferInfo = &descriptorBufferInfo,
+					.pTexelBufferView = nullptr,
+				},
+			};
 			vkUpdateDescriptorSets(deviceHandle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 			descriptorSetUpToDate = true;
 		}
@@ -1143,18 +1147,20 @@ struct DrawCommandBufferImplementation : detail::ReusableCopyOnWriteResourceBase
 				.offset = 0,
 				.range = drawCommandBuffer.capacity(),
 			};
-			const Array descriptorWrites{VkWriteDescriptorSet{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = nullptr,
-				.dstSet = descriptorSet,
-				.dstBinding = 0,
-				.dstArrayElement = 0,
-				.descriptorCount = 1,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.pImageInfo = nullptr,
-				.pBufferInfo = &descriptorBufferInfo,
-				.pTexelBufferView = nullptr,
-			}};
+			const Array descriptorWrites{
+				VkWriteDescriptorSet{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = descriptorSet,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pImageInfo = nullptr,
+					.pBufferInfo = &descriptorBufferInfo,
+					.pTexelBufferView = nullptr,
+				},
+			};
 			vkUpdateDescriptorSets(deviceHandle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 			descriptorSetUpToDate = true;
 		}
@@ -1369,18 +1375,20 @@ struct UnorderedDrawCommandBufferImplementation : detail::ReusableCopyOnWriteRes
 					.offset = 0,
 					.range = drawCommandBuffer.capacity(),
 				};
-				const Array descriptorWrites{VkWriteDescriptorSet{
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.pNext = nullptr,
-					.dstSet = descriptorSet,
-					.dstBinding = 0,
-					.dstArrayElement = 0,
-					.descriptorCount = 1,
-					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-					.pImageInfo = nullptr,
-					.pBufferInfo = &descriptorBufferInfo,
-					.pTexelBufferView = nullptr,
-				}};
+				const Array descriptorWrites{
+					VkWriteDescriptorSet{
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.pNext = nullptr,
+						.dstSet = descriptorSet,
+						.dstBinding = 0,
+						.dstArrayElement = 0,
+						.descriptorCount = 1,
+						.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+						.pImageInfo = nullptr,
+						.pBufferInfo = &descriptorBufferInfo,
+						.pTexelBufferView = nullptr,
+					},
+				};
 				vkUpdateDescriptorSets(deviceHandle, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 				descriptorSetUpToDate = true;
 			}

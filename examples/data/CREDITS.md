@@ -25,7 +25,7 @@ Public Domain
 ### Files
 
 ```
-fps/textures/explosion.png
+shared_3d_advanced/textures/explosion.png
 ```
 
 ### Link
@@ -92,11 +92,11 @@ https://polyhaven.com/a/carrot_cake
 ### Files
 
 ```
-fps/models/Television_01/textures/Television_01_arm_1k.jpg
-fps/models/Television_01/textures/Television_01_diff_1k.jpg
-fps/models/Television_01/textures/Television_01_nor_gl_1k.jpg
-fps/models/Television_01/Television_01_1k.gltf
-fps/models/Television_01/Television_01.bin
+shared_3d_advanced/models/Television_01/textures/Television_01_arm_1k.jpg
+shared_3d_advanced/models/Television_01/textures/Television_01_diff_1k.jpg
+shared_3d_advanced/models/Television_01/textures/Television_01_nor_gl_1k.jpg
+shared_3d_advanced/models/Television_01/Television_01_1k.gltf
+shared_3d_advanced/models/Television_01/Television_01.bin
 ```
 
 ### Link
@@ -116,7 +116,7 @@ https://polyhaven.com/a/Television_01
 ### Files
 
 ```
-fps/models/RobotExpressive.glb
+shared_3d_advanced/models/RobotExpressive.glb
 ```
 
 ### Link
@@ -141,12 +141,12 @@ https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/RobotExpressive
 ### Files
 
 ```
-fps/sounds/footstep0.ogg
-fps/sounds/footstep1.ogg
-fps/sounds/footstep2.ogg
-fps/sounds/footstep3.ogg
-fps/sounds/footstep4.ogg
-fps/sounds/footstep5.ogg
+shared_3d_advanced/sounds/footstep0.ogg
+shared_3d_advanced/sounds/footstep1.ogg
+shared_3d_advanced/sounds/footstep2.ogg
+shared_3d_advanced/sounds/footstep3.ogg
+shared_3d_advanced/sounds/footstep4.ogg
+shared_3d_advanced/sounds/footstep5.ogg
 ```
 
 ### Link
@@ -228,7 +228,7 @@ https://opengameart.org/content/bullet-decal
 ### Files
 
 ```
-fps/textures/autumn_field_puresky_1k.hdr
+shared_3d_advanced/textures/autumn_field_puresky_1k.hdr
 ```
 
 ### Link
@@ -276,16 +276,13 @@ Columbia: Recording
 ```
 fps/sounds/death.ogg
 fps/models/cartridge_case.glb
-fps/models/cylinder.obj
 fps/models/oil_drop.glb
-fps/models/plane.obj
 fps/models/rifle.mtl
 fps/models/rifle.obj
 fps/models/rifle.png
 fps/models/spark.mtl
 fps/models/spark.obj
 fps/models/spark.png
-fps/models/sphere.obj
 fps/models/terrain.glb
 fps/textures/oil_splat/base_color.png
 fps/textures/oil_splat/normal.png
@@ -294,8 +291,14 @@ fps/textures/muzzle_flash_core.png
 fps/textures/muzzle_flash_profile.png
 physics/textures/checkered_circle.png
 physics/textures/checkered_square.png
+platformer/levels/level1.glb
+platformer/levels/level1.json
+platformer/sounds/collect.ogg
 shared_2d/textures/icon.png
 shared_3d/models/cube.obj
+shared_3d/models/cylinder.obj
+shared_3d/models/plane.obj
+shared_3d/models/sphere.obj
 shared_3d/models/test.mtl
 shared_3d/models/test.obj
 shared_3d/textures/test.png

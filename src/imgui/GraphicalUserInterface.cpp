@@ -527,11 +527,14 @@ public:
 		platformIO.Renderer_CreateWindow = [](ImGuiViewport* viewport) -> void {
 			GREM_PROFILE_BLOCK("ImGui Renderer_CreateWindow");
 			Implementation& gui = *static_cast<Implementation*>(ImGui::GetIO().BackendPlatformUserData);
-			graphics::Swapchain* const swapchain = new graphics::Swapchain{gui.device, GraphicalUserInterface::getWindow(*viewport),
+			graphics::Swapchain* const swapchain = new graphics::Swapchain{
+				gui.device,
+				GraphicalUserInterface::getWindow(*viewport),
 				graphics::SwapchainOptions{
 					.maxBufferedFrameCount = gui.swapchain.getMaxBufferedFrameCount(),
 					.useVerticalSynchronization = gui.swapchain.isVerticalSynchronizationEnabled(),
-				}};
+				},
+			};
 			viewport->RendererUserData = swapchain;
 		};
 		platformIO.Renderer_DestroyWindow = [](ImGuiViewport* viewport) -> void {
@@ -744,8 +747,8 @@ public:
 							globalMousePosition += vec2{window->getPosition()};
 						}
 						io.AddMouseSourceEvent((mouseMoved.mouseID == 0xFFFFFFFF)   ? ImGuiMouseSource_TouchScreen
-											   : (mouseMoved.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
-																					: ImGuiMouseSource_Mouse);
+						                       : (mouseMoved.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
+						                                                            : ImGuiMouseSource_Mouse);
 						io.AddMousePosEvent(globalMousePosition.x, globalMousePosition.y);
 					}
 					if (io.WantCaptureMouse) {
@@ -759,8 +762,8 @@ public:
 					const int mouseButton = translateMouseButton(mouseButtonPressed.mouseButton);
 					if (mouseButton != -1) {
 						io.AddMouseSourceEvent((mouseButtonPressed.mouseID == 0xFFFFFFFF)   ? ImGuiMouseSource_TouchScreen
-											   : (mouseButtonPressed.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
-																							: ImGuiMouseSource_Mouse);
+						                       : (mouseButtonPressed.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
+						                                                                    : ImGuiMouseSource_Mouse);
 						io.AddMouseButtonEvent(mouseButton, true);
 						mouseButtonsDown |= 1 << mouseButton;
 					}
@@ -775,8 +778,8 @@ public:
 					const int mouseButton = translateMouseButton(mouseButtonReleased.mouseButton);
 					if (mouseButton != -1) {
 						io.AddMouseSourceEvent((mouseButtonReleased.mouseID == 0xFFFFFFFF)   ? ImGuiMouseSource_TouchScreen
-											   : (mouseButtonReleased.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
-																							 : ImGuiMouseSource_Mouse);
+						                       : (mouseButtonReleased.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
+						                                                                     : ImGuiMouseSource_Mouse);
 						io.AddMouseButtonEvent(mouseButton, false);
 						mouseButtonsDown &= ~(1 << mouseButton);
 					}
@@ -789,8 +792,8 @@ public:
 			GREM_CASE(const events::MouseWheelScrolledEvent& mouseWheelScrolled) {
 				if (findViewportByWindowID(mouseWheelScrolled.windowID)) {
 					io.AddMouseSourceEvent((mouseWheelScrolled.mouseID == 0xFFFFFFFF)   ? ImGuiMouseSource_TouchScreen
-										   : (mouseWheelScrolled.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
-																						: ImGuiMouseSource_Mouse);
+					                       : (mouseWheelScrolled.mouseID == 0xFFFFFFFE) ? ImGuiMouseSource_Pen
+					                                                                    : ImGuiMouseSource_Mouse);
 					io.AddMouseWheelEvent(-mouseWheelScrolled.scrollAmount.x, mouseWheelScrolled.scrollAmount.y);
 					if (io.WantCaptureMouse) {
 						return true;
@@ -806,8 +809,8 @@ public:
 					constexpr float DEADZONE = 8000.0f;
 					constexpr float MIN = -32768.0f;
 					constexpr float MAX = 32767.0f;
-					const float negativeAmount = clamp((static_cast<float>(controllerAxisMoved.axisValue) + DEADZONE) / (MIN + DEADZONE), 0.0f, 1.0f);
-					const float positiveAmount = clamp((static_cast<float>(controllerAxisMoved.axisValue) - DEADZONE) / (MAX - DEADZONE), 0.0f, 1.0f);
+					const float negativeAmount = clamp(unlerp(static_cast<float>(controllerAxisMoved.axisValue), -DEADZONE, MIN), 0.0f, 1.0f);
+					const float positiveAmount = clamp(unlerp(static_cast<float>(controllerAxisMoved.axisValue), DEADZONE, MAX), 0.0f, 1.0f);
 					switch (controllerAxisMoved.axis) {
 						case events::ControllerAxis::LEFT_STICK_X:
 							io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickLeft, negativeAmount > 0.1f, negativeAmount);
@@ -965,8 +968,8 @@ public:
 
 		const ContextPreserver contextPreserver{};
 		ImGui::SetCurrentContext(context.get());
-		ImGuiIO& io = ImGui::GetIO();
-		ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+		const ImGuiIO& io = ImGui::GetIO();
+		const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
 
 		if (drawData.Textures) {
 			for (ImTextureData* const textureData : *drawData.Textures) {
@@ -979,17 +982,19 @@ public:
 					const ImTextureID textureID{nextTextureID};
 					textures.emplace(nextTextureID,
 						ManagedTexture{
-							.linear{graphics::Texture::create(device, graphics::TextureType::TEXTURE_2D, graphics::TextureFormat::R8G8B8A8_SRGB,
-								Extent2D{.width = static_cast<uint32_t>(textureData->Width), .height = static_cast<uint32_t>(textureData->Height)}, 1, textureData->GetPixels(),
-								graphics::TextureSamplerOptions{
-									.minificationFilter = graphics::TextureFilter::LINEAR,
-									.magnificationFilter = graphics::TextureFilter::LINEAR,
-									.mipmapMode = graphics::TextureMipmapMode::NONE,
-									.horizontalWrappingMode = graphics::TextureWrappingMode::CLAMP_TO_EDGE,
-									.verticalWrappingMode = graphics::TextureWrappingMode::CLAMP_TO_EDGE,
-									.maxAnisotropy = 1.0f,
-									.depthComparisonMode{},
-								})},
+							.linear{
+								graphics::Texture::create(device, graphics::TextureType::TEXTURE_2D, graphics::TextureFormat::R8G8B8A8_SRGB,
+									Extent2D{.width = static_cast<uint32_t>(textureData->Width), .height = static_cast<uint32_t>(textureData->Height)}, 1, textureData->GetPixels(),
+									graphics::TextureSamplerOptions{
+										.minificationFilter = graphics::TextureFilter::LINEAR,
+										.magnificationFilter = graphics::TextureFilter::LINEAR,
+										.mipmapMode = graphics::TextureMipmapMode::NONE,
+										.horizontalWrappingMode = graphics::TextureWrappingMode::CLAMP_TO_EDGE,
+										.verticalWrappingMode = graphics::TextureWrappingMode::CLAMP_TO_EDGE,
+										.maxAnisotropy = 1.0f,
+										.depthComparisonMode{},
+									}),
+							},
 							.nearest{},
 						});
 					++nextTextureID;
@@ -1175,7 +1180,7 @@ private:
 		imeDirty = false;
 		if (imeData.WantVisible) {
 			ImVec2 viewportPosition{};
-			if (ImGuiViewport* const focusedViewport = findViewportByWindowID(focusedWindow->getID())) {
+			if (const ImGuiViewport* const focusedViewport = findViewportByWindowID(focusedWindow->getID())) {
 				viewportPosition = focusedViewport->Pos;
 			}
 			focusedWindow->setTextInputArea(

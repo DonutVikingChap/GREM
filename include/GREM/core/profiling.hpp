@@ -342,7 +342,7 @@ public:
 			}
 		}
 #endif
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		threadID = ThreadID::getCurrent();
 		threadName = std::move(newThreadName);
 		threadIndex = newThreadIndex;
@@ -351,12 +351,12 @@ public:
 #endif
 
 	void submitBlock(ProfilerBlock block) {
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		blocks.push_back(std::move(block));
 	}
 
 	void clearCapture() {
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		blocks.clear();
 	}
 
@@ -398,7 +398,7 @@ public:
 	}
 
 	void beginFrame() {
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		if (framesToSaveCount == 0) {
 #ifdef GREM_USE_MULTITHREADING
 			for (const UniquePointer<ProfilerThread>& profilerThread : profilerThreads) {
@@ -421,7 +421,7 @@ public:
 	}
 
 	void endFrame() {
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		if (framesToSaveCount > 0) {
 			frameEndTimes.push_back(Clock::now());
 			if (--framesToSaveCount == 0 && frameInProgress) {
@@ -505,7 +505,7 @@ public:
 
 	void saveFrames(size_t frameCount, String outputFilepathPrefix, ProfileFormats outputFormats) {
 		GREM_ASSERT(!outputFilepathPrefix.empty());
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		nextFrameOutputFilepathPrefix = std::move(outputFilepathPrefix);
 		nextFrameOutputFormats = outputFormats;
 		framesToSaveCount = frameCount;
@@ -725,7 +725,7 @@ private:
 
 #ifdef GREM_USE_MULTITHREADING
 	[[nodiscard]] ProfilerThread& addThread() {
-		ScopedLock lock{mutex};
+		const ScopedLock lock{mutex};
 		return *profilerThreads.emplace_back(UniquePointer<ProfilerThread>::create());
 	}
 
@@ -878,17 +878,17 @@ public:
 	(grem::detail::Profiler::getInstance().saveFrames(frameCount, outputFilepathPrefix, outputFormats))
 #define GREM_PROFILER_SAVE_NEXT_FRAME(outputFilepathPrefix, outputFormats) GREM_PROFILER_SAVE_NEXT_N_FRAMES(1, outputFilepathPrefix, outputFormats)
 #define GREM_PROFILE_BLOCK(staticString) \
-	grem::detail::BlockProfiler GREM_PRIVATE_PROFILING_CONCAT_INDIRECT(GREM_private_blockProfiler, __LINE__) { \
+	const grem::detail::BlockProfiler GREM_PRIVATE_PROFILING_CONCAT_INDIRECT(GREM_private_blockProfiler, __LINE__) { \
 		grem::detail::StaticOrDynamicString::createStaticFromStringView(std::source_location::current().function_name()), \
 			grem::detail::StaticOrDynamicString::createStatic(staticString) \
 	}
 #define GREM_PROFILE_BLOCK_DYNAMIC(dynamicString) \
-	grem::detail::BlockProfiler GREM_PRIVATE_PROFILING_CONCAT_INDIRECT(GREM_private_blockProfiler, __LINE__) { \
+	const grem::detail::BlockProfiler GREM_PRIVATE_PROFILING_CONCAT_INDIRECT(GREM_private_blockProfiler, __LINE__) { \
 		grem::detail::StaticOrDynamicString::createStaticFromStringView(std::source_location::current().function_name()), \
 			grem::detail::StaticOrDynamicString::createDynamic(dynamicString) \
 	}
 #define GREM_PROFILE_FUNCTION() \
-	grem::detail::BlockProfiler GREM_PRIVATE_PROFILING_CONCAT_INDIRECT(GREM_private_blockProfiler, __LINE__) { \
+	const grem::detail::BlockProfiler GREM_PRIVATE_PROFILING_CONCAT_INDIRECT(GREM_private_blockProfiler, __LINE__) { \
 		grem::detail::StaticOrDynamicString::createStaticFromStringView(std::source_location::current().function_name()), \
 			grem::detail::StaticOrDynamicString::createStaticFromStringView( \
 				grem::detail::getQualifiedShortFunctionName(std::source_location::current().function_name(), __func__)) \
@@ -899,7 +899,7 @@ public:
 			grem::detail::StaticOrDynamicString::createStaticFromStringView(grem::detail::getUnqualifiedFunctionName(std::source_location::current().function_name())) \
 	}
 #define GREM_PROFILE_CONSTRUCTOR_END() \
-	grem::detail::BlockProfilerStopper GREM_private_constructorProfilerStopper { \
+	const grem::detail::BlockProfilerStopper GREM_private_constructorProfilerStopper { \
 		GREM_private_constructorProfiler \
 	}
 #else

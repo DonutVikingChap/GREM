@@ -1,0 +1,7 @@
+{
+    "gfx": {
+        "font": "fonts/unscii/unscii-8.ttf",
+        "fontSize": 8
+    },
+    "level": "levels/level1.json"
+}

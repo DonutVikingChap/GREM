@@ -25,7 +25,7 @@ class GameState;
 class GameSystems;
 
 struct GameClientOptions {
-	CStringView settingsFilepath = "configuration/client.json";
+	String settingsFilepath = "configuration/client.json";
 	ClientSettings settings{};
 	bool captureLoadTimeProfile = false;
 };

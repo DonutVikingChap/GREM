@@ -123,7 +123,7 @@ bool Broadphase<N>::collide(ShapeView<N> shape, CollisionFilter filter, const Tr
 		return exitedEarly;
 	};
 
-	if (const Optional<Box<N>> shapeBoundingBox = ShapeView<N>{shape}.getBoundingBox(transformation)) {
+	if (const Optional<Box<N>> shapeBoundingBox = shape.getBoundingBox(transformation)) {
 		const Box<N> expandedShapeBoundingBox = shapeBoundingBox->getExpanded(options.maxCollisionTouchingDistance * 2.0f);
 		traverseEntities(
 			[&](const EntityID& objectID) -> bool {

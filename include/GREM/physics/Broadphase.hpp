@@ -658,6 +658,53 @@ public:
 	}
 
 	/**
+	 * Find any collision between a point and the objects in the broadphase when
+	 * the point is cast like a ray from a given start position towards a given
+	 * direction.
+	 *
+	 * \param ray ray to cast.
+	 * \param filter collision filter of the ray.
+	 * \param entities objects to collide against.
+	 * \param filterTest test that potential colliders must pass in order to be
+	 *        considered for collision. The default test passes if the filters
+	 *        of both colliders want either collision or response (or both) on
+	 *        any layer(s). To limit to only colliders that want response (and
+	 *        skip trigger volumes, etc.), use CollisionFilterTest::RESPONSE.
+	 * \param predicate condition that must be met in order to consider an
+	 *        entity for collision. Must return bool and accept the following
+	 *        parameter:
+	 *        - `EntityID objectID`: an entity handle to the
+	 *          candidate object.
+	 *
+	 * \return the first found collision that passed the filter test, or an
+	 *         empty optional if no collisions were found that passed the test.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the predicate function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 * \note Only entities that are both in the broadphase and in the given set
+	 *       will be considered for collision.
+	 */
+	[[nodiscard]] Optional<RaycastResult> raycastAnyHit(
+		const Ray<N>& ray, CollisionFilter filter, execution::Entities<const Position<N>, const Orientation<N>, const Scale<N>, const Collider<N>, const ObjectBounds<N>> entities,
+		CollisionFilterTest filterTest = {}, FunctionView<bool(EntityID objectID)> predicate = [](EntityID) -> bool { return true; }) const {
+		Optional<RaycastResult> result{};
+		raycast(
+			ray, filter, entities, filterTest,
+			[&](const RaycastResult& hit) -> bool {
+				result = hit;
+				return true;
+			},
+			predicate);
+		return result;
+	}
+
+	/**
 	 * Result of a shapecast against the objects in a broadphase.
 	 */
 	struct ShapecastResult {
@@ -744,9 +791,9 @@ public:
 		FunctionView<bool(EntityID objectID)> predicate = [](EntityID) -> bool { return true; }) const;
 
 	/**
-	 * Find the closest collision between an object of a convex shape and the objects in
-	 * the broadphase when the object is cast from a given start position towards a
-	 * given direction.
+	 * Find the closest collision between an object of a convex shape and the
+	 * objects in the broadphase when the object is cast from a given start
+	 * position towards a given direction.
 	 *
 	 * \param convexShape convex shape to cast.
 	 * \param filter collision filter of the shape.
@@ -799,6 +846,61 @@ public:
 					result = hit;
 				}
 				return false;
+			},
+			predicate);
+		return result;
+	}
+
+	/**
+	 * Find any collision between an object of a convex shape and the objects in
+	 * the broadphase when the object is cast from a given start position towards a
+	 * given direction.
+	 *
+	 * \param convexShape convex shape to cast.
+	 * \param filter collision filter of the shape.
+	 * \param transformation world-space transformation of the shape.
+	 * \param direction direction to cast in.
+	 * \param maxDistance maximum hit distance. Must be non-negative.
+	 * \param entities objects to collide against.
+	 * \param options collision algorithm options, see
+	 *        CollisionAlgorithmOptions. Should usually be
+	 *        `simulation.resources.getResource<SimulationOptions<N>>().collisionAlgorithmOptions`.
+	 * \param filterTest test that potential colliders must pass in order to be
+	 *        considered for collision. The default test passes if the filters
+	 *        of both colliders want either collision or response (or both) on
+	 *        any layer(s). To limit to only colliders that want response (and
+	 *        skip trigger volumes, etc.), use CollisionFilterTest::RESPONSE.
+	 * \param predicate condition that must be met in order to consider an
+	 *        entity for collision. Must return bool and accept the following
+	 *        parameter:
+	 *        - `EntityID objectID`: an entity handle to the
+	 *          candidate object.
+	 *
+	 * \return the first found collision that passed the filter test, or an
+	 *         empty optional if no collisions were found that passed the test.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the predicate function.
+	 *
+	 * \note The order of traversal is unspecified, though it is guaranteed that
+	 *       outer nodes will be visited before their own inner nodes that they
+	 *       contain.
+	 * \note Only entities that are both in the broadphase and in the given set
+	 *       will be considered for collision.
+	 */
+	[[nodiscard]] Optional<ShapecastResult> shapecastAnyHit(
+		ConvexShapeView<N> convexShape, CollisionFilter filter, const Transformation<N>& transformation, Direction<N> direction, Distance maxDistance,
+		execution::Entities<const Position<N>, const Orientation<N>, const Scale<N>, const Collider<N>, const ObjectBounds<N>> entities,
+		const CollisionAlgorithmOptions<N>& options, CollisionFilterTest filterTest = {},
+		FunctionView<bool(EntityID objectID)> predicate = [](EntityID) -> bool { return true; }) const {
+		Optional<ShapecastResult> result{};
+		shapecast(
+			convexShape, filter, transformation, direction, maxDistance, entities, options, filterTest,
+			[&](const ShapecastResult& hit) -> bool {
+				result = hit;
+				return true;
 			},
 			predicate);
 		return result;

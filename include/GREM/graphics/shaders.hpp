@@ -703,7 +703,7 @@ struct VertexShaderOptions {
 	 * specifies the directory in which to look for the corresponding compiled
 	 * file instead of looking in the same directory as the specified file.
 	 */
-	CStringView compiledFileDirectory{};
+	String compiledFileDirectory{};
 };
 
 /**
@@ -724,7 +724,7 @@ struct FragmentShaderOptions {
 	 * specifies the directory in which to look for the corresponding compiled
 	 * file instead of looking in the same directory as the specified file.
 	 */
-	CStringView compiledFileDirectory{};
+	String compiledFileDirectory{};
 };
 
 namespace detail {
@@ -751,7 +751,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] VertexShaderImplementation* get() const noexcept {
+	[[nodiscard]] VertexShaderImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const VertexShaderImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -805,7 +817,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] FragmentShaderImplementation* get() const noexcept {
+	[[nodiscard]] FragmentShaderImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const FragmentShaderImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -860,7 +884,19 @@ public:
 	 * \note The type of the returned resource is backend-specific and has no
 	 *       meaning to application code.
 	 */
-	[[nodiscard]] ShaderPipelineImplementation* get() const noexcept {
+	[[nodiscard]] ShaderPipelineImplementation* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.get();
+	}
+
+	/**
+	 * Get a pointer to the underlying resource implementation.
+	 *
+	 * \return a non-owning read-only pointer to the underlying resource.
+	 *
+	 * \note The type of the returned resource is backend-specific and has no
+	 *       meaning to application code.
+	 */
+	[[nodiscard]] const ShaderPipelineImplementation* get() const noexcept {
 		return implementation.get();
 	}
 
@@ -1451,7 +1487,7 @@ template <typename Mesh, typename VertexShaderConstants, typename VertexShaderOu
 	typename FragmentShaderOutputs, typename... FragmentShaderBuffers>
 struct is_valid_shader_pipeline_combination<VertexShader<Mesh, VertexShaderConstants, VertexShaderOutputs, VertexShaderBuffers...>,
 	FragmentShader<Mesh, VertexShaderOutputs, FragmentShaderConstants, FragmentShaderOutputs, FragmentShaderBuffers...>>
-	: meta::type_list_starts_with<meta::TypeList<FragmentShaderBuffers...>, meta::TypeList<VertexShaderBuffers...>> {};
+    : meta::type_list_starts_with<meta::TypeList<FragmentShaderBuffers...>, meta::TypeList<VertexShaderBuffers...>> {};
 
 template <typename Mesh, typename VertexShaderConstants, typename VertexShaderOutputs, typename... VertexShaderBuffers, typename FragmentShaderConstants,
 	typename FragmentShaderOutputs>

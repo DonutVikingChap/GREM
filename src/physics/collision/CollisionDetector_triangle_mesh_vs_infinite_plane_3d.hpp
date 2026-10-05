@@ -33,8 +33,8 @@ public:
 			return {};
 		}
 
-		const TriangleMeshShape3D& triangleMeshShapeA = static_cast<const Shape3D&>(colliderA.shape).as<TriangleMeshShape3D>();
-		GREM_ASSERT(static_cast<const Shape3D&>(colliderB.shape).is<InfinitePlaneShape3D>());
+		const TriangleMeshShape3D& triangleMeshShapeA = colliderA.shape.as<TriangleMeshShape3D>();
+		GREM_ASSERT(colliderB.shape.is<InfinitePlaneShape3D>());
 
 		const InverseTransformation3D inverseTransformationA = inverse(transformationA);
 
@@ -93,8 +93,8 @@ public:
 			return;
 		}
 
-		const TriangleMeshShape3D& triangleMeshShapeA = static_cast<const Shape3D&>(colliderA.shape).as<TriangleMeshShape3D>();
-		GREM_ASSERT(static_cast<const Shape3D&>(colliderB.shape).is<InfinitePlaneShape3D>());
+		const TriangleMeshShape3D& triangleMeshShapeA = colliderA.shape.as<TriangleMeshShape3D>();
+		GREM_ASSERT(colliderB.shape.is<InfinitePlaneShape3D>());
 
 		const InverseTransformation3D inverseTransformationA = inverse(transformationA);
 		const InverseTransformation3D inverseTransformationB = inverse(transformationB);

@@ -417,13 +417,13 @@ private:
 				shape = phys::CapsuleShape2D{.radius = size.getX() * 0.5f, .halfLength = size.getY() * 0.5f};
 				break;
 		}
-		phys::EntityBuilder2D entityBuilder = simulation.createObject({
+		phys::EntityBuilder2D entity = simulation.createObject({
 			.position = position,
 			.collider{.shape = std::move(shape)},
 			.material{.restitution = 0.8f},
 		});
-		entityBuilder.addComponent<Color>(color);
-		return entityBuilder.build();
+		entity.addComponent<Color>(color);
+		return entity.build();
 	}
 
 	phys::EntityID createRandomShapeObject(phys::Position2D position) {

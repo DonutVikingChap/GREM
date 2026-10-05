@@ -25,7 +25,7 @@ struct WindowOptions {
 	/**
 	 * Null-terminated UTF-8 string of the displayed title of the window.
 	 */
-	CStringView title = "Application";
+	String title = "Application";
 
 	/**
 	 * The desired horizontal position of the window, in screen coordinates
@@ -626,7 +626,26 @@ public:
 	 *         platform.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	[[nodiscard]] GREM_API(graphics) void* getNativeHandle() const;
+	[[nodiscard]] GREM_API(graphics) void* getNativeHandle();
+
+	/**
+	 * Get a pointer to the native handle of the window, if available for the
+	 * current platform.
+	 *
+	 * \return a non-owning read-only pointer representing the native handle of
+	 *         the window used by the host platform, or nullptr if such a handle
+	 *         is not available.
+	 *
+	 * \note On Windows, this is the HWND pointer. Other platforms are likely to
+	 *       return null.
+	 *
+	 * \throws graphics::Error on failure to get the handle on a supported
+	 *         platform.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	[[nodiscard]] const void* getNativeHandle() const {
+		return const_cast<Window*>(this)->getNativeHandle();
+	}
 
 	/**
 	 * Get an opaque pointer to the internal representation of the window.
@@ -638,7 +657,21 @@ public:
 	 *       abstractions and is not intended to be used outside of the graphics
 	 *       module. The returned pointer has no meaning to application code.
 	 */
-	[[nodiscard]] void* get() const noexcept {
+	[[nodiscard]] void* get() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.window;
+	}
+
+	/**
+	 * Get an opaque pointer to the internal representation of the window.
+	 *
+	 * \return an untyped non-owning read-only pointer to the internal
+	 *         representation of the window.
+	 *
+	 * \note This function is used internally by the implementations of various
+	 *       abstractions and is not intended to be used outside of the graphics
+	 *       module. The returned pointer has no meaning to application code.
+	 */
+	[[nodiscard]] const void* get() const noexcept {
 		return implementation.window;
 	}
 
@@ -653,7 +686,22 @@ public:
 	 *       abstractions and is not intended to be used outside of the graphics
 	 *       module. The returned pointer has no meaning to application code.
 	 */
-	[[nodiscard]] void* getSurface() const noexcept {
+	[[nodiscard]] void* getSurface() noexcept { // NOLINT(readability-make-member-function-const)
+		return implementation.surface;
+	}
+
+	/**
+	 * Get an opaque pointer to the internal representation of the window
+	 * surface.
+	 *
+	 * \return an untyped non-owning read-only pointer to the internal
+	 *         representation of the window surface.
+	 *
+	 * \note This function is used internally by the implementations of various
+	 *       abstractions and is not intended to be used outside of the graphics
+	 *       module. The returned pointer has no meaning to application code.
+	 */
+	[[nodiscard]] const void* getSurface() const noexcept {
 		return implementation.surface;
 	}
 

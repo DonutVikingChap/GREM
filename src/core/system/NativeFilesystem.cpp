@@ -128,7 +128,7 @@ File::Metadata NativeFilesystem::getInputFileMetadata(CStringView filepath) cons
 		.lastModificationTime = lastModificationTime,
 		.kind = kind,
 		.readOnly = (status.permissions() & (std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write)) ==
-	                std::filesystem::perms::none,
+		            std::filesystem::perms::none,
 	};
 }
 
@@ -187,7 +187,7 @@ OutputFileHandle NativeFilesystem::openEmptyOutputFile(CStringView filepath) {
 
 void NativeFilesystem::createEmptyOutputFile(CStringView filepath) {
 	const std::filesystem::path path{filepath.c_str()};
-	std::ofstream stream{path, std::ofstream::binary | std::ofstream::out | std::ofstream::trunc};
+	const std::ofstream stream{path, std::ofstream::binary | std::ofstream::out | std::ofstream::trunc};
 	if (!stream.good()) {
 		throw File::Error{String{"Failed to create file \""} + formatPath(path) + "\" for writing."};
 	}

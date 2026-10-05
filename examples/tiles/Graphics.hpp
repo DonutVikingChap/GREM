@@ -40,14 +40,14 @@ struct Graphics {
 		camera2D.setProjection(gfx::OrthographicProjection2D{.size = renderSize});
 	}
 
-	Box<2, float> put2DText(vec2 position, Color color, StringView string, float scale = 1.0f, gfx::TextAlign alignment = {}) {
+	Box<2, float> put2DText(Offset2D position, Color color, StringView string, float scale = 1.0f, gfx::TextAlign alignment = {}) {
 		GREM_PROFILE_FUNCTION();
 
 		temporaryText.assign(mainFont, 8, string, {0.0f, 0.0f}, vec2{scale});
-		instances2D.putTextInstance(temporaryText, {.position = position + vec2{1.0f, -1.0f}, .alignment = alignment, .color = color * Color::fromLinear(0.2f)});
+		instances2D.putTextInstance(temporaryText, {.position = position + Offset2D{1, -1}, .alignment = alignment, .color = color * Color::fromLinear(0.2f)});
 		instances2D.putTextInstance(temporaryText, {.position = position, .alignment = alignment, .color = color});
 		const Box<2, float> boundingBox = temporaryText.getBoundingBox();
-		const vec2 offset = position + temporaryText.getAlignmentOffset(alignment);
+		const vec2 offset = vec2{position} + temporaryText.getAlignmentOffset(alignment);
 		return {.min = boundingBox.min + offset, .max = boundingBox.max + offset};
 	}
 

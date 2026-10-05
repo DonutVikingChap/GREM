@@ -78,7 +78,7 @@ void Simulation<N>::addObjectComponents(EntityRegistry<N>& registry, const Resou
 	registry.template addComponentIfMissing<CenterOfBuoyancy<N>>(entityID, options.centerOfBuoyancy);
 	registry.template addComponentIfMissing<Collider<N>>(entityID, std::move(options.collider));
 	if (Volume* const volume = registry.template addComponentIfMissing<Volume>(entityID, Volume{})) {
-		*volume = ShapeView<N>{registry.template getComponent<Collider<N>>(entityID).shape}.calculateVolume();
+		*volume = registry.template getComponent<Collider<N>>(entityID).shape.calculateVolume();
 	}
 	Mass mass{};
 	if (const InverseMass* const inverseMass = registry.template findComponent<InverseMass>(entityID)) {
@@ -143,7 +143,7 @@ void Simulation<N>::addObjectComponents(EntityRegistry<N>& registry, const Resou
 		const Position<N> position = registry.template getComponent<Position<N>>(entityID);
 		const Scale<N> scale = registry.template getComponent<Scale<N>>(entityID);
 		const Transformation<N> transformation = translateRotateScale(position, orientation, scale);
-		if (const Optional<Box<N>> shapeAABB = ShapeView<N>{registry.template getComponent<Collider<N>>(entityID).shape}.getBoundingBox(transformation)) {
+		if (const Optional<Box<N>> shapeAABB = registry.template getComponent<Collider<N>>(entityID).shape.getBoundingBox(transformation)) {
 			if (registry.template getComponent<ObjectActivity>(entityID).isCorrectable != 0) {
 				const SimulationOptions<N>& simulationOptions = resources.template getResource<SimulationOptions<N>>();
 				const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
@@ -215,7 +215,7 @@ void Simulation<N>::updateObjectBounds(EntityRegistry<N>& registry, const Resour
 	GREM_ASSERT(all(isfinite(scale)));
 	Box<N> newBoundingBox{};
 	const Transformation<N> transformation = translateRotateScale(position, orientation, scale);
-	if (const Optional<Box<N>> shapeAABB = ShapeView<N>{collider.shape}.getBoundingBox(transformation)) {
+	if (const Optional<Box<N>> shapeAABB = collider.shape.getBoundingBox(transformation)) {
 		const LinearVelocity<N> linearVelocity = registry.template getComponent<LinearVelocity<N>>(objectID);
 		const AngularVelocity<N> angularVelocity = registry.template getComponent<AngularVelocity<N>>(objectID);
 		if (registry.template getComponent<ObjectActivity>(objectID).isCorrectable != 0) {
@@ -630,7 +630,7 @@ void Simulation<N>::drawDebugVisualization([[maybe_unused]] DebugVisualization<N
 			const LocalTransformation<N> localTransformation =
 				translateRotateScale(locallyTransformedShape->localOffset, locallyTransformedShape->localOrientation, locallyTransformedShape->localScale);
 			const Transformation<N> globalTransformation = transformation * localTransformation;
-			if (const Optional<Box<N>> boundingBox = ShapeView<N>{*locallyTransformedShape->shape}.getBoundingBox(globalTransformation)) {
+			if (const Optional<Box<N>> boundingBox = locallyTransformedShape->shape->getBoundingBox(globalTransformation)) {
 				debugVisualization.drawWorldAABBWireframe(boundingBox->getExpanded(collisionAlgorithmOptions.maxCollisionTouchingDistance),
 					((registry.template hasComponent<ObjectActiveTag>(objectID)) ? Color::BLUE : Color::DIM_GRAY) * Color::fromLinear(0.7f));
 			}
@@ -639,7 +639,7 @@ void Simulation<N>::drawDebugVisualization([[maybe_unused]] DebugVisualization<N
 				const Transformation<N> transformation = translateRotateScale(position, orientation, scale);
 				const LocalTransformation<N> localTransformation = translateRotateScale(subCollider.localOffset, subCollider.localOrientation, subCollider.localScale);
 				const Transformation<N> globalTransformation = transformation * localTransformation;
-				if (const Optional<Box<N>> boundingBox = ShapeView<N>{subCollider.collider.shape}.getBoundingBox(globalTransformation)) {
+				if (const Optional<Box<N>> boundingBox = subCollider.collider.shape.getBoundingBox(globalTransformation)) {
 					debugVisualization.drawWorldAABBWireframe(boundingBox->getExpanded(collisionAlgorithmOptions.maxCollisionTouchingDistance),
 						((registry.template hasComponent<ObjectActiveTag>(objectID)) ? Color::BLUE : Color::DIM_GRAY) * Color::fromLinear(0.7f));
 				}
@@ -656,12 +656,18 @@ void Simulation<N>::drawDebugVisualization([[maybe_unused]] DebugVisualization<N
 }
 
 template <size_t N>
-Simulation<N>::Simulation(const SimulationOptions<N>& options, const ScheduleStepOptions<N>& scheduleStepOptions) {
-	addRequiredResources(resources, options);
+Simulation<N>::Simulation(const SimulationOptions<N>& options, const ScheduleStepOptions<N>& scheduleStepOptions)
+	: Simulation(options, [&](EntityRegistry<N>&, ResourceRegistry<N>&, const SimulationOptions<N>&) -> Schedule<N> {
+		Scheduler<N> scheduler{};
+		scheduleStep(scheduler, options, scheduleStepOptions);
+		return scheduler.buildSchedule("Step physics simulation");
+	}) {}
 
-	Scheduler<N> scheduler{};
-	scheduleStep(scheduler, options, scheduleStepOptions);
-	stepSchedule = scheduler.buildSchedule("Step physics simulation");
+template <size_t N>
+Simulation<N>::Simulation(const SimulationOptions<N>& options,
+	FunctionView<Schedule<N>(EntityRegistry<N>& registry, ResourceRegistry<N>& resources, const SimulationOptions<N>& simulationOptions)> scheduleStep) {
+	addRequiredResources(resources, options);
+	stepSchedule = scheduleStep(registry, resources, options); // NOLINT(cppcoreguidelines-prefer-member-initializer)
 }
 
 template <size_t N>

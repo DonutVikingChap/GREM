@@ -68,8 +68,8 @@ template <typename T>
 [[nodiscard]] json::Value copyValue(const pmr::json::Value& value) {
 	json::Value result{};
 	GREM_MATCH(value) {
-		GREM_CASE(json::Null null) break;
-		GREM_CASE(json::Boolean boolean) {
+		GREM_CASE(const json::Null null) break;
+		GREM_CASE(const json::Boolean boolean) {
 			result = boolean;
 			break;
 		}
@@ -77,12 +77,12 @@ template <typename T>
 			result.emplace<json::String>(string);
 			break;
 		}
-		GREM_CASE(json::Number number) {
+		GREM_CASE(const json::Number number) {
 			result = number;
 			break;
 		}
 		GREM_CASE(const pmr::json::Object& object) {
-			json::Object resultObject = result.emplace<json::Object>();
+			json::Object& resultObject = result.emplace<json::Object>();
 			resultObject.reserve(object.size());
 			for (const auto& [propertyKey, propertyValue] : object) {
 				resultObject.emplace(json::String{propertyKey}, copyValue(propertyValue));
@@ -90,7 +90,7 @@ template <typename T>
 			break;
 		}
 		GREM_CASE(const pmr::json::Array& array) {
-			json::Array resultArray = result.emplace<json::Array>();
+			json::Array& resultArray = result.emplace<json::Array>();
 			resultArray.reserve(array.size());
 			for (const pmr::json::Value& item : array) {
 				resultArray.push_back(copyValue(item));
@@ -751,7 +751,7 @@ struct Parser<Material> {
 		pmr::json::Object& object = value.get<pmr::json::Object>();
 		return {
 			.pbrMetallicRoughness = parseOptionalProperty<Material::PBRMetallicRoughness>(path, object, "pbrMetallicRoughness")
-		        .value_or(Material::PBRMetallicRoughness{
+			    .value_or(Material::PBRMetallicRoughness{
 					.baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f},
 					.baseColorTexture{},
 					.metallicFactor = 1.0f,
@@ -1436,7 +1436,7 @@ struct Parser<Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive> {
 		return {
 			.type = parseRequiredProperty<Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive::Type>(path, object, "type"),
 			.mode = parseOptionalProperty<Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive::Mode>(path, object, "mode")
-		        .value_or(Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive::Mode::FORCE),
+			    .value_or(Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive::Mode::FORCE),
 			.axis = static_cast<uint8_t>(parseRequiredProperty<size_t>(path, object, "axis")),
 			.maxForce = parseOptionalProperty<float>(path, object, "maxForce"),
 			.positionTarget = parseOptionalProperty<float>(path, object, "positionTarget"),
@@ -1452,9 +1452,9 @@ struct Parser<Asset::Extension::KHRPhysicsRigidBodies::Joint> {
 		pmr::json::Object& object = value.get<pmr::json::Object>();
 		return {
 			.limits = parseOptionalProperty<ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint::Limit>>(path, object, "limits")
-		        .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint::Limit>{}),
+			    .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint::Limit>{}),
 			.drives = parseOptionalProperty<ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive>>(path, object, "drives")
-		        .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive>{}),
+			    .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint::Drive>{}),
 		};
 	}
 };
@@ -1465,11 +1465,11 @@ struct Parser<Asset::Extension::KHRPhysicsRigidBodies> {
 		pmr::json::Object& object = value.get<pmr::json::Object>();
 		return {
 			.physicsMaterials = parseOptionalProperty<ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Material>>(path, object, "physicsMaterials")
-		        .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Material>{}),
+			    .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Material>{}),
 			.collisionFilters = parseOptionalProperty<ArrayList<Asset::Extension::KHRPhysicsRigidBodies::CollisionFilter>>(path, object, "collisionFilters")
-		        .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::CollisionFilter>{}),
+			    .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::CollisionFilter>{}),
 			.physicsJoints = parseOptionalProperty<ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint>>(path, object, "physicsJoints")
-		        .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint>{}),
+			    .value_or(ArrayList<Asset::Extension::KHRPhysicsRigidBodies::Joint>{}),
 		};
 	}
 };
