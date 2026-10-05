@@ -45,8 +45,7 @@ float blinnPhongSpecular(vec3 normal, vec3 lightDirection, vec3 viewDirection, f
 vec3 getDirectLightContribution(Light light, vec3 normal, vec3 viewDirection, vec3 materialDiffuse, vec3 materialSpecular) {
 	float diffuseFactor = halfLambertDiffuse(normal, light.direction);
 
-	float specularExponentSqrt = length(materialSpecular) * 5.0;
-	float specularExponent = specularExponentSqrt * specularExponentSqrt;
+	float specularExponent = dot(materialSpecular, materialSpecular) * 25.0;
 	float specularFactor = blinnPhongSpecular(normal, light.direction, viewDirection, specularExponent);
 
 	vec3 diffuse = diffuseFactor * materialDiffuse;

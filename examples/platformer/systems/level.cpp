@@ -285,7 +285,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 			.lightTypeAndRangeAndConeCosines{
 				PlatformerModelShaderLight::LIGHT_TYPE_DIRECTIONAL,
 				1.0f,
-				0.0f,
+				1.0f,
 				0.0f,
 			},
 			.lightPosition{},
@@ -298,7 +298,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 			.lightTypeAndRangeAndConeCosines{
 				PlatformerModelShaderLight::LIGHT_TYPE_POINT,
 				getEstimatedLightRange(pointLight.intensity),
-				0.0f,
+				1.0f,
 				0.0f,
 			},
 			.lightPosition{pointLight.position.in(phys::METERS), 0.0f},
