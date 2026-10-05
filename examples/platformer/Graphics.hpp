@@ -197,8 +197,8 @@ struct Graphics {
 						GREM_PROFILE_BLOCK("Test lights");
 						for (uint32_t lightIndex = 0; lightCount < 255 && lightIndex < lights.size(); ++lightIndex) {
 							const PlatformerModelShaderLight& light = lights[lightIndex];
-							if (light.lightType == PlatformerModelShaderLight::LIGHT_TYPE_DIRECTIONAL ||
-								tileFrustum.isPotentiallyIntersecting(Sphere<3, float>{.center = light.lightPosition, .radius = light.lightRange})) {
+							if (light.lightTypeAndRangeAndConeCosines.x == PlatformerModelShaderLight::LIGHT_TYPE_DIRECTIONAL ||
+								tileFrustum.isPotentiallyIntersecting(Sphere<3, float>{.center = vec3{light.lightPosition}, .radius = light.lightTypeAndRangeAndConeCosines.y})) {
 								itemChunk.push_back(PlatformerModelShaderItem{.itemIndex = lightIndex});
 								++lightCount;
 							}

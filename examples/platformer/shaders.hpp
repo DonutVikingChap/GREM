@@ -20,12 +20,10 @@ struct PlatformerModelShaderLight {
 	static constexpr float LIGHT_TYPE_POINT = 1.0f;
 	static constexpr float LIGHT_TYPE_SPOT = 2.0f;
 
-	float lightType;
-	float lightRange;
-	vec2 lightConeCosines;
-	vec3 lightPosition;
-	vec3 lightDirection;
-	vec3 lightIntensity;
+	vec4 lightTypeAndRangeAndConeCosines;
+	vec4 lightPosition;
+	vec4 lightDirection;
+	vec4 lightIntensity;
 };
 using PlatformerModelShaderLightBuffer = gfx::StorageBuffer<PlatformerModelShaderLight, "PlatformerModelShaderLights">;
 

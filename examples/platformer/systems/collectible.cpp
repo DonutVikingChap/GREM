@@ -337,8 +337,14 @@ void createCollectible(phys::EntityBuilder3D& entity, phys::ResourceRegistry3D& 
 			.emitsCollisionEvents = true,
 		});
 	const vec3 positionInMeters = position.in(phys::METERS);
+	rng::Xoroshiro128PlusPlusEngine::result_type seed{};
+	seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(positionInMeters.x, 65536.0f));
+	seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(positionInMeters.y, 65536.0f));
+	seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(positionInMeters.z, 65536.0f));
+	rng::Xoroshiro128PlusPlusEngine numberGenerator{seed};
+	rng::UniformIntegerDistribution<Milliseconds::rep> timeOffsetDistribution{0, 65536};
 	entity.addComponent<Collectible>(Collectible{
-		.timeOffset = Milliseconds{getHash(positionInMeters.x, positionInMeters.y, positionInMeters.z) % 65536},
+		.timeOffset = Milliseconds{timeOffsetDistribution(numberGenerator)},
 	});
 	entity.addComponent<CollectibleModelInstance>();
 }

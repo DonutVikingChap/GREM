@@ -8,12 +8,14 @@ struct Light {
 };
 
 Light getLight(uint lightIndex) {
-	float type = lightType(lightIndex);
-	float range = lightRange(lightIndex);
-	vec2 coneCosines = lightConeCosines(lightIndex);
-	vec3 position = lightPosition(lightIndex);
-	vec3 direction = lightDirection(lightIndex);
-	vec3 intensity = lightIntensity(lightIndex);
+	vec4 typeAndRangeAndConeCosines = lightTypeAndRangeAndConeCosines(lightIndex);
+	vec3 position = lightPosition(lightIndex).xyz;
+	vec3 direction = lightDirection(lightIndex).xyz;
+	vec3 intensity = lightIntensity(lightIndex).xyz;
+
+	float type = typeAndRangeAndConeCosines.x;
+	float range = typeAndRangeAndConeCosines.y;
+	vec2 coneCosines = typeAndRangeAndConeCosines.zw;
 
 	Light light;
 	light.type = type;

@@ -148,6 +148,8 @@ struct PlayerSettingsJSON {
 		phys::Coefficient yawMinHorizontalDirectionScale = 0.5_x;
 		phys::Frequency yawDecayRateAtBaseSpeed = 1.5_Hertz;
 		phys::Coefficient yawDecayRateMaxAffectingCoefficientOfBaseSpeed = 1_x;
+		phys::Time yawFollowCooldownAfterAdjustment = 1_second;
+		phys::Time yawFollowCooldownSmoothingTime = 0.5_seconds;
 		phys::Angle pitchAtZeroSpeed = -40_degrees;
 		phys::Angle pitchAtBaseSpeed = -15_degrees;
 		phys::Frequency pitchDecayRate = 0.5_Hertz;
@@ -226,6 +228,7 @@ struct PlayerCamera {
 	phys::Speed smoothedHorizontalSpeed{};
 	phys::Direction2D horizontalDirection;
 	phys::Scale2D horizontalDirectionScale = horizontalDirection;
+	phys::Time horizontalDirectionFollowCooldown{};
 	phys::Position1D verticalTargetPosition;
 	phys::Position1D previousVerticalTargetPosition = verticalTargetPosition;
 	phys::PitchYaw angles;
@@ -437,10 +440,13 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 		const vec2 cameraTurnScale = input.inputManager.getCurrentState2D(PlayerAction::TURN_DOWN, PlayerAction::TURN_UP, PlayerAction::TURN_RIGHT, PlayerAction::TURN_LEFT).value;
 		const float cameraDistanceScale = input.inputManager.getRelativeState1D(PlayerAction::ZOOM_IN, PlayerAction::ZOOM_OUT).motion;
 		const phys::PitchYawRotations angleRotations = cameraAimScale * camera.aimSensitivity + cameraTurnScale * camera.turnSensitivity * deltaTime;
-		const phys::OrthonormalBasis2D yawRotation = rotate(-angleRotations.getY());
-		camera.horizontalDirectionScale = yawRotation * camera.horizontalDirectionScale;
-		camera.horizontalDirection = yawRotation * camera.horizontalDirection;
-		camera.angles += angleRotations;
+		if (angleRotations != 0) {
+			const phys::OrthonormalBasis2D yawRotation = rotate(-angleRotations.getY());
+			camera.horizontalDirectionScale = yawRotation * camera.horizontalDirectionScale;
+			camera.horizontalDirection = yawRotation * camera.horizontalDirection;
+			camera.angles += angleRotations;
+			camera.horizontalDirectionFollowCooldown = settings.camera.yawFollowCooldownAfterAdjustment;
+		}
 		const phys::Length1D newCameraDistance = camera.distance + cameraDistanceScale * phys::METERS;
 		if (newCameraDistance < settings.camera.minDistance) {
 			camera.distance = min(camera.distance, settings.camera.minDistance);
@@ -586,18 +592,23 @@ void adjustPlayerCameras(exec::Entities<PlayerCamera, const PlayerMovement, cons
 			camera.horizontalDirection = phys::Direction2D::reinterpret(*horizontalDirection);
 		}
 
-		const phys::Scale2D newHorizontalDirectionScale = expDecay(camera.horizontalDirectionScale, camera.horizontalDirection,
-			min(horizontalSpeed, settings.cameraYawDecayRateMaxAffectingSpeed) * settings.cameraYawDecayRatePerBaseSpeed, deltaTime);
-		if (const Optional<phys::Direction2D> newHorizontalDirection = tryNormalize(newHorizontalDirectionScale)) {
-			camera.horizontalDirectionScale =
-				(length2(newHorizontalDirectionScale) < length2(settings.camera.yawMinHorizontalDirectionScale))
-			        ? *newHorizontalDirection * settings.camera.yawMinHorizontalDirectionScale
-			        : newHorizontalDirectionScale;
-			camera.horizontalDirection = *newHorizontalDirection;
+		countdown(camera.horizontalDirectionFollowCooldown, deltaTime);
+		if (camera.horizontalDirectionFollowCooldown <= settings.camera.yawFollowCooldownSmoothingTime) {
+			const phys::Coefficient yawDecayRateSmoothingCoefficient = 1_x - camera.horizontalDirectionFollowCooldown / settings.camera.yawFollowCooldownSmoothingTime;
+			const phys::Frequency yawDecayRate =
+				yawDecayRateSmoothingCoefficient * min(horizontalSpeed, settings.cameraYawDecayRateMaxAffectingSpeed) * settings.cameraYawDecayRatePerBaseSpeed;
+			const phys::Scale2D newHorizontalDirectionScale = expDecay(camera.horizontalDirectionScale, camera.horizontalDirection, yawDecayRate, deltaTime);
+			if (const Optional<phys::Direction2D> newHorizontalDirection = tryNormalize(newHorizontalDirectionScale)) {
+				camera.horizontalDirectionScale =
+					(length2(newHorizontalDirectionScale) < length2(settings.camera.yawMinHorizontalDirectionScale))
+				        ? *newHorizontalDirection * settings.camera.yawMinHorizontalDirectionScale
+				        : newHorizontalDirectionScale;
+				camera.horizontalDirection = *newHorizontalDirection;
 
-			const phys::AbsoluteAngle newWrappedYaw = getAngle(rotate90DegreesClockwise(flipY(*newHorizontalDirection)));
-			const phys::AbsoluteAngle newYaw = camera.angles.getY() + getAngleDifference(camera.angles.getY(), newWrappedYaw);
-			camera.angles.setY(newYaw);
+				const phys::AbsoluteAngle newWrappedYaw = getAngle(rotate90DegreesClockwise(flipY(*newHorizontalDirection)));
+				const phys::AbsoluteAngle newYaw = camera.angles.getY() + getAngleDifference(camera.angles.getY(), newWrappedYaw);
+				camera.angles.setY(newYaw);
+			}
 		}
 
 		if (movement.groundNormal || movement.flying || movement.timeSinceJump > settings.jumpDuration) {

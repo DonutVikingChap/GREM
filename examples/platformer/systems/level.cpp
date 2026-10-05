@@ -282,32 +282,41 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 	};
 	for (const LevelJSON::DirectionalLight& directionalLight : levelJSON.directionalLights) {
 		level.lights.push_back(PlatformerModelShaderLight{
-			.lightType = PlatformerModelShaderLight::LIGHT_TYPE_DIRECTIONAL,
-			.lightRange = 1.0f,
-			.lightConeCosines{},
+			.lightTypeAndRangeAndConeCosines{
+				PlatformerModelShaderLight::LIGHT_TYPE_DIRECTIONAL,
+				1.0f,
+				0.0f,
+				0.0f,
+			},
 			.lightPosition{},
-			.lightDirection = convertAnglesToForwardDirection(directionalLight.angles),
-			.lightIntensity = directionalLight.intensity,
+			.lightDirection{convertAnglesToForwardDirection(directionalLight.angles), 0.0f},
+			.lightIntensity{directionalLight.intensity, 0.0f},
 		});
 	}
 	for (const LevelJSON::PointLight& pointLight : levelJSON.pointLights) {
 		level.lights.push_back(PlatformerModelShaderLight{
-			.lightType = PlatformerModelShaderLight::LIGHT_TYPE_POINT,
-			.lightRange = getEstimatedLightRange(pointLight.intensity),
-			.lightConeCosines{},
-			.lightPosition = pointLight.position.in(phys::METERS),
+			.lightTypeAndRangeAndConeCosines{
+				PlatformerModelShaderLight::LIGHT_TYPE_POINT,
+				getEstimatedLightRange(pointLight.intensity),
+				0.0f,
+				0.0f,
+			},
+			.lightPosition{pointLight.position.in(phys::METERS), 0.0f},
 			.lightDirection{},
-			.lightIntensity = pointLight.intensity,
+			.lightIntensity{pointLight.intensity, 0.0f},
 		});
 	}
 	for (const LevelJSON::SpotLight& spotLight : levelJSON.spotLights) {
 		level.lights.push_back(PlatformerModelShaderLight{
-			.lightType = PlatformerModelShaderLight::LIGHT_TYPE_SPOT,
-			.lightRange = getEstimatedLightRange(spotLight.intensity),
-			.lightConeCosines{cos(spotLight.innerConeAngle), cos(spotLight.outerConeAngle)},
-			.lightPosition = spotLight.position.in(phys::METERS),
-			.lightDirection = convertAnglesToForwardDirection(spotLight.angles),
-			.lightIntensity = spotLight.intensity,
+			.lightTypeAndRangeAndConeCosines{
+				PlatformerModelShaderLight::LIGHT_TYPE_SPOT,
+				getEstimatedLightRange(spotLight.intensity),
+				cos(spotLight.innerConeAngle),
+				cos(spotLight.outerConeAngle),
+			},
+			.lightPosition{spotLight.position.in(phys::METERS), 0.0f},
+			.lightDirection{convertAnglesToForwardDirection(spotLight.angles), 0.0f},
+			.lightIntensity{spotLight.intensity, 0.0f},
 		});
 	}
 
