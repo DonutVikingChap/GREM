@@ -3079,11 +3079,7 @@ static_assert(shape_3d<ShapeView3D>);
  */
 template <typename Visitor, size_t N>
 constexpr decltype(auto) visit(Visitor&& visitor, ShapeView<N> shape) { // NOLINT(cppcoreguidelines-missing-std-forward)
-	return Shape<N>::value_type::visitIndex(shape.index(),
-		Overloaded{
-			[&]<typename T>(std::in_place_type_t<T>) -> decltype(auto) { return visitor(*static_cast<const T*>(shape.data())); },
-			[&]() -> decltype(visitor(std::declval<const PointShape<N>&>())) { throw BadVariantAccess{}; },
-		});
+	return Shape<N>::value_type::visitIndex(shape.index(), [&]<typename T>(std::in_place_type_t<T>) -> decltype(auto) { return visitor(*static_cast<const T*>(shape.data())); });
 }
 
 inline Volume Shape<2>::calculateVolume() const {

@@ -1308,7 +1308,7 @@ public:
 			} result{};
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				if (!(((variant.activeTypeIndex == Indices) ? (std::construct_at(&result.value.actual, visitor(std::forward<V>(variant).template access<Ts, Indices>())), true)
-															: false) ||
+				                                            : false) ||
 						...)) {
 					throw BadVariantAccess{};
 				}
@@ -1324,29 +1324,30 @@ public:
 	 * \param index variant alternative index of the visitor overload to call.
 	 * \param visitor callable object that is overloaded to accept any of the
 	 *        variant alternative types wrapped in std::in_place_type_t as a
-	 *        parameter, as well as no arguments in case the given index is
-	 *        outside the range of possible alternatives.
+	 *        parameter.
 	 *
 	 * \return the result of calling the visitor with std::in_place_type<T>,
 	 *         where T is the variant alternative type corresponding to the
-	 *         given index, or with no arguments if the index is out of range.
+	 *         given index.
 	 *
+	 * \throws BadVariantAccess if the given index is not a valid alternative
+	 *         index of the variant.
 	 * \throws any exception thrown by the visitor.
 	 */
 	template <typename Visitor>
 	static constexpr decltype(auto) visitIndex(index_type index, Visitor&& visitor) { // NOLINT(cppcoreguidelines-missing-std-forward)
-		using R = std::common_reference_t<decltype(visitor(std::in_place_type<Ts>))..., decltype(visitor())>;
+		using R = std::common_reference_t<decltype(visitor(std::in_place_type<Ts>))...>;
 		if constexpr (std::is_void_v<R>) {
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				if (!(((index == Indices) ? (visitor(std::in_place_type<Ts>), true) : false) || ...)) {
-					visitor();
+					throw BadVariantAccess{};
 				}
 			}(std::make_index_sequence<sizeof...(Ts)>{});
 		} else if constexpr (std::is_lvalue_reference_v<R>) {
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				std::remove_reference_t<R>* result = nullptr;
 				if (!(((index == Indices) ? ((result = &visitor(std::in_place_type<Ts>)), true) : false) || ...)) {
-					result = &visitor();
+					throw BadVariantAccess{};
 				}
 				return *result;
 			}(std::make_index_sequence<sizeof...(Ts)>{});
@@ -1370,7 +1371,7 @@ public:
 			} result{};
 			[&]<std::size_t... Indices>(std::index_sequence<Indices...>) -> void {
 				if (!(((index == Indices) ? (std::construct_at(&result.value.actual, visitor(std::in_place_type<Ts>)), true) : false) || ...)) {
-					std::construct_at(&result.value.actual, visitor());
+					throw BadVariantAccess{};
 				}
 			}(std::make_index_sequence<sizeof...(Ts)>{});
 			result.hasValue = true;

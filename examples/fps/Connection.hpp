@@ -334,8 +334,8 @@ public:
 						extraUnreliablePayload.buffer.size() <= ((extraUnreliablePayload.compressed) ? size_t{Limits<int16_t>::MAX} + 1 : size_t{Limits<int16_t>::MAX})) {
 						header.extraUnreliablePayloadSizeNegativeIfCompressed =
 							(extraUnreliablePayload.compressed)
-								? static_cast<int16_t>(-static_cast<int32_t>(extraUnreliablePayload.buffer.size()))
-								: static_cast<int16_t>(extraUnreliablePayload.buffer.size());
+						        ? static_cast<int16_t>(-static_cast<int32_t>(extraUnreliablePayload.buffer.size()))
+						        : static_cast<int16_t>(extraUnreliablePayload.buffer.size());
 						outgoing.packet.append_range(extraUnreliablePayload.buffer);
 						outgoingUnreliablePayloads.pop_front();
 						header.unreliableSequenceNumber = ++lastSentUnreliableSequenceNumber;
@@ -383,7 +383,7 @@ public:
 			if (payload.buffer.size() - payload.bytesSent <= MAX_PAYLOAD_SIZE_PER_UNRELIABLE_PACKET) {
 				const PacketType type =
 					(payload.bytesSent == 0) ? ((payload.compressed) ? PacketType::UNRELIABLE_PAYLOAD_FULL_COMPRESSED : PacketType::UNRELIABLE_PAYLOAD_FULL_UNCOMPRESSED)
-											 : ((payload.compressed) ? PacketType::UNRELIABLE_PAYLOAD_END_COMPRESSED : PacketType::UNRELIABLE_PAYLOAD_END_UNCOMPRESSED);
+					                         : ((payload.compressed) ? PacketType::UNRELIABLE_PAYLOAD_END_COMPRESSED : PacketType::UNRELIABLE_PAYLOAD_END_UNCOMPRESSED);
 				if (!sendUnreliablePacket(sendPacket, type, Span{payload.buffer}.subspan(payload.bytesSent))) {
 					return false;
 				}
@@ -592,7 +592,7 @@ private:
 		const bool extraUnreliablePayloadCompressed = header.extraUnreliablePayloadSizeNegativeIfCompressed < 0;
 		const size_t extraUnreliablePayloadSize =
 			(extraUnreliablePayloadCompressed) ? static_cast<size_t>(-static_cast<int32_t>(header.extraUnreliablePayloadSizeNegativeIfCompressed))
-											   : static_cast<size_t>(header.extraUnreliablePayloadSizeNegativeIfCompressed);
+			                                   : static_cast<size_t>(header.extraUnreliablePayloadSizeNegativeIfCompressed);
 		if (extraUnreliablePayloadSize > payload.size()) {
 			close(make_error_code(std::errc::protocol_error));
 			return false;
@@ -764,7 +764,7 @@ private:
 					const bool extraUnreliablePayloadCompressed = header.extraUnreliablePayloadSizeNegativeIfCompressed < 0;
 					const size_t extraUnreliablePayloadSize =
 						(extraUnreliablePayloadCompressed) ? static_cast<size_t>(-static_cast<int32_t>(header.extraUnreliablePayloadSizeNegativeIfCompressed))
-														   : static_cast<size_t>(header.extraUnreliablePayloadSizeNegativeIfCompressed);
+						                                   : static_cast<size_t>(header.extraUnreliablePayloadSizeNegativeIfCompressed);
 					if (extraUnreliablePayloadSize > 0) {
 						if (extraUnreliablePayloadSize > payload.size()) {
 							close(make_error_code(std::errc::protocol_error));
@@ -1013,22 +1013,18 @@ public:
 		return Channel::receive(packet, [&](Span<const byte> payload) -> bool {
 			while (!payload.empty()) {
 				IncomingTypeIndex typeIndex;
-				if (!deserialize(typeIndex, payload)) {
+				if (!deserialize(typeIndex, payload) || typeIndex >= IncomingMessage::npos) {
 					return false;
 				}
 
-				if (!IncomingMessage::visitIndex(typeIndex,
-						Overloaded{
-							[&]<typename Message>(std::in_place_type_t<Message>) -> bool {
-								Message& message = get<Message>(incomingMessages);
-								if (!deserialize(message, payload)) {
-									return false;
-								}
-								handleMessage(std::move(message));
-								return true;
-							},
-							[&]() -> bool { return false; },
-						})) {
+				if (!IncomingMessage::visitIndex(typeIndex, [&]<typename Message>(std::in_place_type_t<Message>) -> bool {
+						Message& message = get<Message>(incomingMessages);
+						if (!deserialize(message, payload)) {
+							return false;
+						}
+						handleMessage(std::move(message));
+						return true;
+					})) {
 					return false;
 				}
 			}

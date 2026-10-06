@@ -67,11 +67,11 @@ struct is_trivially_serializable<phys::Orientation<N>> : std::bool_constant<HOST
 
 template <>
 struct is_trivially_serializable<phys::ObjectActivity>
-	: std::bool_constant<is_trivially_serializable<phys::ObjectActivity::value_type>::value && sizeof(phys::ObjectActivity) == sizeof(phys::ObjectActivity::value_type)> {};
+    : std::bool_constant<is_trivially_serializable<phys::ObjectActivity::value_type>::value && sizeof(phys::ObjectActivity) == sizeof(phys::ObjectActivity::value_type)> {};
 
 template <>
 struct is_trivially_serializable<Duration>
-	: std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(Duration) == sizeof(Duration::rep) && alignof(Duration) == alignof(Duration::rep) && same_as<Duration::rep, int64_t> &&
+    : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(Duration) == sizeof(Duration::rep) && alignof(Duration) == alignof(Duration::rep) && same_as<Duration::rep, int64_t> &&
 						 same_as<Duration::period, Nanoseconds::period>> {};
 
 template <>
@@ -82,14 +82,14 @@ struct is_trivially_serializable<CRC32> : std::bool_constant<HOST_IS_LITTLE_ENDI
 
 template <typename T, size_t N>
 struct is_trivially_serializable<Array<T, N>>
-	: std::bool_constant<(N > 0 && is_trivially_serializable<std::remove_cvref_t<T>>::value && sizeof(Array<T, N>) == packed_size_v<Array<T, N>>)> {};
+    : std::bool_constant<(N > 0 && is_trivially_serializable<std::remove_cvref_t<T>>::value && sizeof(Array<T, N>) == packed_size_v<Array<T, N>>)> {};
 
 template <typename... Ts>
 struct is_trivially_serializable<Tuple<Ts...>> : std::bool_constant<(is_trivially_serializable<std::remove_cvref_t<Ts>>::value && ...)> {};
 
 template <aggregate T>
 requires(!std::is_empty_v<T> && !requires { typename T::TriviallySerializableTag; }) struct is_trivially_serializable<T>
-	: std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(T) == packed_size_v<std::remove_cvref_t<decltype(meta::getFields(std::declval<T>()))>> &&
+    : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(T) == packed_size_v<std::remove_cvref_t<decltype(meta::getFields(std::declval<T>()))>> &&
 						 is_trivially_serializable<decltype(meta::getFields(std::declval<T>()))>::value> {};
 
 template <typename T>
@@ -441,16 +441,10 @@ template <typename... Ts>
 inline bool deserialize(Variant<Ts...>& value, SpanReader input) {
 	using Index = typename Variant<Ts...>::index_type;
 	Index index{};
-	if (!deserialize(index, input)) {
+	if (!deserialize(index, input) || index >= Variant<Ts...>::npos) {
 		return false;
 	}
-	return Variant<Ts...>::visitIndex(index,
-		Overloaded{
-			[&]<typename T>(std::in_place_type_t<T>) -> bool { //
-				return deserialize(value.template emplace<T>(), input);
-			},
-			[&]() -> bool { return false; },
-		});
+	return Variant<Ts...>::visitIndex(index, [&]<typename T>(std::in_place_type_t<T>) -> bool { return deserialize(value.template emplace<T>(), input); });
 }
 
 template <typename T, size_t N>

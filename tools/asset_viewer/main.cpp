@@ -1347,7 +1347,6 @@ private:
 							}
 							return SoundAssetView{*soundStage, filesystem, filepath};
 						},
-						[&]() -> AssetView { unreachable(); },
 					});
 			}();
 			return AssetTab{
