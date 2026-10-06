@@ -38,7 +38,7 @@
  * platformer game like this, since they often want to use a more stylistic or
  * toon-like art style than what PBR shaders are mainly designed for. In this
  * example, the custom shader uses the classic Blinn-Phong shading model with a
- * half-lambertian diffuse term as a baseline
+ * half-Lambertian diffuse term as a baseline
  * (see `examples/data/platformer/shaders/model.frag`), but this can easily be
  * changed to suit whatever style the game needs. The example shader supports
  * direct ambient, directional, point and spot lights as well as basic "blob
