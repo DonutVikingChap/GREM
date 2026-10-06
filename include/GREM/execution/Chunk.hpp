@@ -19,10 +19,10 @@
 namespace grem::execution {
 
 /**
- * %Subrange of a #resource, corresponding to one of a fixed number of chunks
+ * %Subrange of a resource, corresponding to one of a fixed number of chunks
  * that the resource has been divded into.
  *
- * \tparam Resource #resource type that the chunk is a subrange of, potentially
+ * \tparam Resource resource type that the chunk is a subrange of, potentially
  *         const-qualified to indicate read-only access.
  * \tparam Projection function object that gets the full range of elements from
  *         the resource that is to be chunked. The default projection assumes

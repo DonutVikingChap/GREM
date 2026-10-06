@@ -14,14 +14,14 @@
 namespace grem::execution {
 
 /**
- * Container of a specific tuple of singleton #resource types, available to
- * tasks defined through a Scheduler.
+ * Container of a specific tuple of singleton resource types, available to tasks
+ * defined through a Scheduler.
  *
  * This container can be used as a simpler and more performant alternative to
  * ResourceRegistry when the full set of resource types is known at compile
  * time.
  *
- * \tparam ResourcesOrPointers #resource types, or pointers to external
+ * \tparam ResourcesOrPointers resource types, or pointers to external
  *         resources, to store in the table.
  *
  * \sa ResourceRegistry
@@ -40,7 +40,7 @@ public:
 	/**
 	 * Check if the table contains a specific resource.
 	 *
-	 * \tparam T #resource type to check for.
+	 * \tparam T resource type to check for.
 	 *
 	 * \return true if the table contains a resource of the specified type,
 	 *         false otherwise.
@@ -53,7 +53,7 @@ public:
 	/**
 	 * Get a specific resource in the table.
 	 *
-	 * \tparam T #resource type to get. Must be one of the resource types
+	 * \tparam T resource type to get. Must be one of the resource types
 	 *         contained in the table.
 	 *
 	 * \return a reference to the specified resource.
@@ -71,7 +71,7 @@ public:
 	/**
 	 * Get a specific resource in the table.
 	 *
-	 * \tparam T #resource type to get. Must be one of the resource types
+	 * \tparam T resource type to get. Must be one of the resource types
 	 *         contained in the table.
 	 *
 	 * \return a read-only reference to the specified resource.
@@ -89,7 +89,7 @@ public:
 	/**
 	 * Try to get a specific resource in the table.
 	 *
-	 * \tparam T #resource type to get.
+	 * \tparam T resource type to get.
 	 *
 	 * \return a pointer to the specified resource, or nullptr if the table does
 	 *         not contain a resource of the specified type.
@@ -108,7 +108,7 @@ public:
 	/**
 	 * Try to get a specific resource in the table.
 	 *
-	 * \tparam T #resource type to get.
+	 * \tparam T resource type to get.
 	 *
 	 * \return a read-only pointer to the specified resource, or nullptr if the
 	 *         table does not contain a resource of the specified type.

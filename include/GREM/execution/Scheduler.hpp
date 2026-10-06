@@ -405,10 +405,10 @@ public:
 	 * \tparam TaskFunction contextless function object that executes the task.
 	 *         The task function should return void and may accept the following
 	 *         kinds of parameters:
-	 *         - `T&`: Mutable access to a singleton #resource of type `T` from
+	 *         - `T&`: Mutable access to a singleton resource of type `T` from
 	 *           the resource registry that is provided on execution of the
 	 *           schedule.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -445,10 +445,10 @@ public:
 	 * \tparam TaskFunction contextless function object that executes the task.
 	 *         The task function should return void and may accept the following
 	 *         kinds of parameters:
-	 *         - `T&`: Mutable access to a singleton #resource of type `T` from
+	 *         - `T&`: Mutable access to a singleton resource of type `T` from
 	 *           the resource registry that is provided on execution of the
 	 *           schedule.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -479,20 +479,20 @@ public:
 
 	/**
 	 * Append a data-parallel task to the task list that performs a chunked
-	 * operation over a specific #resource.
+	 * operation over a specific resource.
 	 *
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
 	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
 	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - A read-only entity range type, such as Entities or Columns,
@@ -531,20 +531,20 @@ public:
 
 	/**
 	 * Append an optional data-parallel task to the task list that performs a
-	 * chunked operation over a specific #resource.
+	 * chunked operation over a specific resource.
 	 *
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
 	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
 	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - A read-only entity range type, such as Entities or Columns,
@@ -582,7 +582,7 @@ public:
 
 	/**
 	 * Append a data-parallel task to the task list that performs a chunked
-	 * operation over a specific #resource, without any of the compile-time
+	 * operation over a specific resource, without any of the compile-time
 	 * safety checks that prevent sub-tasks from accidentally mutating shared
 	 * data.
 	 *
@@ -590,14 +590,14 @@ public:
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
 	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
 	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - A read-only entity range type, such as Entities or Columns,
@@ -636,7 +636,7 @@ public:
 
 	/**
 	 * Append an optional data-parallel task to the task list that performs a
-	 * chunked operation over a specific #resource, without any of the
+	 * chunked operation over a specific resource, without any of the
 	 * compile-time safety checks that prevent sub-tasks from accidentally
 	 * mutating shared data.
 	 *
@@ -644,14 +644,14 @@ public:
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
 	 *         - `Chunk<T>`: Mutable access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
 	 *         - `Chunk<const T>`: Read-only access to a subrange of a singleton
-	 *           #resource of type `T`. Each parallel invocation of the task
+	 *           resource of type `T`. Each parallel invocation of the task
 	 *           function will be provided a distinct non-overlapping subrange
 	 *           of the full resource, such that the full range is covered.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - A read-only entity range type, such as Entities or Columns,
@@ -694,7 +694,7 @@ public:
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -740,7 +740,7 @@ public:
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -787,7 +787,7 @@ public:
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -835,7 +835,7 @@ public:
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -876,14 +876,14 @@ public:
 	/**
 	 * Append a data-parallel task to the task list that performs a chunked
 	 * reduction operation over a specific entity range and outputs the result
-	 * to a specific #resource.
+	 * to a specific resource.
 	 *
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
-	 *         - `T&`: Mutable access to a singleton #resource of type `T` to
+	 *         - `T&`: Mutable access to a singleton resource of type `T` to
 	 *           write the result of the reduction operation to.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the
@@ -954,14 +954,14 @@ public:
 	/**
 	 * Append an optional data-parallel task to the task list that performs a
 	 * chunked reduction operation over a specific entity range and outputs the
-	 * result to a specific #resource.
+	 * result to a specific resource.
 	 *
 	 * \tparam TaskFunction contextless function object that executes one chunk
 	 *         of the task. The task function should return void and may accept
 	 *         the following kinds of parameters:
-	 *         - `T&`: Mutable access to a singleton #resource of type `T` to
+	 *         - `T&`: Mutable access to a singleton resource of type `T` to
 	 *           write the result of the reduction operation to.
-	 *         - `T` or `const T&`: Read-only access to a singleton #resource of
+	 *         - `T` or `const T&`: Read-only access to a singleton resource of
 	 *           type `T` from the resource registry that is provided on
 	 *           execution of the schedule.
 	 *         - An entity range type, such as Entities or Columns, from the

@@ -24,13 +24,13 @@
 namespace grem::execution {
 
 /**
- * Dynamic container of singleton #resource instances, available to tasks
- * defined through a Scheduler.
+ * Dynamic container of singleton resource instances, available to tasks defined
+ * through a Scheduler.
  *
  * This container supports extending the set of possible resource types
  * dynamically at runtime.
  *
- * \tparam KnownResourcesOrPointers compile-time-known set of possible #resource
+ * \tparam KnownResourcesOrPointers compile-time-known set of possible resource
  *         types, or pointers to external resources, which are given dedicated
  *         slots in the resource registry to speed up access to them. Any
  *         unknown resource types that are not in this list will be stored in a
@@ -106,7 +106,7 @@ public:
 	/**
 	 * Add an owned resource to the registry.
 	 *
-	 * \tparam T #resource type to add.
+	 * \tparam T resource type to add.
 	 *
 	 * \param args arguments to forward to the resource constructor.
 	 *
@@ -158,7 +158,7 @@ public:
 	/**
 	 * Add an owned resource to the registry if it doesn't already have it.
 	 *
-	 * \tparam T #resource type to add.
+	 * \tparam T resource type to add.
 	 *
 	 * \param args arguments to forward to the resource constructor.
 	 *
@@ -182,7 +182,7 @@ public:
 	 * Add a reference-counted resource to the registry, whose ownership is
 	 * shared between copies of the registry.
 	 *
-	 * \tparam T #resource type to add.
+	 * \tparam T resource type to add.
 	 *
 	 * \param args arguments to forward to the resource constructor.
 	 *
@@ -239,7 +239,7 @@ public:
 	 * Add a reference-counted resource to the registry, whose ownership is
 	 * shared between copies of the registry, if it doesn't already have it.
 	 *
-	 * \tparam T #resource type to add.
+	 * \tparam T resource type to add.
 	 *
 	 * \param args arguments to forward to the resource constructor.
 	 *
@@ -262,7 +262,7 @@ public:
 	/**
 	 * Add an unowned external resource reference to the registry.
 	 *
-	 * \tparam T #resource type to add.
+	 * \tparam T resource type to add.
 	 *
 	 * \param resource non-owning pointer to the resource to add to the
 	 *        registry. Must not be nullptr.
@@ -299,7 +299,7 @@ public:
 	 * Add an unowned external resource reference to the registry if it doesn't
 	 * already have it.
 	 *
-	 * \tparam T #resource type to add.
+	 * \tparam T resource type to add.
 	 *
 	 * \param resource non-owning pointer to the resource to add to the
 	 *        registry. Must not be nullptr.
@@ -322,7 +322,7 @@ public:
 	/**
 	 * Erase a resource from the registry.
 	 *
-	 * \tparam T #resource type to remove.
+	 * \tparam T resource type to remove.
 	 *
 	 * \return true if the registry contained a resource of the specified type,
 	 *         false otherwise.
@@ -342,7 +342,7 @@ public:
 	/**
 	 * Check if the registry contains a specific resource.
 	 *
-	 * \tparam T #resource type to check for.
+	 * \tparam T resource type to check for.
 	 *
 	 * \return true if the registry contains a resource of the specified type,
 	 *         false otherwise.
@@ -359,7 +359,7 @@ public:
 	/**
 	 * Get a specific resource in the registry.
 	 *
-	 * \tparam T #resource type to get.
+	 * \tparam T resource type to get.
 	 *
 	 * \return a reference to the specified resource.
 	 *
@@ -384,7 +384,7 @@ public:
 	/**
 	 * Get a specific resource in the registry.
 	 *
-	 * \tparam T #resource type to get.
+	 * \tparam T resource type to get.
 	 *
 	 * \return a read-only reference to the specified resource.
 	 *
@@ -409,7 +409,7 @@ public:
 	/**
 	 * Try to get a specific resource in the registry.
 	 *
-	 * \tparam T #resource type to get.
+	 * \tparam T resource type to get.
 	 *
 	 * \return a pointer to the specified resource, or nullptr if the registry
 	 *         does not contain a resource of the specified type.
@@ -431,7 +431,7 @@ public:
 	/**
 	 * Try to get a specific resource in the registry.
 	 *
-	 * \tparam T #resource type to get.
+	 * \tparam T resource type to get.
 	 *
 	 * \return a read-only pointer to the specified resource, or nullptr if the
 	 *         registry does not contain a resource of the specified type.
