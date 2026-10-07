@@ -3165,16 +3165,19 @@ private:
 				case '8': [[fallthrough]];
 				case '9': scanNumericEscapeSequence(string, 1, 3, 8, [](char32_t codePoint) noexcept -> bool { return (codePoint >= '0' && codePoint <= '7'); }); continue;
 				case 'x':
+					advance();
 					scanNumericEscapeSequence(string, 2, 2, 16, [](char32_t codePoint) noexcept -> bool {
 						return (codePoint >= '0' && codePoint <= '9') || (codePoint >= 'a' && codePoint <= 'f') || (codePoint >= 'A' && codePoint <= 'F');
 					});
 					continue;
 				case 'u':
+					advance();
 					scanNumericEscapeSequence(string, 4, 4, 16, [](char32_t codePoint) noexcept -> bool {
 						return (codePoint >= '0' && codePoint <= '9') || (codePoint >= 'a' && codePoint <= 'f') || (codePoint >= 'A' && codePoint <= 'F');
 					});
 					continue;
 				case 'U':
+					advance();
 					scanNumericEscapeSequence(string, 8, 8, 16, [](char32_t codePoint) noexcept -> bool {
 						return (codePoint >= '0' && codePoint <= '9') || (codePoint >= 'a' && codePoint <= 'f') || (codePoint >= 'A' && codePoint <= 'F');
 					});
