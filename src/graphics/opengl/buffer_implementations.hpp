@@ -107,12 +107,16 @@ struct StorageBufferImplementation : detail::ReusableCopyOnWriteResourceBase<Sto
 	StorageBufferImplementation& operator=(StorageBufferImplementation&&) = delete;
 
 	void assign(const StorageBufferImplementation& other) {
+		GREM_ASSERT(&other.device == &device);
+		GREM_ASSERT(other.elementSize == elementSize);
+
 		const size_t elementStrideInVec4s = detail::convertFloatCountToVec4Count(elementSize / sizeof(float));
 
 		GREM_ASSERT(elementStrideInVec4s < Limits<size_t>::MAX / (sizeof(float) * 4));
 		const size_t elementStrideInBytes = elementStrideInVec4s * (sizeof(float) * 4);
 
 		write(0, StridedSpan{other.stagingMemory.data(), other.stagingMemory.size() / elementStrideInBytes, elementStrideInBytes});
+		dirty = true;
 	}
 
 	void write(uint32_t elementOffset, StridedSpan<const byte> elementsData) {
@@ -231,6 +235,15 @@ struct InstanceBufferImplementation : detail::ReusableCopyOnWriteResourceBase<In
 
 	explicit InstanceBufferImplementation(size_t instanceSize)
 		: instanceSize(instanceSize) {}
+
+	InstanceBufferImplementation(const InstanceBufferImplementation& other) {
+		assign(other);
+	}
+
+	void assign(const InstanceBufferImplementation& other) {
+		GREM_ASSERT(instanceSize == other.instanceSize);
+		instanceData = other.instanceData;
+	}
 };
 
 struct DrawCommandBufferImplementation : detail::ReusableCopyOnWriteResourceBase<DrawCommandBufferImplementation> {
@@ -247,6 +260,16 @@ struct DrawCommandBufferImplementation : detail::ReusableCopyOnWriteResourceBase
 
 	[[nodiscard]] static SharedPointer<DrawCommandBufferImplementation> clone(const DrawCommandBufferImplementation& implementation) {
 		return SharedPointer<DrawCommandBufferImplementation>::create(implementation);
+	}
+
+	DrawCommandBufferImplementation() noexcept = default;
+
+	DrawCommandBufferImplementation(const DrawCommandBufferImplementation& other) {
+		assign(other);
+	}
+
+	void assign(const DrawCommandBufferImplementation& other) {
+		instanceRanges = other.instanceRanges;
 	}
 
 	ArrayList<InstanceRange> instanceRanges{};
@@ -277,6 +300,16 @@ struct UnorderedDrawCommandBufferImplementation : detail::ReusableCopyOnWriteRes
 
 	[[nodiscard]] static SharedPointer<UnorderedDrawCommandBufferImplementation> clone(const UnorderedDrawCommandBufferImplementation& implementation) {
 		return SharedPointer<UnorderedDrawCommandBufferImplementation>::create(implementation);
+	}
+
+	UnorderedDrawCommandBufferImplementation() noexcept = default;
+
+	UnorderedDrawCommandBufferImplementation(const UnorderedDrawCommandBufferImplementation& other) {
+		assign(other);
+	}
+
+	void assign(const UnorderedDrawCommandBufferImplementation& other) {
+		instanceRanges = other.instanceRanges;
 	}
 
 	HashMap<Key, Buffer<InstanceRange>, Key::Hash> instanceRanges{};

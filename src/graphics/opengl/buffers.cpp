@@ -282,7 +282,7 @@ uint32_t InstanceBufferBase::append(StridedSpan<const byte> instancesData, size_
 
 	detail::ensureExclusiveResourceAccess(
 		implementation, InstanceBufferImplementation::clone,
-		[&](InstanceBufferImplementation& oldBuffer, const InstanceBufferImplementation& buffer) -> void { oldBuffer = buffer; }, *implementation);
+		[&](InstanceBufferImplementation& oldBuffer, const InstanceBufferImplementation& buffer) -> void { oldBuffer.assign(buffer); }, *implementation);
 
 	const size_t byteOffset = implementation->instanceData.size();
 	implementation->instanceData.resize(byteOffset + instancesData.size() * instanceSize);
@@ -320,7 +320,7 @@ void DrawCommandBufferBase::append(SharedPointer<ShaderPipelineImplementation> s
 
 	detail::ensureExclusiveResourceAccess(
 		implementation, DrawCommandBufferImplementation::clone,
-		[&](DrawCommandBufferImplementation& oldBuffer, const DrawCommandBufferImplementation& buffer) -> void { oldBuffer = buffer; }, *implementation);
+		[&](DrawCommandBufferImplementation& oldBuffer, const DrawCommandBufferImplementation& buffer) -> void { oldBuffer.assign(buffer); }, *implementation);
 
 	ArrayList<DrawCommandBufferImplementation::InstanceRange>& instanceRanges = implementation->instanceRanges;
 	if (!instanceRanges.empty()) {
@@ -368,7 +368,7 @@ void UnorderedDrawCommandBufferBase::insert(SharedPointer<ShaderPipelineImplemen
 
 	detail::ensureExclusiveResourceAccess(
 		implementation, UnorderedDrawCommandBufferImplementation::clone,
-		[&](UnorderedDrawCommandBufferImplementation& oldBuffer, const UnorderedDrawCommandBufferImplementation& buffer) -> void { oldBuffer = buffer; }, *implementation);
+		[&](UnorderedDrawCommandBufferImplementation& oldBuffer, const UnorderedDrawCommandBufferImplementation& buffer) -> void { oldBuffer.assign(buffer); }, *implementation);
 
 	Buffer<UnorderedDrawCommandBufferImplementation::InstanceRange>& instanceRanges = implementation->instanceRanges[UnorderedDrawCommandBufferImplementation::Key{
 		.shaderPipelineHandle = std::move(shaderPipelineHandle),

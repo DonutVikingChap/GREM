@@ -42,9 +42,18 @@ inline void ensureExclusiveResourceAccess(SharedPointer<ResourceImplementation>&
 	GREM_PROFILE_FUNCTION();
 	for (ResourceImplementation* handle = implementation.get(); handle->previousResource; handle = handle->previousResource.get()) {
 		if (handle->previousResource.use_count() == 1) {
-			resetOldResource(*handle->previousResource, std::forward<Args>(args)...);
-
+			SharedPointer<ResourceImplementation> previousPreviousResource = std::exchange(handle->previousResource->previousResource, nullptr);
+			ResourceImplementation* const nextResource = std::exchange(handle->previousResource->nextResource, nullptr);
+			try {
+				resetOldResource(*handle->previousResource, std::forward<Args>(args)...);
+			} catch (...) {
+				handle->previousResource->previousResource = std::move(previousPreviousResource);
+				handle->previousResource->nextResource = nextResource;
+				throw;
+			}
 			SharedPointer<ResourceImplementation> previousResource = std::exchange(handle->previousResource, nullptr);
+			previousResource->previousResource = std::move(previousPreviousResource);
+			previousResource->nextResource = nextResource;
 
 			GREM_ASSERT(implementation->nextResource);
 			implementation->nextResource->previousResource = std::move(implementation);
