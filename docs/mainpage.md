@@ -111,7 +111,7 @@ This example is ~3500 lines, split across 19 files, and implements a tile-based 
 
 ### examples/platformer
 
-This example is ~3000 lines, split across 17 files, and implements a basic third-person 3D platformer game.
+This example is ~4600 lines, split across 19 files, and implements a basic third-person 3D platformer game with vehicle simulation.
 
 <details>
 <summary>Features added</summary>
@@ -120,8 +120,8 @@ This example is ~3000 lines, split across 17 files, and implements a basic third
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------- | ------------------------ |
 | 3D physics simulation setup                                | `%Game.hpp`                                                                  | `physics`     | [phys::Simulation](@ref grem::physics::Simulation) |
 | Manual simulation step scheduling with additional tasks    | `%Game.hpp`                                                                  | `physics`     | [phys::Simulation](@ref grem::physics::Simulation), [phys::Scheduler](@ref grem::physics::Scheduler) |
-| Raycasting, shapecasting and direct collision queries      | `%systems/player.cpp`                                                        | `physics`     | [phys::Broadphase](@ref grem::physics::Broadphase) |
-| Physical units and quantities in gameplay code             | `%systems/player.cpp`                                                        | `physics`     | [phys::Quantity](@ref grem::physics::Quantity) |
+| Raycasting, shapecasting and direct collision queries      | `%systems/player.cpp`, `%systems/vehicle.cpp`                                | `physics`     | [phys::Broadphase](@ref grem::physics::Broadphase) |
+| Physical units and quantities in gameplay code             | `%systems/player.cpp`, `%systems/vehicle.cpp`                                | `physics`     | [phys::Quantity](@ref grem::physics::Quantity) |
 | 3D positional audio                                        | `%Game.hpp`, `%Audio.hpp`, `%systems/player.cpp`, `%systems/collectible.cpp` | `audio`       | [aud::SoundStage](@ref grem::audio::SoundStage), [aud::Sound](@ref grem::audio::Sound), [aud::Listener](@ref grem::audio::Listener) |
 | Manual instance batching and multithreaded frustum culling | `%Graphics.hpp`, `%systems/level.cpp`                                        | `graphics_3d` | [gfx::Instances3D](@ref grem::graphics::Instances3D) |
 | Sky rendering                                              | `%Graphics.hpp`, `%systems/level.cpp`                                        | `graphics_3d` | [gfx::Sky3D](@ref grem::graphics::Sky3D), [gfx::LightBaker3D](@ref grem::graphics::LightBaker3D) |

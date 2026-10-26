@@ -18,7 +18,7 @@ GREM is a modular, cross-platform C++ library for building games, game engines a
 
 **fps**: Multiplayer FPS prototype with basic weapon handling, fully networked 3D physics, snapshot-based client-predicted server-authoritative netcode with subticked player commands, lag-compensated hit detection with bullet drop and short-range hitscan, splitscreen support with up to 9 local players per client by default, JSON-based runtime entity definitions and a multithreaded ECS architecture comprised of dynamically loaded game systems | [Code (~21000 lines)](examples/fps/main.cpp) | [Run in browser (20 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-fps.html)<sup>1, 3, 4</sup>
 
-**platformer**: Third-person 3D platformer game with a gameplay-code-focused architecture, basic player movement and camera system, collectibles, a custom 3D model shader, and a simple Python script for exporting game levels made in Blender | [Code (~3000 lines)](examples/platformer/main.cpp) | [Run in browser (16 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-platformer.html)<sup>1, 4</sup>
+**platformer**: Third-person 3D platformer game with a gameplay-code-focused architecture, basic player movement and camera system, vehicle simulation, collectibles, a custom 3D model shader, and a simple Python script for exporting game levels made in Blender | [Code (~4600 lines)](examples/platformer/main.cpp) | [Run in browser (17 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-platformer.html)<sup>1, 4</sup>
 
 **test_game**: Single-file demo of various features | [Code (~700 lines)](examples/test_game/main.cpp) | [Run in browser (16 MB .html)](https://donutvikingchap.github.io/GREM/bin/GREM-examples-test_game.html)<sup>1</sup>
 
