@@ -638,7 +638,7 @@ public:
 	 * %Multiply the component values of this color with their respective
 	 * component values in another color.
 	 *
-	 * \param other the other color to multiply this color by.
+	 * \param other color to multiply this color by.
 	 *
 	 * \return `*this`, for chaining.
 	 */
@@ -648,15 +648,43 @@ public:
 	}
 
 	/**
+	 * %Multiply the component values of this color by a scalar.
+	 *
+	 * \param other scalar to multiply this color by.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \note This multiplies all components, including alpha.
+	 */
+	constexpr Color& operator*=(float coefficient) noexcept {
+		rgba *= coefficient;
+		return *this;
+	}
+
+	/**
 	 * %Divide the component values of this color by their respective component
 	 * values in another color.
 	 *
-	 * \param other the other color to divide this color by.
+	 * \param other color to divide this color by.
 	 *
 	 * \return `*this`, for chaining.
 	 */
 	constexpr Color& operator/=(const Color& other) noexcept {
 		rgba /= other.rgba;
+		return *this;
+	}
+
+	/**
+	 * %Divide the component values of this color by a scalar.
+	 *
+	 * \param denominator scalar to divide this color by.
+	 *
+	 * \return `*this`, for chaining.
+	 *
+	 * \note This divides all components, including alpha.
+	 */
+	constexpr Color& operator/=(float denominator) noexcept {
+		rgba /= denominator;
 		return *this;
 	}
 
@@ -733,6 +761,34 @@ public:
 	}
 
 	/**
+	 * Get the result of multiplying a color by a scalar.
+	 *
+	 * \param a left-hand side of the multiplication.
+	 * \param b right-hand side of the multiplication.
+	 *
+	 * \return a color containing each component of a, multiplied by b.
+	 *
+	 * \note This multiplies all components, including alpha.
+	 */
+	[[nodiscard]] friend constexpr Color operator*(const Color& a, float b) {
+		return Color{a.rgba * b};
+	}
+
+	/**
+	 * Get the result of multiplying a scalar by a color.
+	 *
+	 * \param a left-hand side of the multiplication.
+	 * \param b right-hand side of the multiplication.
+	 *
+	 * \return a color containing each component of b, multiplied by a.
+	 *
+	 * \note This multiplies all components, including alpha.
+	 */
+	[[nodiscard]] friend constexpr Color operator*(float a, const Color& b) {
+		return Color{a * b.rgba};
+	}
+
+	/**
 	 * Get the result of component-wise division between two colors.
 	 *
 	 * \param a left-hand side of the division.
@@ -742,6 +798,20 @@ public:
 	 */
 	[[nodiscard]] friend constexpr Color operator/(const Color& a, const Color& b) {
 		return Color{a.rgba / b.rgba};
+	}
+
+	/**
+	 * Get the result of dividing a color by a scalar.
+	 *
+	 * \param a left-hand side of the multiplication.
+	 * \param b right-hand side of the multiplication.
+	 *
+	 * \return a color containing each component of a, divided by b.
+	 *
+	 * \note This divides all components, including alpha.
+	 */
+	[[nodiscard]] friend constexpr Color operator/(const Color& a, float b) {
+		return Color{a.rgba / b};
 	}
 
 	/**

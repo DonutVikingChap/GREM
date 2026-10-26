@@ -414,7 +414,7 @@ private:
 				.angle = elapsedSeconds,
 				.size{180.0f, 70.0f},
 				.origin{0.5f, 0.5f},
-				.color = Color::fromAlpha(0.2f),
+				.color = Color::WHITE * 0.2f,
 			});
 
 		// Middle plain spinning test texture.
@@ -434,7 +434,7 @@ private:
 				.angle = elapsedSeconds,
 				.size{180.0f, 70.0f},
 				.origin{0.5f, 0.5f},
-				.color = Color::fromAlpha(0.2f),
+				.color = Color::WHITE * 0.2f,
 			});
 	}
 

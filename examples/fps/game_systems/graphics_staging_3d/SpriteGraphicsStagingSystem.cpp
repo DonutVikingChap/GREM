@@ -131,7 +131,7 @@ public:
 					.orientation = spriteOrientation,
 					.size = spriteSize.in(phys::METERS),
 					.origin{0.5f, 0.5f},
-					.color = spriteDescription.tintColor * Color::fromAlpha(alpha),
+					.color = spriteDescription.tintColor * alpha,
 				};
 			});
 		}
@@ -210,7 +210,7 @@ public:
 							.orientation = spriteOrientation,
 							.size = spriteSize.in(phys::METERS),
 							.origin{0.5f, 0.5f},
-							.color = spriteDescription.tintColor * Color::fromAlpha(alpha),
+							.color = spriteDescription.tintColor * alpha,
 							.distanceOrderingBias = spriteDescription.distanceOrderingBias.in(phys::METERS),
 						});
 				}
