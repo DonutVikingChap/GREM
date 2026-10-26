@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project("GREM"
-	VERSION 3.8.0
+	VERSION 3.8.1
 	DESCRIPTION "Game/Rendering Engine Modules for C++"
 	LANGUAGES C CXX)
 
