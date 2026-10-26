@@ -14,6 +14,7 @@ inline constexpr phys::CollisionLayer COLLISION_LAYER_PHYSICS_OBJECT{3};
 inline constexpr phys::CollisionLayer COLLISION_LAYER_PLAYER{4};
 inline constexpr phys::CollisionLayer COLLISION_LAYER_CAMERA{5};
 inline constexpr phys::CollisionLayer COLLISION_LAYER_COLLECTIBLE{6};
+inline constexpr phys::CollisionLayer COLLISION_LAYER_VEHICLE{7};
 
 [[nodiscard]] inline res::Model::Transformation buildBindPoseTransformation(const res::Model& model) {
 	res::Model::Transformation bindPoseTransformation{};

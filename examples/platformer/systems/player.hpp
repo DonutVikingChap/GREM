@@ -31,6 +31,23 @@ enum class PlayerAction : uint8_t {
 	ZOOM_IN,
 	ZOOM_OUT,
 	TOGGLE_FLYING,
+	INTERACT,
+	IGNITION,
+	GAS,
+	GAS_SMOOTH,
+	BRAKE,
+	BRAKE_SMOOTH,
+	HANDBRAKE,
+	STEER_LEFT,
+	STEER_LEFT_SMOOTH,
+	STEER_RIGHT,
+	STEER_RIGHT_SMOOTH,
+	STEER_WITH_AIM,
+	CLUTCH,
+	CLUTCH_SMOOTH,
+	GEAR_SHIFT_UP,
+	GEAR_SHIFT_DOWN,
+	GEAR_SHIFT_WITH_AIM,
 };
 
 extern System* const playerSystem;
@@ -64,6 +81,13 @@ struct PlayerInput : evt::InputManager {
 	struct Settings {
 		phys::Scale2D aimSensitivity{1.0f, 1.0f};
 		phys::PitchYawRates lookSensitivity{200_degrees_per_second};
+		phys::Frequency gasSmoothDecayRate = 3_Hertz;
+		phys::Frequency brakeSmoothDecayRate = 3_Hertz;
+		phys::Frequency clutchSmoothDecayRate = 5_Hertz;
+		phys::Frequency steeringSmoothDecayRate = 6_Hertz;
+		phys::Coefficient steeringFromAimSensitivity = 0.5_x;
+		phys::Coefficient shiftFromAimSensitivity = 10_x;
+		bool invertSteerWithAim = false;
 	};
 
 	Settings settings{};

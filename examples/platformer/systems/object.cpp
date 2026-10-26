@@ -118,33 +118,35 @@ struct ObjectSystem final : System {
 		const WorldView& worldView = simulation.resources.getResource<WorldView>();
 
 		for (const auto& [entityID, modelInstance] : simulation.registry.getEntities<const ObjectModelInstance>()) {
-			const Box<3, float> localBoundingBox = modelInstance.model->getBindPoseBoundingBox();
-			const Length<3, float> localBoundingBoxSize = localBoundingBox.max - localBoundingBox.min;
-			const float localBoundingRadius = modelInstance.model->getBindPoseBoundingRadius();
-			const phys::Box3D boundingBox = Graphics::getBoundingBox(*modelInstance.model, modelInstance.transformation);
-			const float maxScale = sqrt(maxComponent(vec3{
-				length2(vec3{modelInstance.transformation.jointMatrices[0][0]}),
-				length2(vec3{modelInstance.transformation.jointMatrices[0][1]}),
-				length2(vec3{modelInstance.transformation.jointMatrices[0][2]}),
-			}));
-			const phys::Sphere3D boundingSphere{
-				.center = vec3{modelInstance.transformation.jointMatrices[0][3]} * phys::METERS,
-				.radius = maxScale * modelInstance.model->getBindPoseBoundingRadius() * phys::METERS,
-			};
-			const phys::Position3D blobShadowPosition{boundingSphere.center.getX(), boundingBox.min.getY(), boundingSphere.center.getZ()};
-			const phys::Distance blobShadowRadius = boundingSphere.radius * min(localBoundingBoxSize.x, localBoundingBoxSize.z) * (0.5f / localBoundingRadius);
-			const PlatformerModelShaderBlobShadow blobShadow{
-				.blobShadowPosition = blobShadowPosition.in(phys::METERS),
-				.blobShadowRadius = blobShadowRadius.in(phys::METERS),
-				.blobShadowInstanceIdentifier = entityID.getIndex(),
-			};
-			if (worldView.isPotentiallyVisible(blobShadow.getBoundingBox(worldView.visibleBounds) * phys::METERS)) {
-				graphics.blobShadows.push_back(blobShadow);
-			}
+			if (modelInstance.transformation.jointsVisible[0]) {
+				const Box<3, float> localBoundingBox = modelInstance.model->getBindPoseBoundingBox();
+				const Length<3, float> localBoundingBoxSize = localBoundingBox.max - localBoundingBox.min;
+				const float localBoundingRadius = modelInstance.model->getBindPoseBoundingRadius();
+				const phys::Box3D boundingBox = Graphics::getBoundingBox(*modelInstance.model, modelInstance.transformation);
+				const float maxScale = sqrt(maxComponent(vec3{
+					length2(vec3{modelInstance.transformation.jointMatrices[0][0]}),
+					length2(vec3{modelInstance.transformation.jointMatrices[0][1]}),
+					length2(vec3{modelInstance.transformation.jointMatrices[0][2]}),
+				}));
+				const phys::Sphere3D boundingSphere{
+					.center = vec3{modelInstance.transformation.jointMatrices[0][3]} * phys::METERS,
+					.radius = maxScale * modelInstance.model->getBindPoseBoundingRadius() * phys::METERS,
+				};
+				const phys::Position3D blobShadowPosition{boundingSphere.center.getX(), boundingBox.min.getY(), boundingSphere.center.getZ()};
+				const phys::Distance blobShadowRadius = boundingSphere.radius * min(localBoundingBoxSize.x, localBoundingBoxSize.z) * (0.5f / localBoundingRadius);
+				const PlatformerModelShaderBlobShadow blobShadow{
+					.blobShadowPosition = blobShadowPosition.in(phys::METERS),
+					.blobShadowRadius = blobShadowRadius.in(phys::METERS),
+					.blobShadowInstanceIdentifier = entityID.getIndex(),
+				};
+				if (worldView.isPotentiallyVisible(blobShadow.getBoundingBox(worldView.visibleBounds) * phys::METERS)) {
+					graphics.blobShadows.push_back(blobShadow);
+				}
 
-			if (modelInstance.visible) {
-				graphics.instances3D.putShadedModelInstance(graphics.modelShaderPipelineSet, *modelInstance.model, modelInstance.transformation,
-					{.instanceIdentifier = entityID.getIndex()});
+				if (modelInstance.visible) {
+					graphics.instances3D.putShadedModelInstance(graphics.modelShaderPipelineSet, *modelInstance.model, modelInstance.transformation,
+						{.instanceIdentifier = entityID.getIndex()});
+				}
 			}
 		}
 	}

@@ -42,6 +42,7 @@ struct Graphics {
 	gfx::Camera2D camera2D;
 	gfx::Camera3D camera3D;
 	gfx::Viewport viewport{};
+	gfx::Texture circleTexture;
 	gfx::Font2D mainFont;
 	gfx::Text2D temporaryText{};
 	gfx::SpriteAtlas spriteAtlas;
@@ -64,6 +65,7 @@ struct Graphics {
 		, renderer3D(device, renderer2D, renderer3DOptions)
 		, camera2D(device)
 		, camera3D(device)
+		, circleTexture(device, res::Image{filesystem, "textures/circle.png"})
 		, mainFont(filesystem, this->options.font)
 		, temporaryText()
 		, spriteAtlas(device)
@@ -98,6 +100,27 @@ struct Graphics {
 		temporaryText.assign(mainFont, options.fontSize, string);
 		instances2D.putTextInstance(temporaryText, {.position = position + Offset2D{1, -1}, .scale{scale}, .alignment = alignment, .color = Color::BLACK});
 		instances2D.putTextInstance(temporaryText, {.position = position, .scale{scale}, .alignment = alignment, .color = color});
+	}
+
+	void put3DText(phys::Position3D position, phys::Orientation3D orientation, float scale, Color color, StringView string, gfx::TextAlign alignment = {}) {
+		temporaryText.assign(mainFont, options.fontSize, string);
+		instances3D.putTextInstance(temporaryText,
+			{
+				.position = position.in(phys::METERS) + 0.001f * orientation(-phys::Z_AXIS_3D),
+				.orientation = orientation,
+				.scale{scale},
+				.alignment = alignment,
+				.alignmentOffset{1.0f, -1.0f},
+				.color = Color::BLACK,
+			});
+		instances3D.putTextInstance(temporaryText,
+			{
+				.position = position.in(phys::METERS),
+				.orientation = orientation,
+				.scale{scale},
+				.alignment = alignment,
+				.color = color,
+			});
 	}
 
 	void flushModelShaderBuffers(exec::Executor& executor, Extent2D framebufferSize, const WorldView& worldView) {

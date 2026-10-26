@@ -293,6 +293,7 @@ physics/textures/checkered_circle.png
 physics/textures/checkered_square.png
 platformer/levels/level1.glb
 platformer/levels/level1.json
+platformer/models/car.glb
 platformer/sounds/collect.ogg
 shared_2d/textures/icon.png
 shared_3d/models/cube.obj
@@ -301,8 +302,8 @@ shared_3d/models/plane.obj
 shared_3d/models/sphere.obj
 shared_3d/models/test.mtl
 shared_3d/models/test.obj
+shared_3d/textures/circle.png
 shared_3d/textures/test.png
-test_game/textures/circle.png
 ```
 
 ### Author

@@ -1,0 +1,36 @@
+{
+    "types": {
+        "CAR": {
+            "model": {
+                "filepath": "models/car.glb"
+            },
+            "body": {
+                "downforceOffset": [0, 0, 1.1]
+            },
+            "transmission": {
+                "automatic": true
+            },
+            "drive": {
+                "wheels": [2, 3]
+            },
+            "seats": [
+                {
+                    "offset": [-0.4, 0.64, -0.1],
+                    "exitOffset": [-1.5, 0.64, -0.1]
+                },
+                {
+                    "offset": [0.4, 0.64, -0.1],
+                    "exitOffset": [1.5, 0.64, -0.1]
+                },
+                {
+                    "offset": [-0.4, 0.74, 0.82],
+                    "exitOffset": [-1.5, 0.74, 0.82]
+                },
+                {
+                    "offset": [0.4, 0.74, 0.82],
+                    "exitOffset": [1.5, 0.74, 0.82]
+                }
+            ]
+        }
+    }
+}

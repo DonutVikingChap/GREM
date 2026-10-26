@@ -14,6 +14,7 @@
 #include "systems/level.hpp"
 #include "systems/object.hpp"
 #include "systems/player.hpp"
+#include "systems/vehicle.hpp"
 
 struct GameOptions {
 	app::ApplicationOptions app{
@@ -288,6 +289,7 @@ private:
 		&playerSystem,
 		&playerControlSystem,
 		&objectSystem,
+		&vehicleSystem,
 		&objectPhysicsSystem,
 		&levelSystem,
 		&collectibleSystem,

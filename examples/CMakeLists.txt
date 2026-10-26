@@ -100,6 +100,7 @@ add_executable(GREM-examples-platformer
 	"platformer/systems/level.cpp"
 	"platformer/systems/object.cpp"
 	"platformer/systems/player.cpp"
+	"platformer/systems/vehicle.cpp"
 	"platformer/main.cpp")
 GREM_configure_example(GREM-examples-platformer)
 if(EMSCRIPTEN)

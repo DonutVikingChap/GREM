@@ -14,6 +14,7 @@
 #include "collectible.hpp"
 #include "object.hpp"
 #include "player.hpp"
+#include "vehicle.hpp"
 
 #include <memory>  // std::uninitialized_...
 #include <new>     // std::launder
@@ -198,6 +199,13 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 			phys::Material::RestitutionCombine restitutionCombine = phys::Material::RestitutionCombine::MAXIMUM;
 		};
 
+		struct Vehicle {
+			phys::Position3D position{};
+			quat orientation{};
+			phys::Scale3D scale{1_x};
+			String vehicleType{};
+		};
+
 		phys::Box3D bounds{.min{-1000_meters}, .max{1000_meters}};
 		String geometry{};
 		String skyImage{};
@@ -208,6 +216,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 		PlayerSpawn playerSpawn{};
 		ArrayList<Prop> props{};
 		ArrayList<PhysicsObject> physicsObjects{};
+		ArrayList<Vehicle> vehicles{};
 		ArrayList<phys::Position3D> collectibles{};
 	} levelJSON{};
 	try {
@@ -495,6 +504,11 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 				},
 			});
 		registry.getComponent<ObjectModelInstance>(entity.getEntityID()).localTransformation = translate(-physicsObject.centerOfMass);
+	}
+
+	for (const LevelJSON::Vehicle& vehicle : levelJSON.vehicles) {
+		phys::EntityBuilder3D& entity = entities.emplace_back(registry.createEntity());
+		createVehicle(entity, resources, vehicle.position, vehicle.orientation, vehicle.scale, vehicle.vehicleType);
 	}
 
 	for (const phys::Position3D collectiblePosition : levelJSON.collectibles) {

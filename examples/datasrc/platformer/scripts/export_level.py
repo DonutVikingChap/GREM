@@ -53,6 +53,8 @@
 #     - (optional) "angularDrag": Float (default: 0.5)
 #     - (optional) "frictionCombine": String ("AVERAGE" | "MINIMUM" | "MAXIMUM" | "MULTIPLY", default: "MINIMUM")
 #     - (optional) "restitutionCombine": String ("AVERAGE" | "MINIMUM" | "MAXIMUM" | "MULTIPLY", default: "MAXIMUM")
+#   - "Vehicles" - Objects whose positions mark the positions of vehicles, with custom properties
+#     - "vehicleType": String (vehicle type name)
 #   - "Collectibles" - Objects whose positions mark the positions of collectibles
 # - objects
 #   - "Player Spawn" (Object whose position and angles determine the spawnpoint)
@@ -142,6 +144,15 @@
 #       },
 #       ...
 #     ],
+#     "vehicles": [
+#       {
+#         "position": [x, y, z],
+#         "orientation": [i, j, k, w],
+#         "scale": [sx, sy, sz],
+#         "vehicleType": string
+#       },
+#       ...
+#     ],
 #     "collectibles": [
 #       [x, y, z],
 #       ...
@@ -161,7 +172,8 @@ def convert_position(position):
     return (position[0], position[2], -position[1])
 
 def convert_orientation(orientation):
-    return (orientation.x, orientation.z, -orientation.y, orientation.w)
+    scale = 1.0 / math.sqrt(orientation.x * orientation.x + orientation.y * orientation.y + orientation.z * orientation.z + orientation.w * orientation.w)
+    return (orientation.x * scale, orientation.z * scale, -orientation.y * scale, orientation.w * scale)
 
 def convert_angles(basis):
     direction = basis @ mathutils.Vector((0, 1, 0))
@@ -182,8 +194,8 @@ def convert_omni_light_intensity(light):
     return tuple(light.color * luminous_intensity * (2 ** light.exposure))
 
 input_filepath = Path(bpy.data.filepath)
-geometry_output_filepath = Path(OUTPUT_FILEPATH).joinpath(input_filepath.with_suffix('.glb').name)
-json_output_filepath = Path(OUTPUT_FILEPATH).joinpath(input_filepath.with_suffix('.json').name)
+geometry_output_filepath = input_filepath.parent.joinpath(OUTPUT_FILEPATH).joinpath(input_filepath.with_suffix('.glb').name).resolve()
+json_output_filepath = input_filepath.parent.joinpath(OUTPUT_FILEPATH).joinpath(input_filepath.with_suffix('.json').name).resolve()
 
 print(f"Exporting level geometry to {geometry_output_filepath}...")
 
@@ -322,6 +334,16 @@ if 'Physics Objects' in bpy.data.collections:
         if 'restitutionCombine' in object:
             physics_object['restitutionCombine'] = float(object['restitutionCombine'])
         level['physicsObjects'].append(physics_object)
+
+if 'Vehicles' in bpy.data.collections:
+    for object in bpy.data.collections['Vehicles'].all_objects:
+        vehicle = {
+            'position': convert_position(object.location),
+            'orientation': convert_orientation(object.rotation_quaternion),
+            'scale': tuple(object.scale),
+            'vehicleType': str(object['vehicleType']),
+        }
+        level['vehicles'].append(vehicle)
 
 if 'Collectibles' in bpy.data.collections:
     for object in bpy.data.collections['Collectibles'].all_objects:
