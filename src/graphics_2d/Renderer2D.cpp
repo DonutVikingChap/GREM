@@ -8,6 +8,7 @@
 #include <GREM/core/data/SharedPointer.hpp>
 #include <GREM/core/data/Span.hpp>
 #include <GREM/core/data/StridedSpan.hpp>
+#include <GREM/core/profiling.hpp>
 #include <GREM/graphics/RenderPass.hpp>
 #include <GREM/graphics_2d/Instances2D.hpp>
 #include <GREM/graphics_2d/Model2D.hpp>
@@ -65,6 +66,8 @@ const Renderer2D::TonemappingModel2DFragmentShader& Renderer2D::getTonemappingMo
 
 void Renderer2D::drawFrameImplementation(RenderPass& renderPass, StridedSpan<const Instances2DView> instanceBatches, const Camera2D& camera,
 	Span<const Pair<BufferLayoutReference, SharedPointer<void>>> extraBufferHandles) {
+	GREM_PROFILE_FUNCTION();
+
 	for (const Instances2DView& instanceBatch : instanceBatches) {
 		GREM_ASSERT(instanceBatch.instances);
 		const Instances2D& instances = *instanceBatch.instances;

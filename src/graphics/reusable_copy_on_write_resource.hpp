@@ -27,57 +27,38 @@ struct ReusableCopyOnWriteResourceBase {
 	// look for an old resource whose reference count has dropped back to 1,
 	// meaning it has become safe to reuse. If none is found, a new entry is
 	// added to the list. (See ensureExclusiveResourceAccess() below.)
-	SharedPointer<ResourceImplementation> oldResource{};
+	SharedPointer<ResourceImplementation> previousResource{};
+	ResourceImplementation* nextResource = nullptr;
 };
 
 template <typename ResourceImplementation, typename... Args>
 inline void ensureExclusiveResourceAccess(SharedPointer<ResourceImplementation>& implementation, auto createNewResource, auto resetOldResource, Args&&... args) {
+	GREM_ASSERT(implementation);
 	if (implementation.use_count() == 1) {
 		[[likely]];
 		return;
 	}
 
 	GREM_PROFILE_FUNCTION();
-	for (ResourceImplementation* handle = implementation.get(); handle->oldResource; handle = handle->oldResource.get()) {
-		if (handle->oldResource.use_count() == 1) {
-			// implementation -> [implementation] -> ... -> [handle] -> [oldResource] -> [oldOldResource] -> ...
+	for (ResourceImplementation* handle = implementation.get(); handle->previousResource; handle = handle->previousResource.get()) {
+		if (handle->previousResource.use_count() == 1) {
+			resetOldResource(*handle->previousResource, std::forward<Args>(args)...);
 
-			SharedPointer<ResourceImplementation> oldOldResource = std::exchange(handle->oldResource->oldResource, nullptr);
-			// implementation -> [implementation] -> ... -> [handle] -> [oldResource] -> nullptr
-			// oldOldResource -> [oldOldResource] -> ...
+			SharedPointer<ResourceImplementation> previousResource = std::exchange(handle->previousResource, nullptr);
 
-			resetOldResource(*handle->oldResource, std::forward<Args>(args)...);
-			SharedPointer<ResourceImplementation> oldResource = std::move(handle->oldResource);
-			// implementation -> [implementation] -> ... -> [handle] -> nullptr
-			// oldOldResource -> [oldOldResource] -> ...
-			// oldResource    -> [oldResource] -> nullptr
+			GREM_ASSERT(implementation->nextResource);
+			implementation->nextResource->previousResource = std::move(implementation);
 
-			handle->oldResource = std::move(oldOldResource);
-			// implementation -> [implementation] -> ... -> [handle] -> [oldOldResource] -> ...
-			// oldResource    -> [oldResource] -> nullptr
-
-			oldResource->oldResource = std::move(implementation);
-			// implementation -> nullptr
-			// oldResource    -> [oldResource] -> [implementation] -> ... -> [handle] -> [oldOldResource] -> ...
-
-			implementation = std::move(oldResource);
-			// implementation -> [oldResource] -> [implementation] -> ... -> [handle] -> [oldOldResource] -> ...
+			implementation = std::move(previousResource);
 			return;
 		}
 	}
 
-	// implementation -> [implementation] -> [oldResource] -> ...
-
 	SharedPointer<ResourceImplementation> newResource = createNewResource(std::forward<Args>(args)...);
-	// implementation -> [implementation] -> [oldResource] -> ...
-	// newResource    -> [newResource] -> nullptr
-
-	newResource->oldResource = std::move(implementation);
-	// implementation -> nullptr
-	// newResource    -> [newResource] -> [implementation] -> [oldResource] -> ...
-
+	newResource->nextResource = (implementation->nextResource) ? implementation->nextResource : implementation.get();
+	implementation->nextResource = newResource.get();
+	newResource->previousResource = std::move(implementation);
 	implementation = std::move(newResource);
-	// implementation -> [newResource] -> [implementation] -> [oldResource] -> ...
 }
 
 } // namespace detail

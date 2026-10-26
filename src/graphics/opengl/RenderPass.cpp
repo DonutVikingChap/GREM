@@ -711,16 +711,16 @@ void enqueueInstanceRange(RenderPassImplementation& implementation, const MeshIm
 
 void RenderPassImplementation::invalidateContentsOfOldBuffersAvailableForReuse() noexcept {
 	for (const UniformBufferImplementation* const uniformBuffer : usedUniformBuffers) {
-		for (const UniformBufferImplementation* handle = uniformBuffer; handle->oldResource; handle = handle->oldResource.get()) {
-			if (handle->oldResource.use_count() == 1) {
-				handle->oldResource->invalidateContents();
+		for (const UniformBufferImplementation* handle = uniformBuffer; handle->previousResource; handle = handle->previousResource.get()) {
+			if (handle->previousResource.use_count() == 1) {
+				handle->previousResource->invalidateContents();
 			}
 		}
 	}
 	for (const BufferSetImplementation* const bufferSet : usedBufferSets) {
-		for (const BufferSetImplementation* handle = bufferSet; handle->oldResource; handle = handle->oldResource.get()) {
-			if (handle->oldResource.use_count() == 1) {
-				handle->oldResource->invalidateContents();
+		for (const BufferSetImplementation* handle = bufferSet; handle->previousResource; handle = handle->previousResource.get()) {
+			if (handle->previousResource.use_count() == 1) {
+				handle->previousResource->invalidateContents();
 			}
 		}
 	}
