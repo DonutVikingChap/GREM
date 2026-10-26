@@ -643,19 +643,17 @@ void applyShaderPipelineOptions(const ShaderPipelineOptions& configuration) {
 		case FaceCullingMode::CULL_BACK_FACES:
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_BACK);
-			glFrontFace(translateFrontFace(configuration.frontFace));
 			break;
 		case FaceCullingMode::CULL_FRONT_FACES:
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
-			glFrontFace(translateFrontFace(configuration.frontFace));
 			break;
 		case FaceCullingMode::CULL_FRONT_AND_BACK_FACES:
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT_AND_BACK);
-			glFrontFace(translateFrontFace(configuration.frontFace));
 			break;
 	}
+	glFrontFace(translateFrontFace(configuration.frontFace));
 
 	if (configuration.blendState) {
 		glEnable(GL_BLEND);
