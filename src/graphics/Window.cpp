@@ -101,7 +101,7 @@ void Window::setIcon(const resource::ImageView& newIconImage) {
 	if (newIconImage.getFormat() != resource::ImageFormat::R8G8B8A8_UINT) {
 		throw graphics::Error{"Invalid window icon image format."};
 	}
-	SDL_Surface* const icon = SDL_CreateSurfaceFrom(static_cast<int>(newIconImage.getWidth()), static_cast<int>(newIconImage.getHeight()), SDL_PIXELFORMAT_RGBA8888,
+	SDL_Surface* const icon = SDL_CreateSurfaceFrom(static_cast<int>(newIconImage.getWidth()), static_cast<int>(newIconImage.getHeight()), SDL_PIXELFORMAT_ABGR8888,
 		const_cast<byte*>(newIconImage.data()), static_cast<int>(newIconImage.getWidth() * 4));
 	try {
 		if (!SDL_SetWindowIcon(static_cast<SDL_Window*>(get()), icon)) {
