@@ -86,145 +86,145 @@ struct ZLIBStreamHeader {
 }
 
 struct PNGNoneFilter {
-	void filterRow(byte* filteredRow, Span<const byte> originalRow, const byte* previousOriginalRow) const {
+	void filterRow(byte* filteredRow, const byte* originalRow, const byte* previousOriginalRow, size_t rowSize) const {
 		(void)previousOriginalRow;
-		memcpy(filteredRow, originalRow.data(), originalRow.size());
+		memcpy(filteredRow, originalRow, rowSize);
 	}
 
-	void filterFirstRow(byte* filteredRow, Span<const byte> originalRow) const {
-		filterRow(filteredRow, originalRow, nullptr);
+	void filterFirstRow(byte* filteredRow, const byte* originalRow, size_t rowSize) const {
+		filterRow(filteredRow, originalRow, nullptr, rowSize);
 	}
 
-	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, Span<const byte> filteredRow) const {
+	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, const byte* filteredRow, size_t rowSize) const {
 		(void)previousReconstructedRow;
-		memcpy(reconstructedRow, filteredRow.data(), filteredRow.size());
+		memcpy(reconstructedRow, filteredRow, rowSize);
 	}
 
-	void reconstructFirstRow(byte* firstReconstructedRow, Span<const byte> filteredRow) const {
-		reconstructRow(firstReconstructedRow, nullptr, filteredRow);
+	void reconstructFirstRow(byte* firstReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		reconstructRow(firstReconstructedRow, nullptr, filteredRow, rowSize);
 	}
 };
 
 struct PNGSubFilter {
 	size_t filterBytes;
 
-	void filterRow(byte* filteredRow, Span<const byte> originalRow, const byte* previousOriginalRow) const {
+	void filterRow(byte* filteredRow, const byte* originalRow, const byte* previousOriginalRow, size_t rowSize) const {
 		(void)previousOriginalRow;
-		GREM_ASSERT(filterBytes <= originalRow.size());
-		memcpy(filteredRow, originalRow.data(), filterBytes);
-		for (size_t x = filterBytes; x < originalRow.size(); ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origA = bit_cast<uint8_t>(originalRow[x - filterBytes]);
+		GREM_ASSERT(filterBytes <= rowSize);
+		memcpy(filteredRow, originalRow, filterBytes);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origA = static_cast<uint8_t>(originalRow[x - filterBytes]);
 			const uint8_t filtX = static_cast<uint8_t>((origX - origA) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
+			filteredRow[x] = static_cast<byte>(filtX);
 		}
 	}
 
-	void filterFirstRow(byte* filteredRow, Span<const byte> originalRow) const {
-		filterRow(filteredRow, originalRow, nullptr);
+	void filterFirstRow(byte* filteredRow, const byte* originalRow, size_t rowSize) const {
+		filterRow(filteredRow, originalRow, nullptr, rowSize);
 	}
 
-	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, Span<const byte> filteredRow) const {
+	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, const byte* filteredRow, size_t rowSize) const {
 		(void)previousReconstructedRow;
-		GREM_ASSERT(filterBytes <= filteredRow.size());
-		memcpy(reconstructedRow, filteredRow.data(), filterBytes);
-		for (size_t x = filterBytes; x < filteredRow.size(); ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconA = bit_cast<uint8_t>(reconstructedRow[x - filterBytes]);
+		GREM_ASSERT(filterBytes <= rowSize);
+		memcpy(reconstructedRow, filteredRow, filterBytes);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconA = static_cast<uint8_t>(reconstructedRow[x - filterBytes]);
 			const uint8_t reconX = static_cast<uint8_t>((filtX + reconA) & 0xFF);
-			reconstructedRow[x] = bit_cast<byte>(reconX);
+			reconstructedRow[x] = static_cast<byte>(reconX);
 		}
 	}
 
-	void reconstructFirstRow(byte* firstReconstructedRow, Span<const byte> filteredRow) const {
-		reconstructRow(firstReconstructedRow, nullptr, filteredRow);
+	void reconstructFirstRow(byte* firstReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		reconstructRow(firstReconstructedRow, nullptr, filteredRow, rowSize);
 	}
 };
 
 struct PNGUpFilter {
-	void filterRow(byte* filteredRow, Span<const byte> originalRow, const byte* previousOriginalRow) const {
-		for (size_t x = 0; x < originalRow.size(); ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origB = bit_cast<uint8_t>(previousOriginalRow[x]);
+	void filterRow(byte* filteredRow, const byte* originalRow, const byte* previousOriginalRow, size_t rowSize) const {
+		for (size_t x = 0; x < rowSize; ++x) {
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origB = static_cast<uint8_t>(previousOriginalRow[x]);
 			const uint8_t filtX = static_cast<uint8_t>((origX - origB) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
+			filteredRow[x] = static_cast<byte>(filtX);
 		}
 	}
 
-	void filterFirstRow(byte* filteredRow, Span<const byte> originalRow) const {
-		PNGNoneFilter{}.filterFirstRow(filteredRow, originalRow);
+	void filterFirstRow(byte* filteredRow, const byte* originalRow, size_t rowSize) const {
+		PNGNoneFilter{}.filterFirstRow(filteredRow, originalRow, rowSize);
 	}
 
-	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, Span<const byte> filteredRow) const {
-		for (size_t x = 0; x < filteredRow.size(); ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconB = bit_cast<uint8_t>(previousReconstructedRow[x]);
+	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		for (size_t x = 0; x < rowSize; ++x) {
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconB = static_cast<uint8_t>(previousReconstructedRow[x]);
 			const uint8_t reconX = static_cast<uint8_t>((filtX + reconB) & 0xFF);
-			reconstructedRow[x] = bit_cast<byte>(reconX);
+			reconstructedRow[x] = static_cast<byte>(reconX);
 		}
 	}
 
-	void reconstructFirstRow(byte* firstReconstructedRow, Span<const byte> filteredRow) const {
-		PNGNoneFilter{}.reconstructFirstRow(firstReconstructedRow, filteredRow);
+	void reconstructFirstRow(byte* firstReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		PNGNoneFilter{}.reconstructFirstRow(firstReconstructedRow, filteredRow, rowSize);
 	}
 };
 
 struct PNGAverageFilter {
 	size_t filterBytes;
 
-	void filterRow(byte* filteredRow, Span<const byte> originalRow, const byte* previousOriginalRow) const {
-		GREM_ASSERT(filterBytes <= originalRow.size());
+	void filterRow(byte* filteredRow, const byte* originalRow, const byte* previousOriginalRow, size_t rowSize) const {
+		GREM_ASSERT(filterBytes <= rowSize);
 		for (size_t x = 0; x < filterBytes; ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origB = bit_cast<uint8_t>(previousOriginalRow[x]);
-			const uint8_t filtX = static_cast<uint8_t>((origX - origB / 2) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origB = static_cast<uint8_t>(previousOriginalRow[x]);
+			const uint8_t filtX = static_cast<uint8_t>((origX - (origB >> 1)) & 0xFF);
+			filteredRow[x] = static_cast<byte>(filtX);
 		}
-		for (size_t x = filterBytes; x < originalRow.size(); ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origA = bit_cast<uint8_t>(originalRow[x - filterBytes]);
-			const uint8_t origB = bit_cast<uint8_t>(previousOriginalRow[x]);
-			const uint8_t filtX = static_cast<uint8_t>((origX - (origA + origB) / 2) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
-		}
-	}
-
-	void filterFirstRow(byte* filteredRow, Span<const byte> originalRow) const {
-		GREM_ASSERT(filterBytes <= originalRow.size());
-		memcpy(filteredRow, originalRow.data(), filterBytes);
-		for (size_t x = filterBytes; x < originalRow.size(); ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origA = bit_cast<uint8_t>(originalRow[x - filterBytes]);
-			const uint8_t filtX = static_cast<uint8_t>((origX - origA / 2) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origA = static_cast<uint8_t>(originalRow[x - filterBytes]);
+			const uint8_t origB = static_cast<uint8_t>(previousOriginalRow[x]);
+			const uint8_t filtX = static_cast<uint8_t>((origX - ((origA + origB) >> 1)) & 0xFF);
+			filteredRow[x] = static_cast<byte>(filtX);
 		}
 	}
 
-	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, Span<const byte> filteredRow) const {
-		GREM_ASSERT(filterBytes <= filteredRow.size());
+	void filterFirstRow(byte* filteredRow, const byte* originalRow, size_t rowSize) const {
+		GREM_ASSERT(filterBytes <= rowSize);
+		memcpy(filteredRow, originalRow, filterBytes);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origA = static_cast<uint8_t>(originalRow[x - filterBytes]);
+			const uint8_t filtX = static_cast<uint8_t>((origX - (origA >> 1)) & 0xFF);
+			filteredRow[x] = static_cast<byte>(filtX);
+		}
+	}
+
+	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		GREM_ASSERT(filterBytes <= rowSize);
 		for (size_t x = 0; x < filterBytes; ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconB = bit_cast<uint8_t>(previousReconstructedRow[x]);
-			const uint8_t reconX = static_cast<uint8_t>((filtX + reconB / 2) & 0xFF);
-			reconstructedRow[x] = bit_cast<byte>(reconX);
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconB = static_cast<uint8_t>(previousReconstructedRow[x]);
+			const uint8_t reconX = static_cast<uint8_t>((filtX + (reconB >> 1)) & 0xFF);
+			reconstructedRow[x] = static_cast<byte>(reconX);
 		}
-		for (size_t x = filterBytes; x < filteredRow.size(); ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconA = bit_cast<uint8_t>(reconstructedRow[x - filterBytes]);
-			const uint8_t reconB = bit_cast<uint8_t>(previousReconstructedRow[x]);
-			const uint8_t reconX = static_cast<uint8_t>((filtX + (reconA + reconB) / 2) & 0xFF);
-			reconstructedRow[x] = bit_cast<byte>(reconX);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconA = static_cast<uint8_t>(reconstructedRow[x - filterBytes]);
+			const uint8_t reconB = static_cast<uint8_t>(previousReconstructedRow[x]);
+			const uint8_t reconX = static_cast<uint8_t>((filtX + ((reconA + reconB) >> 1)) & 0xFF);
+			reconstructedRow[x] = static_cast<byte>(reconX);
 		}
 	}
 
-	void reconstructFirstRow(byte* firstReconstructedRow, Span<const byte> filteredRow) const {
-		GREM_ASSERT(filterBytes <= filteredRow.size());
-		memcpy(firstReconstructedRow, filteredRow.data(), filterBytes);
-		for (size_t x = filterBytes; x < filteredRow.size(); ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconA = bit_cast<uint8_t>(firstReconstructedRow[x - filterBytes]);
-			const uint8_t reconX = static_cast<uint8_t>((filtX + reconA / 2) & 0xFF);
-			firstReconstructedRow[x] = bit_cast<byte>(reconX);
+	void reconstructFirstRow(byte* firstReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		GREM_ASSERT(filterBytes <= rowSize);
+		memcpy(firstReconstructedRow, filteredRow, filterBytes);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconA = static_cast<uint8_t>(firstReconstructedRow[x - filterBytes]);
+			const uint8_t reconX = static_cast<uint8_t>((filtX + (reconA >> 1)) & 0xFF);
+			firstReconstructedRow[x] = static_cast<byte>(reconX);
 		}
 	}
 };
@@ -241,48 +241,48 @@ struct PNGPaethFilter {
 
 	size_t filterBytes;
 
-	void filterRow(byte* filteredRow, Span<const byte> originalRow, const byte* previousOriginalRow) const {
-		GREM_ASSERT(filterBytes <= originalRow.size());
+	void filterRow(byte* filteredRow, const byte* originalRow, const byte* previousOriginalRow, size_t rowSize) const {
+		GREM_ASSERT(filterBytes <= rowSize);
 		for (size_t x = 0; x < filterBytes; ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origB = bit_cast<uint8_t>(previousOriginalRow[x]);
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origB = static_cast<uint8_t>(previousOriginalRow[x]);
 			const uint8_t filtX = static_cast<uint8_t>((origX - paethPredictor(0, origB, 0)) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
+			filteredRow[x] = static_cast<byte>(filtX);
 		}
-		for (size_t x = filterBytes; x < originalRow.size(); ++x) {
-			const uint8_t origX = bit_cast<uint8_t>(originalRow[x]);
-			const uint8_t origA = bit_cast<uint8_t>(originalRow[x - filterBytes]);
-			const uint8_t origB = bit_cast<uint8_t>(previousOriginalRow[x]);
-			const uint8_t origC = bit_cast<uint8_t>(previousOriginalRow[x - filterBytes]);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t origX = static_cast<uint8_t>(originalRow[x]);
+			const uint8_t origA = static_cast<uint8_t>(originalRow[x - filterBytes]);
+			const uint8_t origB = static_cast<uint8_t>(previousOriginalRow[x]);
+			const uint8_t origC = static_cast<uint8_t>(previousOriginalRow[x - filterBytes]);
 			const uint8_t filtX = static_cast<uint8_t>((origX - paethPredictor(origA, origB, origC)) & 0xFF);
-			filteredRow[x] = bit_cast<byte>(filtX);
+			filteredRow[x] = static_cast<byte>(filtX);
 		}
 	}
 
-	void filterFirstRow(byte* filteredRow, Span<const byte> originalRow) const {
-		PNGSubFilter{filterBytes}.filterFirstRow(filteredRow, originalRow);
+	void filterFirstRow(byte* filteredRow, const byte* originalRow, size_t rowSize) const {
+		PNGSubFilter{filterBytes}.filterFirstRow(filteredRow, originalRow, rowSize);
 	}
 
-	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, Span<const byte> filteredRow) const {
-		GREM_ASSERT(filterBytes <= filteredRow.size());
+	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		GREM_ASSERT(filterBytes <= rowSize);
 		for (size_t x = 0; x < filterBytes; ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconB = bit_cast<uint8_t>(previousReconstructedRow[x]);
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconB = static_cast<uint8_t>(previousReconstructedRow[x]);
 			const uint8_t reconX = static_cast<uint8_t>((filtX + paethPredictor(0, reconB, 0)) & 0xFF);
-			reconstructedRow[x] = bit_cast<byte>(reconX);
+			reconstructedRow[x] = static_cast<byte>(reconX);
 		}
-		for (size_t x = filterBytes; x < filteredRow.size(); ++x) {
-			const uint8_t filtX = bit_cast<uint8_t>(filteredRow[x]);
-			const uint8_t reconA = bit_cast<uint8_t>(reconstructedRow[x - filterBytes]);
-			const uint8_t reconB = bit_cast<uint8_t>(previousReconstructedRow[x]);
-			const uint8_t reconC = bit_cast<uint8_t>(previousReconstructedRow[x - filterBytes]);
+		for (size_t x = filterBytes; x < rowSize; ++x) {
+			const uint8_t filtX = static_cast<uint8_t>(filteredRow[x]);
+			const uint8_t reconA = static_cast<uint8_t>(reconstructedRow[x - filterBytes]);
+			const uint8_t reconB = static_cast<uint8_t>(previousReconstructedRow[x]);
+			const uint8_t reconC = static_cast<uint8_t>(previousReconstructedRow[x - filterBytes]);
 			const uint8_t reconX = static_cast<uint8_t>((filtX + paethPredictor(reconA, reconB, reconC)) & 0xFF);
-			reconstructedRow[x] = bit_cast<byte>(reconX);
+			reconstructedRow[x] = static_cast<byte>(reconX);
 		}
 	}
 
-	void reconstructFirstRow(byte* firstReconstructedRow, Span<const byte> filteredRow) const {
-		PNGSubFilter{filterBytes}.reconstructFirstRow(firstReconstructedRow, filteredRow);
+	void reconstructFirstRow(byte* firstReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		PNGSubFilter{filterBytes}.reconstructFirstRow(firstReconstructedRow, filteredRow, rowSize);
 	}
 };
 
@@ -298,20 +298,20 @@ struct PNGFilter : Variant<PNGNoneFilter, PNGSubFilter, PNGUpFilter, PNGAverageF
 		}
 	}
 
-	void filterRow(byte* filteredRow, Span<const byte> originalRow, const byte* previousOriginalRow) const {
-		match (*this)([&](const auto& filter) -> void { filter.filterRow(filteredRow, originalRow, previousOriginalRow); });
+	void filterRow(byte* filteredRow, const byte* originalRow, const byte* previousOriginalRow, size_t rowSize) const {
+		match (*this)([&](const auto& filter) -> void { filter.filterRow(filteredRow, originalRow, previousOriginalRow, rowSize); });
 	}
 
-	void filterFirstRow(byte* filteredRow, Span<const byte> originalRow) const {
-		match (*this)([&](const auto& filter) -> void { filter.filterFirstRow(filteredRow, originalRow); });
+	void filterFirstRow(byte* filteredRow, const byte* originalRow, size_t rowSize) const {
+		match (*this)([&](const auto& filter) -> void { filter.filterFirstRow(filteredRow, originalRow, rowSize); });
 	}
 
-	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, Span<const byte> filteredRow) const {
-		match (*this)([&](const auto& filter) -> void { filter.reconstructRow(reconstructedRow, previousReconstructedRow, filteredRow); });
+	void reconstructRow(byte* reconstructedRow, const byte* previousReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		match (*this)([&](const auto& filter) -> void { filter.reconstructRow(reconstructedRow, previousReconstructedRow, filteredRow, rowSize); });
 	}
 
-	void reconstructFirstRow(byte* firstReconstructedRow, Span<const byte> filteredRow) const {
-		match (*this)([&](const auto& filter) -> void { filter.reconstructFirstRow(firstReconstructedRow, filteredRow); });
+	void reconstructFirstRow(byte* firstReconstructedRow, const byte* filteredRow, size_t rowSize) const {
+		match (*this)([&](const auto& filter) -> void { filter.reconstructFirstRow(firstReconstructedRow, filteredRow, rowSize); });
 	}
 };
 
@@ -323,9 +323,9 @@ inline void writeLowBitDepthReconstructedRowToOutput(byte* output, const byte* r
 	uint8_t inputByte = 0;
 	for (uint32_t x = 0; x < componentCount; ++x) {
 		if (x % (8 / BitDepth) == 0) {
-			inputByte = bit_cast<uint8_t>(*reconstructedRow++);
+			inputByte = static_cast<uint8_t>(*reconstructedRow++);
 		}
-		*output++ = bit_cast<byte>(static_cast<uint8_t>((inputByte >> (8 - BitDepth)) * componentScale));
+		*output++ = static_cast<byte>(static_cast<uint8_t>((inputByte >> (8 - BitDepth)) * componentScale));
 		inputByte <<= BitDepth;
 	}
 }
@@ -397,7 +397,7 @@ inline void writeReconstructedRowToOutput(byte* output, const byte* reconstructe
 	imageData = imageData.subspan(1);
 
 	// The first scanline needs special handling in order to treat the non-existent previous reconstructed row as all 0s.
-	PNGFilter{firstFilterType, outputPixelSize}.reconstructFirstRow(firstReconstructedRow, imageData.first(filteredRowSize));
+	PNGFilter{firstFilterType, outputPixelSize}.reconstructFirstRow(firstReconstructedRow, imageData.data(), filteredRowSize);
 	imageData = imageData.subspan(filteredRowSize);
 
 	writeReconstructedRowToOutput(output, firstReconstructedRow, size2D.width, channelCount, bitDepth, greyscale);
@@ -411,7 +411,7 @@ inline void writeReconstructedRowToOutput(byte* output, const byte* reconstructe
 		const byte filterType = imageData.front();
 		imageData = imageData.subspan(1);
 
-		PNGFilter{filterType, outputPixelSize}.reconstructRow(reconstructedRow, previousReconstructedRow, imageData.first(filteredRowSize));
+		PNGFilter{filterType, outputPixelSize}.reconstructRow(reconstructedRow, previousReconstructedRow, imageData.data(), filteredRowSize);
 		imageData = imageData.subspan(filteredRowSize);
 
 		writeReconstructedRowToOutput(output, reconstructedRow, size2D.width, channelCount, bitDepth, greyscale);
@@ -484,7 +484,7 @@ inline void writeReconstructedRowToOutput(byte* output, const byte* reconstructe
 
 	Allocation<byte> result(totalPixelCount * newChannelCount);
 	for (size_t i = 0; i < totalPixelCount; ++i) {
-		const uint8_t paletteIndex = bit_cast<uint8_t>(palettizedImageContents[i]);
+		const uint8_t paletteIndex = static_cast<uint8_t>(palettizedImageContents[i]);
 		const u8vec4 pixel = palette[paletteIndex];
 		memcpy(result.data() + i * newChannelCount, &pixel, newChannelCount);
 	}
@@ -525,7 +525,7 @@ inline void writeReconstructedRowToOutput(byte* output, const byte* reconstructe
 		for (size_t i = 0; i < channelCount; ++i) {
 			uint8_t componentValue{};
 			memcpy(&componentValue, transparentSampleColor.data() + i, sizeof(uint8_t));
-			transparentSamplePixel[i] = bit_cast<byte>(static_cast<uint8_t>(componentValue * componentScale));
+			transparentSamplePixel[i] = static_cast<byte>(static_cast<uint8_t>(componentValue * componentScale));
 		}
 	}
 
@@ -864,17 +864,17 @@ struct PNGChunkHeader {
 	Allocation<byte> result(outputRowStride * imageSizeInPixels.y);
 	byte* output = result.data();
 	const byte* input = imageContents.data();
-	if (bit_cast<uint8_t>(filterTypeOverride) <= 4) {
+	if (static_cast<uint8_t>(filterTypeOverride) <= 4) {
 		const PNGFilter filter{filterTypeOverride, channelCount};
 
 		*output = filterTypeOverride;
-		filter.filterFirstRow(output + 1, Span{input, imageRowStride});
+		filter.filterFirstRow(output + 1, input, imageRowStride);
 		output += outputRowStride;
 		input += imageRowStride;
 
 		for (size_t y = 1; y < imageSizeInPixels.y; ++y) {
 			*output = filterTypeOverride;
-			filter.filterRow(output + 1, Span{input, imageRowStride}, input - imageRowStride);
+			filter.filterRow(output + 1, input, input - imageRowStride, imageRowStride);
 			output += outputRowStride;
 			input += imageRowStride;
 		}
@@ -882,8 +882,8 @@ struct PNGChunkHeader {
 		byte lowestEstimatedEntropyFilterType{};
 		int64_t lowestEstimatedEntropy = Limits<int64_t>::MAX;
 		for (uint8_t filterTypeIndex = 0; filterTypeIndex < 5; ++filterTypeIndex) {
-			const byte filterType = bit_cast<byte>(filterTypeIndex);
-			PNGFilter{filterType, channelCount}.filterFirstRow(output + 1, Span{input, imageRowStride});
+			const byte filterType = static_cast<byte>(filterTypeIndex);
+			PNGFilter{filterType, channelCount}.filterFirstRow(output + 1, input, imageRowStride);
 			const int64_t estimatedEntropy = getEstimatedEntropy(Span{output + 1, imageRowStride});
 			if (estimatedEntropy < lowestEstimatedEntropy) {
 				lowestEstimatedEntropy = estimatedEntropy;
@@ -891,7 +891,7 @@ struct PNGChunkHeader {
 			}
 		}
 		if (lowestEstimatedEntropyFilterType != byte{4}) {
-			PNGFilter{lowestEstimatedEntropyFilterType, channelCount}.filterFirstRow(output + 1, Span{input, imageRowStride});
+			PNGFilter{lowestEstimatedEntropyFilterType, channelCount}.filterFirstRow(output + 1, input, imageRowStride);
 		}
 		*output = lowestEstimatedEntropyFilterType;
 		output += outputRowStride;
@@ -900,8 +900,8 @@ struct PNGChunkHeader {
 		for (size_t y = 1; y < imageSizeInPixels.y; ++y) {
 			lowestEstimatedEntropy = Limits<int64_t>::MAX;
 			for (uint8_t filterTypeIndex = 0; filterTypeIndex < 5; ++filterTypeIndex) {
-				const byte filterType = bit_cast<byte>(filterTypeIndex);
-				PNGFilter{filterType, channelCount}.filterRow(output + 1, Span{input, imageRowStride}, input - imageRowStride);
+				const byte filterType = static_cast<byte>(filterTypeIndex);
+				PNGFilter{filterType, channelCount}.filterRow(output + 1, input, input - imageRowStride, imageRowStride);
 				const int64_t estimatedEntropy = getEstimatedEntropy(Span{output + 1, imageRowStride});
 				if (estimatedEntropy < lowestEstimatedEntropy) {
 					lowestEstimatedEntropy = estimatedEntropy;
@@ -909,7 +909,7 @@ struct PNGChunkHeader {
 				}
 			}
 			if (lowestEstimatedEntropyFilterType != byte{4}) {
-				PNGFilter{lowestEstimatedEntropyFilterType, channelCount}.filterRow(output + 1, Span{input, imageRowStride}, input - imageRowStride);
+				PNGFilter{lowestEstimatedEntropyFilterType, channelCount}.filterRow(output + 1, input, input - imageRowStride, imageRowStride);
 			}
 			*output = lowestEstimatedEntropyFilterType;
 			output += outputRowStride;
@@ -982,7 +982,8 @@ inline void savePNGImage(const ImageView& image, const ImageSavePNGOptions& opti
 	writer.write(imageHeaderChunkData);
 	writer.writeUInt32BE(static_cast<uint32_t>(CRC32{"IHDR"} + imageHeaderChunkData));
 
-	const byte filterTypeOverride = bit_cast<byte>(options.filterTypeOverride.value_or(ImageSavePNGOptions::FilterType{5})); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
+	const byte filterTypeOverride =
+		static_cast<byte>(options.filterTypeOverride.value_or(ImageSavePNGOptions::FilterType{5})); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
 	const Allocation<byte> imageData = buildPNGDataFrom8BitImage(layer.getSize2D(), channelCount, layer.getContents(), filterTypeOverride);
 	const Buffer<byte> imageDataChunkData = encodeZLIBStreamFromPNGData(imageData, options.compressionLevel);
 	writer.writeUInt32BE(imageDataChunkData.size());
