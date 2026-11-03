@@ -921,6 +921,7 @@ vec3 GREM_Lights3D_getFragmentPositionInLightSpacePerspective(mat4 lightShadowMa
 }
 
 float GREM_Lights3D_getCascadedShadowVisibility(float shadowMapIndex, float shadowMatrixIndex, vec3 samplePosition, float sampleDepth, vec3 rawNormal, vec3 lightDirection, float normalOffsetBiasConstantFactor, float normalOffsetBiasSlopeFactor) {
+	const float BASE_FILTER_RADIUS = 2.0;
 	uint cascadeLevelA = 0u;
 	uint cascadeLevelMax = lightsShadowCascadeCount - 1u;
 	for (uint cascadeLevel = 0u; cascadeLevel < cascadeLevelMax; ++cascadeLevel) {
@@ -933,8 +934,8 @@ float GREM_Lights3D_getCascadedShadowVisibility(float shadowMapIndex, float shad
 	float cascadeLevelInterpolationAlpha = (sampleDepth - cascadeBlendNear) / (cascadeBlendFar - cascadeBlendNear);
 	float layerA = float(cascadeLevelA);
 	float layerB = float(cascadeLevelB);
-	float filterRadiusA = 2.0 / (1.0 + layerA);
-	float filterRadiusB = 2.0 / (1.0 + layerB);
+	float filterRadiusA = BASE_FILTER_RADIUS / (1.0 + layerA);
+	float filterRadiusB = BASE_FILTER_RADIUS / (1.0 + layerB);
 	mat4 lightShadowMatrixA = shadowMatrix(shadowMatrixIndex + layerA);
 	mat4 lightShadowMatrixB = shadowMatrix(shadowMatrixIndex + layerB);
 	float texelSize = 1.0 / float(textureSize(screenCascadedShadowMaps, 0).x);
@@ -943,7 +944,7 @@ float GREM_Lights3D_getCascadedShadowVisibility(float shadowMapIndex, float shad
 	float worldSpacePCFFilterKernelSizeA = texelSize * viewWidthA;
 	float worldSpacePCFFilterKernelSizeB = texelSize * viewWidthB;
 	float slopeScaleBias = 1.0 - max(dot(rawNormal, lightDirection), 0.0);
-	vec3 biasedFragmentPositionA = samplePosition + rawNormal * (normalOffsetBiasConstantFactor + worldSpacePCFFilterKernelSizeA * normalOffsetBiasSlopeFactor * slopeScaleBias);
+	vec3 biasedFragmentPositionA = samplePosition + rawNormal * ((1.0 + layerA) * normalOffsetBiasConstantFactor + worldSpacePCFFilterKernelSizeA * normalOffsetBiasSlopeFactor * slopeScaleBias);
 	if (cascadeLevelInterpolationAlpha < 0.0) {
 		vec3 projectedCoordinates = GREM_Lights3D_getFragmentPositionInLightSpaceOrtho(lightShadowMatrixA, biasedFragmentPositionA);
 		return GREM_Lights3D_pcfFilterCascadedShadowMap(shadowMapIndex, projectedCoordinates, layerA, filterRadiusA);
@@ -951,7 +952,7 @@ float GREM_Lights3D_getCascadedShadowVisibility(float shadowMapIndex, float shad
 	if (cascadeLevelInterpolationAlpha > 1.0) {
 		return 1.0;
 	}
-	vec3 biasedFragmentPositionB = samplePosition + rawNormal * (normalOffsetBiasConstantFactor + worldSpacePCFFilterKernelSizeB * normalOffsetBiasSlopeFactor * slopeScaleBias);
+	vec3 biasedFragmentPositionB = samplePosition + rawNormal * ((1.0 + layerB) * normalOffsetBiasConstantFactor + worldSpacePCFFilterKernelSizeB * normalOffsetBiasSlopeFactor * slopeScaleBias);
 	vec3 projectedCoordinatesA = GREM_Lights3D_getFragmentPositionInLightSpaceOrtho(lightShadowMatrixA, biasedFragmentPositionA);
 	vec3 projectedCoordinatesB = GREM_Lights3D_getFragmentPositionInLightSpaceOrtho(lightShadowMatrixB, biasedFragmentPositionB);
 	float shadowVisibilityA = GREM_Lights3D_pcfFilterCascadedShadowMap(shadowMapIndex, projectedCoordinatesA, layerA, filterRadiusA);
