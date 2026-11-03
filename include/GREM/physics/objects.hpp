@@ -90,21 +90,21 @@ struct Material {
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient staticFriction = Scalar{0.8};
+	Coefficient staticFriction = static_cast<Scalar>(0.8);
 
 	/**
 	 * Coefficient of kinetic friction of the object.
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient kineticFriction = Scalar{0.707};
+	Coefficient kineticFriction = static_cast<Scalar>(0.707);
 
 	/**
 	 * Coefficient of rolling resistance of the object.
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient rollingResistance = Scalar{0.01};
+	Coefficient rollingResistance = static_cast<Scalar>(0.01);
 
 	/**
 	 * Coefficient of restitution of the object.
@@ -280,7 +280,7 @@ struct ObjectOptions {
 	 * Gravity acceleration that will be applied to the object on every
 	 * simulation step.
 	 */
-	LinearAcceleration<N> gravityAcceleration = -Y_AXIS<N> * Scalar{9.82} * METERS_PER_SECOND_SQUARED;
+	LinearAcceleration<N> gravityAcceleration = -Y_AXIS<N> * static_cast<Scalar>(9.82) * METERS_PER_SECOND_SQUARED;
 
 	/**
 	 * Effective fluid density of the object's surroundings, which will be used
@@ -289,7 +289,7 @@ struct ObjectOptions {
 	 * \sa Material::linearDrag
 	 * \sa Material::angularDrag
 	 */
-	Density surroundingFluidDensity = Scalar{1.2041} * KILOGRAMS_PER_CUBIC_METER;
+	Density surroundingFluidDensity = static_cast<Scalar>(1.2041) * KILOGRAMS_PER_CUBIC_METER;
 
 	/**
 	 * World-space offset of the center of buoyancy of the object relative to

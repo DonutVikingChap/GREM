@@ -295,7 +295,7 @@ public:
 					break;
 				}
 				GREM_CASE(const DrawWorldPointCommand& command) {
-					const mat4 transformation = translateScale(command.point, Scale3D{Scalar{0.02} * command.radiusCoefficient});
+					const mat4 transformation = translateScale(command.point, Scale3D{static_cast<Scalar>(0.02) * command.radiusCoefficient});
 					instances.putShadedModelInstance(renderer3D.getHDRUnlitModel3DShaderPipelineSet(), renderer3D.getCubeModel3D(), lengthScale * transformation,
 						graphics::ModelInstance3D{.color = command.color});
 					break;
@@ -305,7 +305,7 @@ public:
 					if (difference != 0) {
 						const Position3D midpoint = command.pointA + difference * Scalar{0.5};
 						const mat4 transformation = translateRotateScale(midpoint, Orientation3D::rotation(Z_AXIS_3D, normalize(difference.in(Length3D::UNIT))),
-							Scale3D{Scalar{0.01} * command.thicknessCoefficient, Scalar{0.01f} * command.thicknessCoefficient,
+							Scale3D{static_cast<Scalar>(0.01) * command.thicknessCoefficient, static_cast<Scalar>(0.01) * command.thicknessCoefficient,
 								Scalar{0.5} * length(difference).in(Distance::UNIT)});
 						instances.putShadedModelInstance(renderer3D.getHDRUnlitModel3DShaderPipelineSet(), renderer3D.getCubeModel3D(), lengthScale * transformation,
 							graphics::ModelInstance3D{.color = command.color});
