@@ -166,13 +166,13 @@ void loadMap(EntityRegistry& registry, ResourceRegistry& resources, CStringView 
 				} else if (mapKey == "bounds") {
 					reader.readCustomObject([&](const json::SourceLocation&, const json::String& key) -> void {
 						if (key == "min") {
-							mapInfo.bounds.min = parseVector<3, float>(reader.readValue()) * phys::METERS;
+							mapInfo.bounds.min = parseVector<3, phys::Scalar>(reader.readValue()) * phys::METERS;
 						} else if (key == "max") {
-							mapInfo.bounds.max = parseVector<3, float>(reader.readValue()) * phys::METERS;
+							mapInfo.bounds.max = parseVector<3, phys::Scalar>(reader.readValue()) * phys::METERS;
 						}
 					});
 				} else if (mapKey == "playerRespawnTime") {
-					mapState.playerRespawnTime = parseNumber<float>(reader.readValue()) * phys::SECONDS;
+					mapState.playerRespawnTime = parseNumber<phys::Scalar>(reader.readValue()) * phys::SECONDS;
 				} else if (mapKey == "spawnpoints") {
 					reader.readCustomArray([&](const json::SourceLocation&) -> void {
 						MapInfo::Spawnpoint spawnpoint{};

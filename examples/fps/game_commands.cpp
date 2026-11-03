@@ -421,8 +421,8 @@ void RainBoxesCommand::execute(GameState& gameState, PlayerID, LocalPlayerID) co
 	const TickIndex tickIndex = resources.getResource<TickIndex>();
 	const rng::Xoroshiro128PlusPlusEngine::result_type seed = static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(tickIndex - TickIndex{});
 	rng::Xoroshiro128PlusPlusEngine numberGenerator{seed};
-	rng::UniformRealDistribution<float> distributionXZ{-99.0f, 99.0f};
-	rng::UniformRealDistribution<float> distributionY{0.0f, 50.0f};
+	rng::UniformRealDistribution<phys::Scalar> distributionXZ{phys::Scalar{-99}, phys::Scalar{99}};
+	rng::UniformRealDistribution<phys::Scalar> distributionY{phys::Scalar{0}, phys::Scalar{50}};
 	for (int i = 0; i < 1000; ++i) {
 		const phys::Length1D x = distributionXZ(numberGenerator) * phys::METERS;
 		const phys::Length1D y = distributionY(numberGenerator) * phys::METERS;

@@ -216,12 +216,12 @@ protected:
 		});
 
 		WorldView worldView{
-			.frustum = Frustum<float>::fromViewProjectionMatrix(graphics.camera3D.getProjectionMatrix() * graphics.camera3D.getViewMatrix()),
-			.visibleBounds = calculateBoundingBox<3, float>(worldView.frustum.corners),
+			.frustum = Frustum<phys::Scalar>::fromViewProjectionMatrix(mat<4, 4, phys::Scalar>{graphics.camera3D.getProjectionMatrix() * graphics.camera3D.getViewMatrix()}),
+			.visibleBounds = calculateBoundingBox<3, phys::Scalar>(worldView.frustum.corners),
 			.playerEntityID = playerEntityID,
 		};
-		worldView.visibleBounds.min = max(worldView.visibleBounds.min, vec3{levelBounds.min.in(phys::METERS)});
-		worldView.visibleBounds.max = min(worldView.visibleBounds.max, vec3{levelBounds.max.in(phys::METERS)});
+		worldView.visibleBounds.min = max(worldView.visibleBounds.min, vec<3, phys::Scalar>{levelBounds.min.in(phys::METERS)});
+		worldView.visibleBounds.max = min(worldView.visibleBounds.max, vec<3, phys::Scalar>{levelBounds.max.in(phys::METERS)});
 
 		simulation.resources.addExternalResource(&frameInfo);
 		simulation.resources.addExternalResource(&worldView);

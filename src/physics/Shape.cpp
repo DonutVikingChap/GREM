@@ -62,16 +62,16 @@ RaycastResult3D InfinitePlaneShape3D::castLocalRay(Length3D localRayOrigin, Dire
 	return RayHit3D{
 		.localOffset = localRayOrigin + distance * localRayDirection,
 		.distance = distance,
-		.normal = Direction3D::reinterpret(Scale3D{0, copysign(Coefficient{1}, localRayOrigin.getY()), 0}),
+		.normal = Direction3D::reinterpret(Scale3D{0, copysign(Coefficient{Scalar{1}}, localRayOrigin.getY()), 0}),
 	};
 }
 
 template <size_t N>
 Volume BoxShape<N>::calculateVolume() const {
 	if constexpr (N == 3) {
-		return 8.0f * product(halfExtents);
+		return Scalar{8} * product(halfExtents);
 	} else {
-		return 4.0f * product(halfExtents) * (1.0f * METERS);
+		return Scalar{4} * product(halfExtents) * (Scalar{1} * METERS);
 	}
 }
 
@@ -80,25 +80,25 @@ PrincipalMomentsOfInertia<N> BoxShape<N>::calculatePrincipalMomentsOfInertia(Mas
 	GREM_ASSERT(all(greaterThan(halfExtents, 0)));
 	if constexpr (N == 3) {
 		const Quantity<3, SquaredLength::Unit> squaredHalfExtents = halfExtents * halfExtents;
-		return (1.0f / 3.0f) * mass *
+		return (Scalar{1} / Scalar{3}) * mass *
 		       Quantity<3, SquaredLength::Unit>{
 				   squaredHalfExtents.getY() + squaredHalfExtents.getZ(),
 				   squaredHalfExtents.getX() + squaredHalfExtents.getZ(),
 				   squaredHalfExtents.getX() + squaredHalfExtents.getY(),
 			   };
 	} else {
-		return PrincipalMomentsOfInertia2D{(1.0f / 3.0f) * mass * (length2(halfExtents.getX()) + length2(halfExtents.getY()))};
+		return PrincipalMomentsOfInertia2D{(Scalar{1} / Scalar{3}) * mass * (length2(halfExtents.getX()) + length2(halfExtents.getY()))};
 	}
 }
 
 template <size_t N>
 Optional<Area> BoxShape<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
 	if constexpr (N == 3) {
-		return 2.0f * (halfExtents.getY() * halfExtents.getZ() * abs(dot(direction, basis[X])) +    //
-						  halfExtents.getX() * halfExtents.getZ() * abs(dot(direction, basis[Y])) + //
-						  halfExtents.getX() * halfExtents.getY() * abs(dot(direction, basis[Z])));
+		return Scalar{2} * (halfExtents.getY() * halfExtents.getZ() * abs(dot(direction, basis[X])) +    //
+							   halfExtents.getX() * halfExtents.getZ() * abs(dot(direction, basis[Y])) + //
+							   halfExtents.getX() * halfExtents.getY() * abs(dot(direction, basis[Z])));
 	} else {
-		return 2.0f * (halfExtents.getY() * abs(dot(direction, basis[X])) + halfExtents.getX() * abs(dot(direction, basis[Y]))) * (1.0f * METERS);
+		return Scalar{2} * (halfExtents.getY() * abs(dot(direction, basis[X])) + halfExtents.getX() * abs(dot(direction, basis[Y]))) * (Scalar{1} * METERS);
 	}
 }
 
@@ -160,20 +160,20 @@ template <size_t N>
 Direction<N> BoxShape<N>::getLocalFaceNormal(ConvexPolytopeFaceIndex faceIndex) const {
 	if constexpr (N == 2) {
 		static constexpr Array<Direction2D, 4> FACE_NORMALS{
-			Direction2D::reinterpret(vec2{0.0f, -1.0f}),
-			Direction2D::reinterpret(vec2{1.0f, 0.0f}),
-			Direction2D::reinterpret(vec2{0.0f, 1.0f}),
-			Direction2D::reinterpret(vec2{-1.0f, 0.0f}),
+			Direction2D::reinterpret(vec<2, Scalar>{Scalar{0}, Scalar{-1}}),
+			Direction2D::reinterpret(vec<2, Scalar>{Scalar{1}, Scalar{0}}),
+			Direction2D::reinterpret(vec<2, Scalar>{Scalar{0}, Scalar{1}}),
+			Direction2D::reinterpret(vec<2, Scalar>{Scalar{-1}, Scalar{0}}),
 		};
 		return FACE_NORMALS[faceIndex];
 	} else {
 		static constexpr Array<Direction3D, 6> FACE_NORMALS{
-			Direction3D::reinterpret(vec3{0.0f, 0.0f, 1.0f}),
-			Direction3D::reinterpret(vec3{1.0f, 0.0f, 0.0f}),
-			Direction3D::reinterpret(vec3{0.0f, 1.0f, 0.0f}),
-			Direction3D::reinterpret(vec3{0.0f, 0.0f, -1.0f}),
-			Direction3D::reinterpret(vec3{-1.0f, 0.0f, 0.0f}),
-			Direction3D::reinterpret(vec3{0.0f, -1.0f, 0.0f}),
+			Direction3D::reinterpret(vec<3, Scalar>{Scalar{0}, Scalar{0}, Scalar{1}}),
+			Direction3D::reinterpret(vec<3, Scalar>{Scalar{1}, Scalar{0}, Scalar{0}}),
+			Direction3D::reinterpret(vec<3, Scalar>{Scalar{0}, Scalar{1}, Scalar{0}}),
+			Direction3D::reinterpret(vec<3, Scalar>{Scalar{0}, Scalar{0}, Scalar{-1}}),
+			Direction3D::reinterpret(vec<3, Scalar>{Scalar{-1}, Scalar{0}, Scalar{0}}),
+			Direction3D::reinterpret(vec<3, Scalar>{Scalar{0}, Scalar{-1}, Scalar{0}}),
 		};
 		return FACE_NORMALS[faceIndex];
 	}
@@ -328,9 +328,9 @@ template struct CubeShape<3>;
 template <size_t N>
 Volume EllipsoidShape<N>::calculateVolume() const {
 	if constexpr (N == 3) {
-		return (4.0f / 3.0f) * PI * product(radii);
+		return (Scalar{4} / Scalar{3}) * PI * product(radii);
 	} else {
-		return PI * product(radii) * (1.0f * METERS);
+		return PI * product(radii) * (Scalar{1} * METERS);
 	}
 }
 
@@ -339,14 +339,14 @@ PrincipalMomentsOfInertia<N> EllipsoidShape<N>::calculatePrincipalMomentsOfInert
 	GREM_ASSERT(all(greaterThan(radii, 0)));
 	if constexpr (N == 3) {
 		const Quantity<3, SquaredLength::Unit> squaredRadii = radii * radii;
-		return (1.0f / 5.0f) * mass *
+		return (Scalar{1} / Scalar{5}) * mass *
 		       Quantity<3, SquaredLength::Unit>{
 				   squaredRadii.getY() + squaredRadii.getZ(),
 				   squaredRadii.getX() + squaredRadii.getZ(),
 				   squaredRadii.getX() + squaredRadii.getY(),
 			   };
 	} else {
-		return PrincipalMomentsOfInertia2D{(1.0f / 5.0f) * mass * (length2(radii.getX()) + length2(radii.getY()))};
+		return PrincipalMomentsOfInertia2D{(Scalar{1} / Scalar{5}) * mass * (length2(radii.getX()) + length2(radii.getY()))};
 	}
 }
 
@@ -357,15 +357,15 @@ Optional<Area> EllipsoidShape<N>::getReferenceArea(const Basis<N>& basis, Direct
 						radii.getX() * radii.getZ() * abs(dot(direction, basis[Y])) + //
 						radii.getX() * radii.getY() * abs(dot(direction, basis[Z])));
 	} else {
-		return 2.0f * (radii.getY() * abs(dot(direction, basis[X])) + radii.getX() * abs(dot(direction, basis[Y]))) * (1.0f * METERS);
+		return Scalar{2} * (radii.getY() * abs(dot(direction, basis[X])) + radii.getX() * abs(dot(direction, basis[Y]))) * (Scalar{1} * METERS);
 	}
 }
 
 template <size_t N>
 RaycastResult<N> EllipsoidShape<N>::castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const {
 	GREM_ASSERT(all(greaterThan(radii, 0)));
-	const grem::Ellipsoid<N, float> ellipsoid{.center{}, .radii = radii.in(Length<N>::UNIT)};
-	const grem::Ray<N, float> r{
+	const grem::Ellipsoid<N, Scalar> ellipsoid{.center{}, .radii = radii.in(Length<N>::UNIT)};
+	const grem::Ray<N, Scalar> r{
 		.origin = localRayOrigin.in(Length<N>::UNIT),
 		.direction = localRayDirection,
 		.maxDistance = maxLocalRayDistance.in(Distance::UNIT),
@@ -376,7 +376,7 @@ RaycastResult<N> EllipsoidShape<N>::castLocalRay(Length<N> localRayOrigin, Direc
 template <size_t N>
 bool EllipsoidShape<N>::containsLocalPoint(Length<N> localPoint) const {
 	GREM_ASSERT(all(greaterThan(radii, 0)));
-	const grem::Ellipsoid<N, float> ellipsoid{.center{}, .radii = radii.in(Length<N>::UNIT)};
+	const grem::Ellipsoid<N, Scalar> ellipsoid{.center{}, .radii = radii.in(Length<N>::UNIT)};
 	return ellipsoid.contains(localPoint.in(Length<N>::UNIT));
 }
 
@@ -392,8 +392,8 @@ template struct EllipsoidShape<3>;
 template <size_t N>
 RaycastResult<N> SphereShape<N>::castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const {
 	GREM_ASSERT(radius > Distance{});
-	const grem::Sphere<N, float> sphere{.center{}, .radius = radius.in(Length<N>::UNIT)};
-	const grem::Ray<N, float> r{
+	const grem::Sphere<N, Scalar> sphere{.center{}, .radius = radius.in(Length<N>::UNIT)};
+	const grem::Ray<N, Scalar> r{
 		.origin = localRayOrigin.in(Length<N>::UNIT),
 		.direction = localRayDirection,
 		.maxDistance = maxLocalRayDistance.in(Distance::UNIT),
@@ -404,7 +404,7 @@ RaycastResult<N> SphereShape<N>::castLocalRay(Length<N> localRayOrigin, Directio
 template <size_t N>
 bool SphereShape<N>::containsLocalPoint(Length<N> localPoint) const {
 	GREM_ASSERT(radius > Distance{});
-	const grem::Sphere<N, float> sphere{.center{}, .radius = radius.in(Length<N>::UNIT)};
+	const grem::Sphere<N, Scalar> sphere{.center{}, .radius = radius.in(Length<N>::UNIT)};
 	return sphere.contains(localPoint.in(Length<N>::UNIT));
 }
 
@@ -420,9 +420,9 @@ template struct SphereShape<3>;
 template <size_t N>
 Volume CapsuleShape<N>::calculateVolume() const {
 	if constexpr (N == 3) {
-		return PI * radius * radius * ((4.0f / 3.0f) * radius + 2.0f * halfLength);
+		return PI * radius * radius * ((Scalar{4} / Scalar{3}) * radius + Scalar{2} * halfLength);
 	} else {
-		return (PI * radius * radius + 4.0f * radius * halfLength) * (1.0f * METERS);
+		return (PI * radius * radius + Scalar{4} * radius * halfLength) * (Scalar{1} * METERS);
 	}
 }
 
@@ -431,21 +431,21 @@ PrincipalMomentsOfInertia<N> CapsuleShape<N>::calculatePrincipalMomentsOfInertia
 	GREM_ASSERT(radius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
 	const SquaredDistance squaredRadius = length2(radius);
-	const Volume hemisphereVolume = (2.0f / 3.0f) * PI * squaredRadius * radius;
+	const Volume hemisphereVolume = (Scalar{2} / Scalar{3}) * PI * squaredRadius * radius;
 	const Volume halfCylinderVolume = PI * squaredRadius * halfLength;
-	const Mass halfMass = mass * 0.5f;
+	const Mass halfMass = mass * Scalar{0.5};
 	const Mass hemisphereMass = halfMass * hemisphereVolume / (hemisphereVolume + halfCylinderVolume);
-	const Mass cylinderMass = mass - hemisphereMass * 2.0f;
-	const MomentOfInertia2D hemisphereMomentOfInertiaAroundBase = (2.0f / 5.0f) * hemisphereMass * squaredRadius;
-	const Distance hemisphereCenterOfMassOffset = (3.0f / 8.0f) * radius;
+	const Mass cylinderMass = mass - hemisphereMass * Scalar{2};
+	const MomentOfInertia2D hemisphereMomentOfInertiaAroundBase = (Scalar{2} / Scalar{5}) * hemisphereMass * squaredRadius;
+	const Distance hemisphereCenterOfMassOffset = (Scalar{3} / Scalar{8}) * radius;
 	const MomentOfInertia2D hemisphereMomentOfInertia =
 		hemisphereMomentOfInertiaAroundBase + hemisphereMass * (length2(hemisphereCenterOfMassOffset + halfLength) - length2(hemisphereCenterOfMassOffset));
-	const MomentOfInertia2D cylinderMomentOfInertia = cylinderMass * ((1.0f / 4.0f) * squaredRadius + (1.0f / 3.0f) * length2(halfLength));
-	const MomentOfInertia2D capsuleMomentOfInertia = cylinderMomentOfInertia + 2.0f * hemisphereMomentOfInertia;
+	const MomentOfInertia2D cylinderMomentOfInertia = cylinderMass * ((Scalar{1} / Scalar{4}) * squaredRadius + (Scalar{1} / Scalar{3}) * length2(halfLength));
+	const MomentOfInertia2D capsuleMomentOfInertia = cylinderMomentOfInertia + Scalar{2} * hemisphereMomentOfInertia;
 	if constexpr (N == 3) {
 		return PrincipalMomentsOfInertia3D{
 			capsuleMomentOfInertia,
-			0.5f * cylinderMass * squaredRadius + 2.0f * hemisphereMomentOfInertiaAroundBase,
+			Scalar{0.5} * cylinderMass * squaredRadius + Scalar{2} * hemisphereMomentOfInertiaAroundBase,
 			capsuleMomentOfInertia,
 		};
 	} else {
@@ -457,7 +457,7 @@ template <size_t N>
 Optional<Area> CapsuleShape<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
 	// Approximate as half the area of the corresponding box shape.
 	if (const Optional<Area> result = BoxShape<N>{.halfExtents = Y_AXIS<N> * halfLength + Length<N>{radius}}.getReferenceArea(basis, direction)) {
-		return *result * 0.5f;
+		return *result * Scalar{0.5};
 	}
 	return {};
 }
@@ -466,7 +466,7 @@ template <size_t N>
 RaycastResult<N> CapsuleShape<N>::castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const {
 	GREM_ASSERT(radius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
-	const Distance centerLineLength = 2.0f * halfLength;
+	const Distance centerLineLength = Scalar{2} * halfLength;
 	const SquaredDistance squaredRadius = length2(radius);
 	const Length<N> offsetFromBottomCenter = localRayOrigin + Y_AXIS<N> * halfLength;
 	const SquaredDistance squaredCenterLineLength = length2(centerLineLength);
@@ -508,8 +508,8 @@ template <size_t N>
 bool CapsuleShape<N>::containsLocalPoint(Length<N> localPoint) const {
 	GREM_ASSERT(radius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
-	const grem::Length<N, float> halfLine = (Y_AXIS<N> * halfLength).in(Length<N>::UNIT);
-	const grem::Capsule<N, float> capsule{.centerLine{.pointA = -halfLine, .pointB = halfLine}, .radius = radius.in(Length<N>::UNIT)};
+	const grem::Length<N, Scalar> halfLine = (Y_AXIS<N> * halfLength).in(Length<N>::UNIT);
+	const grem::Capsule<N, Scalar> capsule{.centerLine{.pointA = -halfLine, .pointB = halfLine}, .radius = radius.in(Length<N>::UNIT)};
 	return capsule.contains(localPoint.in(Length<N>::UNIT));
 }
 
@@ -539,7 +539,7 @@ PrincipalMomentsOfInertia<N> TaperedCapsuleShape<N>::calculatePrincipalMomentsOf
 	GREM_ASSERT(halfLength > Distance{});
 	const SquaredDistance squaredBottomRadius = length2(bottomRadius);
 	const SquaredDistance squaredTopRadius = length2(topRadius);
-	const SquaredDistance squaredCenterLineLength = length2(2.0f * halfLength);
+	const SquaredDistance squaredCenterLineLength = length2(Scalar{2} * halfLength);
 	const Volume cubedBottomRadius = squaredBottomRadius * bottomRadius;
 	const Volume cubedTopRadius = squaredTopRadius * topRadius;
 	const SquaredArea squaredSquaredBottomRadius = length2(squaredBottomRadius);
@@ -549,11 +549,11 @@ PrincipalMomentsOfInertia<N> TaperedCapsuleShape<N>::calculatePrincipalMomentsOf
 	const SquaredDistance b = (squaredBottomRadius + bottomRadius * topRadius + squaredTopRadius) * PI;
 	const MomentOfInertia2D xz =
 		mass *
-		((a + 2.0f * (squaredBottomRadius + 3.0f * bottomRadius * topRadius + 6.0f * squaredBottomRadius) * squaredCenterLineLength) / (6.0f * b) + squaredBottomRadius +
-			squaredTopRadius + 2.0f * squaredCenterLineLength) /
-		10.0f;
+		((a + Scalar{2} * (squaredBottomRadius + Scalar{3} * bottomRadius * topRadius + Scalar{6} * squaredBottomRadius) * squaredCenterLineLength) / (Scalar{6} * b) +
+			squaredBottomRadius + squaredTopRadius + Scalar{2} * squaredCenterLineLength) /
+		Scalar{10};
 	if constexpr (N == 3) {
-		const MomentOfInertia2D y = mass * (a / b + squaredBottomRadius + squaredTopRadius) / 10.0f;
+		const MomentOfInertia2D y = mass * (a / b + squaredBottomRadius + squaredTopRadius) / Scalar{10};
 		return PrincipalMomentsOfInertia3D{xz, y, xz};
 	} else {
 		return PrincipalMomentsOfInertia2D{xz};
@@ -564,7 +564,7 @@ template <size_t N>
 Optional<Area> TaperedCapsuleShape<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
 	// Approximate as half the area of the corresponding box shape for the average radius.
 	if (const Optional<Area> result = BoxShape<N>{.halfExtents = Y_AXIS<N> * halfLength + Length<N>{midpoint(bottomRadius, topRadius)}}.getReferenceArea(basis, direction)) {
-		return *result * 0.5f;
+		return *result * Scalar{0.5};
 	}
 	return {};
 }
@@ -575,7 +575,7 @@ RaycastResult<N> TaperedCapsuleShape<N>::castLocalRay(Length<N> localRayOrigin, 
 		return RayHitInterior{.localOffset = localRayOrigin};
 	}
 
-	const Distance centerLineLength = 2.0f * halfLength;
+	const Distance centerLineLength = Scalar{2} * halfLength;
 	const SquaredDistance squaredBottomRadius = length2(bottomRadius);
 	const SquaredDistance squaredTopRadius = length2(topRadius);
 	const Length<N> offsetFromBottomCenter = localRayOrigin + Y_AXIS<N> * halfLength;
@@ -597,7 +597,7 @@ RaycastResult<N> TaperedCapsuleShape<N>::castLocalRay(Length<N> localRayOrigin, 
 	const SquaredVolume discriminant =
 		length2(offsetAlongDirectionAlongCenterLineSquared) -
 		(lengthRadiusDifferenceSquared * squaredOffsetFromBottomCenter - length2(signedOffsetFromBottomOnCenterLineSquared) +
-			signedOffsetFromBottomOnCenterLineSquared * radiusDifference * bottomRadius * 2.0f - squaredCenterLineLength * squaredBottomRadius) *
+			signedOffsetFromBottomOnCenterLineSquared * radiusDifference * bottomRadius * Scalar{2} - squaredCenterLineLength * squaredBottomRadius) *
 			differenceOfSquares;
 	if (discriminant < 0) {
 		return RayMiss{};
@@ -613,7 +613,7 @@ RaycastResult<N> TaperedCapsuleShape<N>::castLocalRay(Length<N> localRayOrigin, 
 			.distance = t,
 			.normal = tryNormalize(
 				lengthRadiusDifferenceSquared * (offsetFromBottomCenter + t * localRayDirection) - Y_AXIS<N> * centerLineLength * hitSignedOffsetFromBottomCenterSquared)
-		        .value_or(-localRayDirection),
+			    .value_or(-localRayDirection),
 		};
 	}
 
@@ -653,9 +653,9 @@ bool TaperedCapsuleShape<N>::containsLocalPoint(Length<N> localPoint) const {
 	GREM_ASSERT(bottomRadius > Distance{} || topRadius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
 	const Length1D radiusDifference = bottomRadius - topRadius;
-	const Distance centerLineLength = 2.0f * halfLength;
+	const Distance centerLineLength = Scalar{2} * halfLength;
 	const Scale1D b = radiusDifference / centerLineLength;
-	const Scale1D a = sqrt(1.0f - length2(b));
+	const Scale1D a = sqrt(Scalar{1} - length2(b));
 
 	Distance horizontalPointDistance{};
 	if constexpr (N == 3) {
@@ -691,7 +691,7 @@ Length<N> TaperedCapsuleShape<N>::getLocalSupportPointOffset(Direction<N> localD
 	}
 	const bool isTop = (abs(radiusDifference) <= Distance::MACHINE_EPSILON || horizontalDirectionAmount <= Coefficient::MACHINE_EPSILON)
 	                       ? (localDirection.getY() >= 0)
-	                       : ((localDirection.getY() / horizontalDirectionAmount) <= (2.0f * halfLength) / radiusDifference);
+	                       : ((localDirection.getY() / horizontalDirectionAmount) <= (Scalar{2} * halfLength) / radiusDifference);
 	const Length1D radius = (isTop) ? topRadius : bottomRadius;
 	return Y_AXIS<N> * ((isTop) ? halfLength : -halfLength) + radius * localDirection;
 }
@@ -702,17 +702,17 @@ template struct TaperedCapsuleShape<3>;
 Volume CylinderShape3D::calculateVolume() const {
 	GREM_ASSERT(radius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
-	return PI * radius * radius * 2.0f * halfLength;
+	return PI * radius * radius * Scalar{2} * halfLength;
 }
 
 PrincipalMomentsOfInertia3D CylinderShape3D::calculatePrincipalMomentsOfInertia(Mass mass) const {
 	GREM_ASSERT(radius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
 	const SquaredDistance squaredRadius = length2(radius);
-	const MomentOfInertia2D cylinderMomentOfInertia = (1.0f / 12.0f) * mass * (3.0f * squaredRadius + 4.0f * length2(halfLength));
+	const MomentOfInertia2D cylinderMomentOfInertia = (Scalar{1} / Scalar{12}) * mass * (Scalar{3} * squaredRadius + Scalar{4} * length2(halfLength));
 	return PrincipalMomentsOfInertia3D{
 		cylinderMomentOfInertia,
-		0.5f * mass * squaredRadius,
+		Scalar{0.5} * mass * squaredRadius,
 		cylinderMomentOfInertia,
 	};
 }
@@ -720,7 +720,7 @@ PrincipalMomentsOfInertia3D CylinderShape3D::calculatePrincipalMomentsOfInertia(
 Optional<Area> CylinderShape3D::getReferenceArea(const Basis3D& basis, Direction3D direction) const {
 	GREM_ASSERT(radius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
-	const SquaredDistance squaredCenterLineLength = length2(2.0f * halfLength);
+	const SquaredDistance squaredCenterLineLength = length2(Scalar{2} * halfLength);
 	const SquaredDistance squaredRadius = length2(radius);
 	return squaredCenterLineLength * abs(dot(direction, basis[X])) + //
 	       PI * squaredRadius * abs(dot(direction, basis[Y])) +      //
@@ -732,7 +732,7 @@ RaycastResult3D CylinderShape3D::castLocalRay(Length3D localRayOrigin, Direction
 		return RayHitInterior{.localOffset = localRayOrigin};
 	}
 
-	const Distance centerLineLength = 2.0f * halfLength;
+	const Distance centerLineLength = Scalar{2} * halfLength;
 	const SquaredDistance squaredRadius = length2(radius);
 	const Length3D offsetFromBottomCenter = localRayOrigin + Y_AXIS_3D * halfLength;
 	const SquaredDistance squaredCenterLineLength = length2(centerLineLength);
@@ -773,7 +773,7 @@ RaycastResult3D CylinderShape3D::castLocalRay(Length3D localRayOrigin, Direction
 		return RayHit3D{
 			.localOffset = localRayOrigin + tCap * localRayDirection,
 			.distance = tCap,
-			.normal = Direction3D::reinterpret(Scale3D{0, copysign(Coefficient{1}, hitSignedOffsetFromBottomCenterSquared), 0}),
+			.normal = Direction3D::reinterpret(Scale3D{0, copysign(Coefficient{Scalar{1}}, hitSignedOffsetFromBottomCenterSquared), 0}),
 		};
 	}
 	return RayMiss{};
@@ -801,7 +801,7 @@ Volume TaperedCylinderShape3D::calculateVolume() const {
 	GREM_ASSERT(topRadius >= Distance{});
 	GREM_ASSERT(bottomRadius > Distance{} || topRadius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
-	return (2.0f / 3.0f) * PI * halfLength * (length2(bottomRadius) + length2(topRadius) + bottomRadius * topRadius);
+	return (Scalar{2} / Scalar{3}) * PI * halfLength * (length2(bottomRadius) + length2(topRadius) + bottomRadius * topRadius);
 }
 
 PrincipalMomentsOfInertia3D TaperedCylinderShape3D::calculatePrincipalMomentsOfInertia(Mass mass) const {
@@ -817,10 +817,10 @@ PrincipalMomentsOfInertia3D TaperedCylinderShape3D::calculatePrincipalMomentsOfI
 	const SquaredArea squaredSquaredBottomRadius = length2(squaredBottomRadius);
 	const SquaredArea squaredSquaredTopRadius = length2(squaredTopRadius);
 	const SquaredArea numerator =
-		3.0f * (squaredSquaredBottomRadius + cubedBottomRadius * topRadius + squaredBottomRadius * squaredTopRadius + bottomRadius * cubedTopRadius + squaredSquaredTopRadius);
-	const SquaredDistance denominator = 10.0f * PI * (squaredBottomRadius + bottomRadius * topRadius + squaredTopRadius);
-	const MomentOfInertia2D xz =
-		mass * (numerator + 8.0f * (squaredBottomRadius + 3.0f * bottomRadius * topRadius + 6.0f * squaredTopRadius) * squaredHalfLength) / (2.0f * denominator);
+		Scalar{3} * (squaredSquaredBottomRadius + cubedBottomRadius * topRadius + squaredBottomRadius * squaredTopRadius + bottomRadius * cubedTopRadius + squaredSquaredTopRadius);
+	const SquaredDistance denominator = Scalar{10} * PI * (squaredBottomRadius + bottomRadius * topRadius + squaredTopRadius);
+	const MomentOfInertia2D xz = mass * (numerator + Scalar{8} * (squaredBottomRadius + Scalar{3} * bottomRadius * topRadius + Scalar{6} * squaredTopRadius) * squaredHalfLength) /
+	                             (Scalar{2} * denominator);
 	const MomentOfInertia2D y = mass * numerator / denominator;
 	return PrincipalMomentsOfInertia3D{xz, y, xz};
 }
@@ -835,7 +835,7 @@ RaycastResult3D TaperedCylinderShape3D::castLocalRay(Length3D localRayOrigin, Di
 		return RayHitInterior{.localOffset = localRayOrigin};
 	}
 
-	const Distance centerLineLength = 2.0f * halfLength;
+	const Distance centerLineLength = Scalar{2} * halfLength;
 	const Length3D offsetFromBottomCenter = localRayOrigin + Y_AXIS_3D * halfLength;
 	const Length3D offsetFromTopCenter = localRayOrigin - Y_AXIS_3D * halfLength;
 	const SquaredDistance squaredCenterLineLength = length2(centerLineLength);
@@ -876,7 +876,7 @@ RaycastResult3D TaperedCylinderShape3D::castLocalRay(Length3D localRayOrigin, Di
 		squaredCenterLineLength * bottomRadius * radiusDifference * directionAlongCenterLine;
 	const SquaredVolume k0 =
 		squaredCenterLineLengthSquared * squaredOffsetFromBottomCenter - length2(signedOffsetFromBottomOnCenterLineSquared) * lengthRadiusDifferenceSquared +
-		squaredCenterLineLength * bottomRadius * (radiusDifference * signedOffsetFromBottomOnCenterLineSquared * 2.0f - squaredCenterLineLength * bottomRadius);
+		squaredCenterLineLength * bottomRadius * (radiusDifference * signedOffsetFromBottomOnCenterLineSquared * Scalar{2} - squaredCenterLineLength * bottomRadius);
 	const auto discriminant = length2(k1) - k2 * k0;
 	if (discriminant < 0) {
 		return RayMiss{};
@@ -895,7 +895,7 @@ RaycastResult3D TaperedCylinderShape3D::castLocalRay(Length3D localRayOrigin, Di
 		.normal = tryNormalize(squaredCenterLineLength *
 								   (squaredCenterLineLength * (offsetFromBottomCenter + t * localRayDirection) + radiusDifference * (Y_AXIS_3D * centerLineLength) * bottomRadius) -
 							   (Y_AXIS_3D * centerLineLength) * lengthRadiusDifferenceSquared * hitSignedOffsetFromBottomCenterSquared)
-	        .value_or(-localRayDirection),
+		    .value_or(-localRayDirection),
 	};
 }
 
@@ -905,7 +905,7 @@ bool TaperedCylinderShape3D::containsLocalPoint(Length3D localPoint) const {
 	GREM_ASSERT(bottomRadius > Distance{} || topRadius > Distance{});
 	GREM_ASSERT(halfLength > Distance{});
 
-	const Distance centerLineLength = 2.0f * halfLength;
+	const Distance centerLineLength = Scalar{2} * halfLength;
 	const Length1D verticalPoint = localPoint.getY();
 	if (abs(verticalPoint) >= centerLineLength) {
 		return false;
@@ -913,9 +913,9 @@ bool TaperedCylinderShape3D::containsLocalPoint(Length3D localPoint) const {
 
 	const Length1D radiusDifference = bottomRadius - topRadius;
 	const Distance horizontalPointDistance = length(localPoint.get(X, Z));
-	const Scale1D radiusDifferenceScale = ((horizontalPointDistance - topRadius) * radiusDifference + (centerLineLength - verticalPoint) * 2.0f * centerLineLength) /
-	                                      (length2(radiusDifference) + length2(2.0f * centerLineLength));
-	return horizontalPointDistance - topRadius - radiusDifference * clamp(radiusDifferenceScale, Scale1D{}, Scale1D{1}) < 0;
+	const Scale1D radiusDifferenceScale = ((horizontalPointDistance - topRadius) * radiusDifference + (centerLineLength - verticalPoint) * Scalar{2} * centerLineLength) /
+	                                      (length2(radiusDifference) + length2(Scalar{2} * centerLineLength));
+	return horizontalPointDistance - topRadius - radiusDifference * clamp(radiusDifferenceScale, Scale1D{Scalar{0}}, Scale1D{Scalar{1}}) < 0;
 }
 
 Length3D TaperedCylinderShape3D::getLocalSupportPointOffset(Direction3D localDirection) const {
@@ -934,7 +934,7 @@ Length3D TaperedCylinderShape3D::getLocalSupportPointOffset(Direction3D localDir
 
 template <size_t N>
 ConvexPolytopeShape<N>::ConvexPolytopeShape(Span<const Vertex> vertices, ConvexPolytopeVertexIndex maxVertexCount)
-	: ConvexPolytopeShape(SharedPointer<ConvexPolytope<N>>::create(vertices, maxVertexCount)) {}
+	: ConvexPolytopeShape(SharedPointer<ConvexPolytope<N, float>>::create(vertices, maxVertexCount)) {}
 
 template <size_t N>
 Volume ConvexPolytopeShape<N>::calculateVolume() const {
@@ -948,7 +948,7 @@ template <size_t N>
 PrincipalMomentsOfInertia<N> ConvexPolytopeShape<N>::calculatePrincipalMomentsOfInertia(Mass mass) const {
 	// Approximate as the moment of inertia of the bounding box.
 	const grem::Box<N, float> boundingBox = polytope->getBoundingBox();
-	const Length<N> halfExtents = ((boundingBox.max - boundingBox.min) * 0.5f) * Length<N>::UNIT;
+	const Length<N> halfExtents = ((grem::Point<N, Scalar>{boundingBox.max} - grem::Point<N, Scalar>{boundingBox.min}) * Scalar{0.5}) * Length<N>::UNIT;
 	if (any(lessThanEqual(halfExtents, 0))) {
 		return {};
 	}
@@ -959,7 +959,7 @@ template <size_t N>
 Optional<Area> ConvexPolytopeShape<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
 	// Approximate as the reference area of the bounding box.
 	const grem::Box<N, float> boundingBox = polytope->getBoundingBox();
-	const Length<N> halfExtents = ((boundingBox.max - boundingBox.min) * 0.5f) * Length<N>::UNIT;
+	const Length<N> halfExtents = ((grem::Point<N, Scalar>{boundingBox.max} - grem::Point<N, Scalar>{boundingBox.min}) * Scalar{0.5}) * Length<N>::UNIT;
 	if (any(lessThanEqual(halfExtents, 0))) {
 		return {};
 	}
@@ -1074,7 +1074,7 @@ ConvexPolytopeVertexIndex ConvexPolytopeShape<N>::getLocalSupportPointVertexInde
 	if constexpr (N == 3) {
 		const Span<const Edge> edges = polytope->getEdges();
 		ConvexPolytopeVertexIndex farthestVertexIndex = searchStartVertexIndex;
-		float farthestSignedDistance = dot(vertices[farthestVertexIndex], vec<N, float>{localDirection});
+		Scalar farthestSignedDistance = dot(vec<N, Scalar>{vertices[farthestVertexIndex]}, vec<N, Scalar>{localDirection});
 		ConvexPolytopeEdgeIndex farthestVertexEdgeIndex = polytope->getVertexEdgeIndices()[farthestVertexIndex];
 		ConvexPolytopeEdgeIndex oldFarthestVertexEdgeIndex{};
 		do {
@@ -1084,8 +1084,8 @@ ConvexPolytopeVertexIndex ConvexPolytopeShape<N>::getLocalSupportPointVertexInde
 			do {
 				const ConvexPolytopeEdgeIndex twinEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(edgeIndex ^ 1);
 				const ConvexPolytopeVertexIndex twinVertexIndex = edges[twinEdgeIndex].vertexIndex;
-				const float twinSignedDistance = dot(vertices[twinVertexIndex], vec<N, float>{localDirection});
-				if (twinSignedDistance - farthestSignedDistance > Limits<float>::MACHINE_EPSILON * 2.0f) {
+				const Scalar twinSignedDistance = dot(vec<N, Scalar>{vertices[twinVertexIndex]}, vec<N, Scalar>{localDirection});
+				if (twinSignedDistance - farthestSignedDistance > Limits<Scalar>::MACHINE_EPSILON * Scalar{2}) {
 					farthestVertexIndex = twinVertexIndex;
 					farthestSignedDistance = twinSignedDistance;
 					farthestVertexEdgeIndex = twinEdgeIndex;
@@ -1096,9 +1096,9 @@ ConvexPolytopeVertexIndex ConvexPolytopeShape<N>::getLocalSupportPointVertexInde
 		return farthestVertexIndex;
 	} else {
 		ConvexPolytopeVertexIndex farthestVertexIndex = 0;
-		float farthestSignedDistance = dot(vertices.front(), vec<N, float>{localDirection});
+		Scalar farthestSignedDistance = dot(vec<N, Scalar>{vertices.front()}, vec<N, Scalar>{localDirection});
 		for (size_t vertexIndex = 1; vertexIndex < vertices.size(); ++vertexIndex) {
-			const float signedDistance = dot(vertices[vertexIndex], vec<N, float>{localDirection});
+			const Scalar signedDistance = dot(vec<N, Scalar>{vertices[vertexIndex]}, vec<N, Scalar>{localDirection});
 			if (signedDistance > farthestSignedDistance) {
 				farthestVertexIndex = static_cast<ConvexPolytopeVertexIndex>(vertexIndex);
 				farthestSignedDistance = signedDistance;
@@ -1212,11 +1212,11 @@ template class ConvexPolytopeShape<3>;
 
 template <size_t N>
 TriangleMeshShape<N>::TriangleMeshShape(Allocation<Vertex> vertices, Allocation<VertexIndex> indices)
-	: mesh(SharedPointer<TriangleMesh<N>>::create(std::move(vertices), std::move(indices))) {}
+	: mesh(SharedPointer<TriangleMesh<N, float>>::create(std::move(vertices), std::move(indices))) {}
 
 template <size_t N>
 TriangleMeshShape<N>::TriangleMeshShape(Span<const Vertex> vertices, Span<const VertexIndex> indices)
-	: mesh(SharedPointer<TriangleMesh<N>>::create(vertices, indices)) {}
+	: mesh(SharedPointer<TriangleMesh<N, float>>::create(vertices, indices)) {}
 
 template <size_t N>
 Volume TriangleMeshShape<N>::calculateVolume() const {
@@ -1230,7 +1230,7 @@ template <size_t N>
 PrincipalMomentsOfInertia<N> TriangleMeshShape<N>::calculatePrincipalMomentsOfInertia(Mass mass) const {
 	// Approximate as the moment of inertia of the bounding box.
 	const grem::Box<N, float> boundingBox = mesh->getBoundingBox();
-	const Length<N> halfExtents = ((boundingBox.max - boundingBox.min) * 0.5f) * Length<N>::UNIT;
+	const Length<N> halfExtents = ((grem::Point<N, Scalar>{boundingBox.max} - grem::Point<N, Scalar>{boundingBox.min}) * Scalar{0.5}) * Length<N>::UNIT;
 	if (any(lessThanEqual(halfExtents, 0))) {
 		return {};
 	}
@@ -1241,7 +1241,7 @@ template <size_t N>
 Optional<Area> TriangleMeshShape<N>::getReferenceArea(const Basis<N>& basis, Direction<N> direction) const {
 	// Approximate as the reference area of the bounding box.
 	const grem::Box<N, float> boundingBox = mesh->getBoundingBox();
-	const Length<N> halfExtents = ((boundingBox.max - boundingBox.min) * 0.5f) * Length<N>::UNIT;
+	const Length<N> halfExtents = ((grem::Point<N, Scalar>{boundingBox.max} - grem::Point<N, Scalar>{boundingBox.min}) * Scalar{0.5}) * Length<N>::UNIT;
 	if (any(lessThanEqual(halfExtents, 0))) {
 		return {};
 	}
@@ -1277,7 +1277,7 @@ RaycastResult<N> TriangleMeshShape<N>::castLocalRay(Length<N> localRayOrigin, Di
 				}
 			}
 		},
-		[&](const grem::Box<N, float>& boundingBox) -> bool { return boundingBox.intersects(ray.in(Ray<N>::UNIT)); });
+		[&](const grem::Box<N, float>& boundingBox) -> bool { return static_cast<grem::Box<N, Scalar>>(boundingBox).intersects(ray.in(Ray<N>::UNIT)); });
 	return result;
 }
 
@@ -1370,7 +1370,7 @@ Volume CompoundColliderShape<N>::calculateVolume() const {
 template <size_t N>
 PrincipalMomentsOfInertia<N> CompoundColliderShape<N>::calculatePrincipalMomentsOfInertia(Mass mass) const {
 	const Volume totalVolume = calculateVolume();
-	const auto inverseTotalVolume = Coefficient{1} / totalVolume;
+	const auto inverseTotalVolume = Scalar{1} / totalVolume;
 	PrincipalMomentsOfInertia<N> result{};
 	for (const SubCollider<N>& subCollider : getSubColliders()) {
 		const Coefficient volumeAmount = product(subCollider.localScale) * subCollider.collider.shape.calculateVolume() * inverseTotalVolume;

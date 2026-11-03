@@ -164,7 +164,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 
 		struct Prop {
 			phys::Position3D position{};
-			quat orientation{};
+			qua<phys::Scalar> orientation{};
 			phys::Scale3D scale{1_x};
 			String model{};
 			phys::Coefficient staticFriction = 0.8_x;
@@ -177,7 +177,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 
 		struct PhysicsObject {
 			phys::Position3D position{};
-			quat orientation{};
+			qua<phys::Scalar> orientation{};
 			phys::Scale3D scale{1_x};
 			String model{};
 			phys::LinearVelocity3D linearVelocity{};
@@ -201,7 +201,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 
 		struct Vehicle {
 			phys::Position3D position{};
-			quat orientation{};
+			qua<phys::Scalar> orientation{};
 			phys::Scale3D scale{1_x};
 			String vehicleType{};
 		};
@@ -324,16 +324,16 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 		if (!node.name.empty()) {
 			LevelGeometryMaterial material{};
 			if (const json::Value* const staticFriction = node.extras.findProperty("staticFriction")) {
-				material.staticFriction = staticFriction->getNumber<float>();
+				material.staticFriction = staticFriction->getNumber<phys::Scalar>();
 			}
 			if (const json::Value* const kineticFriction = node.extras.findProperty("kineticFriction")) {
-				material.kineticFriction = kineticFriction->getNumber<float>();
+				material.kineticFriction = kineticFriction->getNumber<phys::Scalar>();
 			}
 			if (const json::Value* const rollingResistance = node.extras.findProperty("rollingResistance")) {
-				material.rollingResistance = rollingResistance->getNumber<float>();
+				material.rollingResistance = rollingResistance->getNumber<phys::Scalar>();
 			}
 			if (const json::Value* const restitution = node.extras.findProperty("restitution")) {
-				material.restitution = restitution->getNumber<float>();
+				material.restitution = restitution->getNumber<phys::Scalar>();
 			}
 			if (const json::Value* const frictionCombine = node.extras.findProperty("frictionCombine")) {
 				const json::String& name = frictionCombine->getString();
@@ -375,7 +375,6 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 		levelGeometryBindPoseTransformation.assign(mat4{1.0f}, levelGeometryModel.bindPose.localJoints, levelGeometryModel.bindPose.localMorphTargetWeights,
 			levelGeometryModel.jointParentIndices);
 
-		Buffer<TriangleMeshVertexIndex> temporaryIndices{};
 		for (const res::Model::Instance& instance : levelGeometryModel.instances) {
 			const res::Model::Mesh& mesh = levelGeometryModel.meshes.at(instance.meshIndex);
 			if ((mesh.vertexFlags & res::Model::VERTEX_SKINNED) != 0) {
@@ -385,17 +384,22 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 			const mat4 jointMatrix = levelGeometryBindPoseTransformation.jointMatrices[instance.jointIndex];
 			const auto [translation, rotation, scale] = decomposeTranslationRotationScale(jointMatrix);
 
-			const Span<const vec3> meshPositions{
+			const Span<const vec3> positions{
 				std::launder(reinterpret_cast<const vec3*>(
 					levelGeometryModel.meshData.data() + static_cast<size_t>(mesh.meshDataOffset) * 4 + static_cast<size_t>(mesh.indexCount) * sizeof(uint32_t))),
 				static_cast<size_t>(mesh.vertexCount)};
+			Allocation<TriangleMeshVertex<3, float>> meshPositions(positions.size());
+			transform(positions, meshPositions.begin(), [](vec3 position) -> TriangleMeshVertex<3, float> { return static_cast<TriangleMeshVertex<3, float>>(position); });
 
-			Span<const uint32_t> meshIndices{std::launder(reinterpret_cast<const uint32_t*>(levelGeometryModel.meshData.data() + static_cast<size_t>(mesh.meshDataOffset) * 4)),
-				static_cast<size_t>(mesh.indexCount)};
+			Allocation<TriangleMeshVertexIndex> meshIndices(mesh.indexCount);
 			if (mesh.indexCount == 0) {
-				temporaryIndices.resize(meshPositions.size());
-				iota(Span{temporaryIndices}.last(meshPositions.size()), TriangleMeshVertexIndex{0});
-				meshIndices = temporaryIndices;
+				meshIndices.resize(positions.size());
+				iota(meshIndices, TriangleMeshVertexIndex{0});
+			} else {
+				const Span<const uint32_t> indices{
+					std::launder(reinterpret_cast<const uint32_t*>(levelGeometryModel.meshData.data() + static_cast<size_t>(mesh.meshDataOffset) * 4)),
+					static_cast<size_t>(mesh.indexCount)};
+				transform(indices, meshIndices.begin(), [](uint32_t index) -> TriangleMeshVertexIndex { return static_cast<TriangleMeshVertexIndex>(index); });
 			}
 
 			LevelGeometryMaterial material{};
@@ -412,7 +416,7 @@ void loadLevel(phys::EntityRegistry3D& registry, phys::ResourceRegistry3D& resou
 					.gravityAcceleration{},
 					.mass = phys::Mass::INF,
 					.principalMomentsOfInertia = phys::PrincipalMomentsOfInertia3D::INF,
-					.collider{.shape = phys::TriangleMeshShape3D{meshPositions, meshIndices}, .filter{.layers = COLLISION_LAYER_LEVEL_GEOMETRY}},
+					.collider{.shape = phys::TriangleMeshShape3D{std::move(meshPositions), std::move(meshIndices)}, .filter{.layers = COLLISION_LAYER_LEVEL_GEOMETRY}},
 					.material{
 						.staticFriction = material.staticFriction,
 						.kineticFriction = material.kineticFriction,

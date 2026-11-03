@@ -201,10 +201,10 @@ public:
 		const Position3D minPointB = transformationB(shapeB.getLocalSupportPointOffset(-localNormalB));
 		const Position3D maxPointB = transformationB(shapeB.getLocalSupportPointOffset(localNormalB));
 
-		const Length1D minA = dot(minPointA - 0, normal);
-		const Length1D maxA = dot(maxPointA - 0, normal);
-		const Length1D minB = dot(minPointB - 0, normal);
-		const Length1D maxB = dot(maxPointB - 0, normal);
+		const Length1D minA = dot(+minPointA, normal);
+		const Length1D maxA = dot(+maxPointA, normal);
+		const Length1D minB = dot(+minPointB, normal);
+		const Length1D maxB = dot(+maxPointB, normal);
 
 		const Length1D penetrationDepth = maxA - minB;
 		const Length1D oppositePenetrationDepth = maxB - minA;

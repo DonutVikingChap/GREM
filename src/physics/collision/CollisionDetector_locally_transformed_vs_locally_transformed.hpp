@@ -79,8 +79,8 @@ public:
 						for (ContactPoint<N>& point : collision.manifold.points) {
 							point.offsets.first = locallyTransformedShapeA.localOffset + point.offsets.first;
 							point.offsets.second = locallyTransformedShapeB.localOffset + point.offsets.second;
-							point.localOffsets.first = localTransformationA(point.localOffsets.first) - 0;
-							point.localOffsets.second = localTransformationB(point.localOffsets.second) - 0;
+							point.localOffsets.first = +localTransformationA(point.localOffsets.first);
+							point.localOffsets.second = +localTransformationB(point.localOffsets.second);
 						}
 						callback(collision);
 					});

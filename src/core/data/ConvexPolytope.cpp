@@ -17,16 +17,16 @@ namespace grem {
 
 namespace {
 
-template <size_t N>
-[[nodiscard]] size_t findFarthestVertexInDirection(Span<const vec<N, float>> vertices, vec<N, float> direction) noexcept {
+template <size_t N, typename Scalar>
+[[nodiscard]] size_t findFarthestVertexInDirection(Span<const vec<N, Scalar>> vertices, vec<N, Scalar> direction) noexcept {
 	if (vertices.empty()) {
 		[[unlikely]];
 		return 0;
 	}
 	size_t farthestVertexIndex = 0;
-	float farthestSignedDistance = dot(vertices.front(), direction);
+	Scalar farthestSignedDistance = dot(vertices.front(), direction);
 	for (size_t vertexIndex = 1; vertexIndex < vertices.size(); ++vertexIndex) {
-		const float signedDistance = dot(vertices[vertexIndex], direction);
+		const Scalar signedDistance = dot(vertices[vertexIndex], direction);
 		if (signedDistance > farthestSignedDistance) {
 			farthestVertexIndex = vertexIndex;
 			farthestSignedDistance = signedDistance;
@@ -35,15 +35,15 @@ template <size_t N>
 	return farthestVertexIndex;
 }
 
-template <size_t N>
-[[nodiscard]] size_t findFarthestUnvisitedVertexInDirection(Span<const vec<N, float>> vertices, Span<const bool> visited, vec<N, float> direction) noexcept {
+template <size_t N, typename Scalar>
+[[nodiscard]] size_t findFarthestUnvisitedVertexInDirection(Span<const vec<N, Scalar>> vertices, Span<const bool> visited, vec<N, Scalar> direction) noexcept {
 	size_t farthestVertexIndex = vertices.size();
-	float farthestSignedDistance = Limits<float>::MIN;
+	Scalar farthestSignedDistance = Limits<Scalar>::MIN;
 	for (size_t vertexIndex = 0; vertexIndex < vertices.size(); ++vertexIndex) {
 		if (visited[vertexIndex]) {
 			continue;
 		}
-		const float signedDistance = dot(vertices[vertexIndex], direction);
+		const Scalar signedDistance = dot(vertices[vertexIndex], direction);
 		if (signedDistance > farthestSignedDistance) {
 			farthestVertexIndex = vertexIndex;
 			farthestSignedDistance = signedDistance;
@@ -52,38 +52,39 @@ template <size_t N>
 	return farthestVertexIndex;
 }
 
-[[nodiscard]] bool buildSimplex(Buffer<size_t>& outputVertexIndices, Span<const vec3> vertices) {
-	const vec3 initialDirection = normalize(vec3{1.0f});
-	const size_t a = findFarthestVertexInDirection<3>(vertices, initialDirection);
-	const size_t b = findFarthestVertexInDirection<3>(vertices, -initialDirection);
+template <typename Scalar>
+[[nodiscard]] bool buildSimplex(Buffer<size_t>& outputVertexIndices, Span<const ConvexPolytopeVertex<3, Scalar>> vertices) {
+	const vec<3, Scalar> initialDirection = normalize(vec<3, Scalar>{Scalar{1}});
+	const size_t a = findFarthestVertexInDirection<3, Scalar>(vertices, initialDirection);
+	const size_t b = findFarthestVertexInDirection<3, Scalar>(vertices, -initialDirection);
 	if (a == b) {
 		return false;
 	}
 
-	const vec3 ab = vertices[b] - vertices[a];
-	const vec3 abX = cross(vec3{1.0f, 0.0f, 0.0f}, ab);
-	const vec3 abY = cross(vec3{0.0f, 1.0f, 0.0f}, ab);
-	const vec3 secondDirection = (length2(abX) > length2(abY)) ? abX : abY;
-	size_t c = findFarthestVertexInDirection<3>(vertices, secondDirection);
+	const vec<3, Scalar> ab = vertices[b] - vertices[a];
+	const vec<3, Scalar> abX = cross(vec<3, Scalar>{Scalar{1}, Scalar{0}, Scalar{0}}, ab);
+	const vec<3, Scalar> abY = cross(vec<3, Scalar>{Scalar{0}, Scalar{1}, Scalar{0}}, ab);
+	const vec<3, Scalar> secondDirection = (length2(abX) > length2(abY)) ? abX : abY;
+	size_t c = findFarthestVertexInDirection<3, Scalar>(vertices, secondDirection);
 	if (c == a || c == b) {
-		c = findFarthestVertexInDirection<3>(vertices, -secondDirection);
+		c = findFarthestVertexInDirection<3, Scalar>(vertices, -secondDirection);
 		if (c == a || c == b) {
 			return false;
 		}
 	}
 
-	const vec3 ac = vertices[c] - vertices[a];
-	const vec3 abc = cross(ab, ac);
-	size_t d = findFarthestVertexInDirection<3>(vertices, abc);
+	const vec<3, Scalar> ac = vertices[c] - vertices[a];
+	const vec<3, Scalar> abc = cross(ab, ac);
+	size_t d = findFarthestVertexInDirection<3, Scalar>(vertices, abc);
 	if (d == a || d == b || d == c) {
-		d = findFarthestVertexInDirection<3>(vertices, -abc);
+		d = findFarthestVertexInDirection<3, Scalar>(vertices, -abc);
 		if (d == a || d == b || d == c) {
 			return false;
 		}
 	}
 
-	const vec3 ad = vertices[d] - vertices[a];
-	if (dot(ad, abc) < 0.0f) {
+	const vec<3, Scalar> ad = vertices[d] - vertices[a];
+	if (dot(ad, abc) < Scalar{0}) {
 		std::swap(c, d);
 	}
 
@@ -94,46 +95,46 @@ template <size_t N>
 	return true;
 }
 
-} // namespace
-
-detail::ConvexPolytopeData<2> detail::buildConvexHull2D(Span<const ConvexPolytopeVertex2D> vertices, const mat3& transformation, ConvexPolytopeVertexIndex maxVertexCount) {
-	detail::ConvexPolytopeData<2> result{};
+template <typename Scalar>
+detail::ConvexPolytopeData<2, Scalar> buildConvexHull2D(Span<const ConvexPolytopeVertex<2, Scalar>> vertices, const mat<3, 3, Scalar>& transformation,
+	ConvexPolytopeVertexIndex maxVertexCount) {
+	detail::ConvexPolytopeData<2, Scalar> result{};
 	if (min(vertices.size(), size_t{maxVertexCount}) < 3) {
 		return result;
 	}
 
 	result.vertices.resize(vertices.size());
 	for (size_t i = 0; i < vertices.size(); ++i) {
-		result.vertices[i] = vec2{transformation * vec3{vertices[i], 1.0f}};
+		result.vertices[i] = ConvexPolytopeVertex<2, Scalar>{transformation * vec<3, Scalar>{vertices[i], Scalar{1}}};
 	}
 
-	const Box<2, float> fullBoundingBox = calculateBoundingBox<2, float>(result.vertices);
-	const float epsilon = length(fullBoundingBox.max - fullBoundingBox.min) * 0.001f;
-	const float epsilonSquared = length2(epsilon);
+	const Box<2, Scalar> fullBoundingBox = calculateBoundingBox<2, Scalar>(result.vertices);
+	const Scalar epsilon = length(fullBoundingBox.max - fullBoundingBox.min) * Scalar{0.001};
+	const Scalar epsilonSquared = length2(epsilon);
 
 	// Reference: R.L. Graham: "An efficient algorith for determining the convex hull of a finite planar set": Information Processing Letters 1 (1972) 132-133: https://doi.org/10.1016%2F0020-0190%2872%2990045-2
 
-	ConvexPolytopeVertex2D lowestVertex = result.vertices[0];
-	for (const ConvexPolytopeVertex2D& vertex : Span{result.vertices}.subspan(1)) {
+	ConvexPolytopeVertex<2, Scalar> lowestVertex = result.vertices[0];
+	for (const ConvexPolytopeVertex<2, Scalar>& vertex : Span{result.vertices}.subspan(1)) {
 		if ((vertex.y == lowestVertex.y && vertex.x < lowestVertex.x) || vertex.y < lowestVertex.y) {
 			lowestVertex = vertex;
 		}
 	}
 
-	const auto getOrientation = [](ConvexPolytopeVertex2D a, ConvexPolytopeVertex2D b, ConvexPolytopeVertex2D c) -> double {
+	const auto getOrientation = [](ConvexPolytopeVertex<2, Scalar> a, ConvexPolytopeVertex<2, Scalar> b, ConvexPolytopeVertex<2, Scalar> c) -> double {
 		// Testing on real-world meshes shows that double precision seems necessary for numerical stability in practice.
 		const dvec2 ab = dvec2{b} - dvec2{a};
 		const dvec2 bc = dvec2{c} - dvec2{b};
 		return dot(dvec2{ab.y, -ab.x}, bc);
 	};
 
-	sort(result.vertices, [&](const ConvexPolytopeVertex2D& a, const ConvexPolytopeVertex2D& b) -> bool {
+	sort(result.vertices, [&](const ConvexPolytopeVertex<2, Scalar>& a, const ConvexPolytopeVertex<2, Scalar>& b) -> bool {
 		const double ordering = getOrientation(lowestVertex, a, b);
 		return (ordering == 0.0 && distance2(a, lowestVertex) < distance2(b, lowestVertex)) || ordering < 0.0;
 	});
 
-	Buffer<ConvexPolytopeVertex2D> stack{result.vertices[0]};
-	for (const ConvexPolytopeVertex2D& vertex : Span{result.vertices}.subspan(1)) {
+	Buffer<ConvexPolytopeVertex<2, Scalar>> stack{result.vertices[0]};
+	for (const ConvexPolytopeVertex<2, Scalar>& vertex : Span{result.vertices}.subspan(1)) {
 		while (stack.size() >= 2 && getOrientation(stack[stack.size() - 2], stack.back(), vertex) >= 0.0) {
 			stack.pop_back();
 		}
@@ -151,13 +152,13 @@ detail::ConvexPolytopeData<2> detail::buildConvexHull2D(Span<const ConvexPolytop
 		// Grow epsilon exponentially until the stack has been reduced to the desired vertex count.
 		// If we accidentally remove so many vertices that less than 3 remain,
 		// keep the previous set before that and instead choose vertices by iterating around the hull with a uniform step size (handled by the loop after this).
-		Buffer<ConvexPolytopeVertex2D> reducedVertices{};
-		float newEpsilon = max(epsilon, Limits<float>::MACHINE_EPSILON * 8.0f);
+		Buffer<ConvexPolytopeVertex<2, Scalar>> reducedVertices{};
+		Scalar newEpsilon = max(epsilon, Limits<Scalar>::MACHINE_EPSILON * Scalar{8});
 		do {
-			newEpsilon *= 1.125f;
-			const float newEpsilonSquared = length(newEpsilon);
+			newEpsilon *= Scalar{1.125};
+			const Scalar newEpsilonSquared = length(newEpsilon);
 			reducedVertices.push_back(stack[0]);
-			for (const ConvexPolytopeVertex2D& vertex : Span{stack}.subspan(1)) {
+			for (const ConvexPolytopeVertex<2, Scalar>& vertex : Span{stack}.subspan(1)) {
 				if (distance2(vertex, reducedVertices.back()) > newEpsilonSquared) {
 					reducedVertices.push_back(vertex);
 				}
@@ -179,61 +180,63 @@ detail::ConvexPolytopeData<2> detail::buildConvexHull2D(Span<const ConvexPolytop
 
 	result.faces.resize(vertexCount);
 	for (size_t i = 0; i < vertexCount; ++i) {
-		const vec2 difference = result.vertices[(i + 1) % vertexCount] - result.vertices[i];
-		result.faces[i].normal = normalize(vec2{difference.y, -difference.x});
+		const vec<2, Scalar> difference = result.vertices[(i + 1) % vertexCount] - result.vertices[i];
+		result.faces[i].normal = normalize(vec<2, Scalar>{difference.y, -difference.x});
 	}
 	return result;
 }
 
-detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytopeVertex3D> vertices, const mat4& transformation, ConvexPolytopeVertexIndex maxVertexCount) {
-	detail::ConvexPolytopeData<3> result{};
+template <typename Scalar>
+detail::ConvexPolytopeData<3, Scalar> buildConvexHull3D(Span<const ConvexPolytopeVertex<3, Scalar>> vertices, const mat<4, 4, Scalar>& transformation,
+	ConvexPolytopeVertexIndex maxVertexCount) {
+	detail::ConvexPolytopeData<3, Scalar> result{};
 	if (min(vertices.size(), size_t{maxVertexCount}) < 4) {
 		return result;
 	}
 
 	result.vertices.resize(vertices.size());
 	for (size_t i = 0; i < vertices.size(); ++i) {
-		result.vertices[i] = vec3{transformation * vec4{vertices[i], 1.0f}};
+		result.vertices[i] = ConvexPolytopeVertex<3, Scalar>{transformation * vec<4, Scalar>{vertices[i], Scalar{1}}};
 	}
 
-	const Box<3, float> fullBoundingBox = calculateBoundingBox<3, float>(result.vertices);
-	const float epsilon = length(fullBoundingBox.max - fullBoundingBox.min) * 0.001f;
+	const Box<3, Scalar> fullBoundingBox = calculateBoundingBox<3, Scalar>(result.vertices);
+	const Scalar epsilon = length(fullBoundingBox.max - fullBoundingBox.min) * Scalar{0.001};
 
 	// References:
 	// - Randy Gaul: "Convex Hull Generation with Quick Hull" (2013): https://randygaul.github.io/math/collision-detection/2013/11/01/Convex-Hull-Generation.html
 	// - Dirk Gregorius (Valve Software): "Implementing Quickhull": Game Developers Conference (2014): https://media.gdcvault.com/GDC2014/Presentations/gregorius_dirk_implementing_quickhull.pdf
 
 	Buffer<size_t> vertexIndices{};
-	if (!buildSimplex(vertexIndices, result.vertices)) {
+	if (!buildSimplex<Scalar>(vertexIndices, result.vertices)) {
 		result.vertices.clear();
 		return result;
 	}
 
-	Buffer<ConvexPolytopeEdge3D> newEdges{
-		ConvexPolytopeEdge3D{.vertexIndex = 0, .faceIndex = 0, .nextEdgeIndex = 2},  // 0
-		ConvexPolytopeEdge3D{.vertexIndex = 2, .faceIndex = 2, .nextEdgeIndex = 9},  // 1
-		ConvexPolytopeEdge3D{.vertexIndex = 2, .faceIndex = 0, .nextEdgeIndex = 4},  // 2
-		ConvexPolytopeEdge3D{.vertexIndex = 1, .faceIndex = 3, .nextEdgeIndex = 11}, // 3
-		ConvexPolytopeEdge3D{.vertexIndex = 1, .faceIndex = 0, .nextEdgeIndex = 0},  // 4
-		ConvexPolytopeEdge3D{.vertexIndex = 0, .faceIndex = 1, .nextEdgeIndex = 6},  // 5
-		ConvexPolytopeEdge3D{.vertexIndex = 1, .faceIndex = 1, .nextEdgeIndex = 8},  // 6
-		ConvexPolytopeEdge3D{.vertexIndex = 3, .faceIndex = 3, .nextEdgeIndex = 3},  // 7
-		ConvexPolytopeEdge3D{.vertexIndex = 3, .faceIndex = 1, .nextEdgeIndex = 5},  // 8
-		ConvexPolytopeEdge3D{.vertexIndex = 0, .faceIndex = 2, .nextEdgeIndex = 10}, // 9
-		ConvexPolytopeEdge3D{.vertexIndex = 3, .faceIndex = 2, .nextEdgeIndex = 1},  // 10
-		ConvexPolytopeEdge3D{.vertexIndex = 2, .faceIndex = 3, .nextEdgeIndex = 7},  // 11
+	Buffer<ConvexPolytopeEdge<3, Scalar>> newEdges{
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 0, .faceIndex = 0, .nextEdgeIndex = 2},  // 0
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 2, .faceIndex = 2, .nextEdgeIndex = 9},  // 1
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 2, .faceIndex = 0, .nextEdgeIndex = 4},  // 2
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 1, .faceIndex = 3, .nextEdgeIndex = 11}, // 3
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 1, .faceIndex = 0, .nextEdgeIndex = 0},  // 4
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 0, .faceIndex = 1, .nextEdgeIndex = 6},  // 5
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 1, .faceIndex = 1, .nextEdgeIndex = 8},  // 6
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 3, .faceIndex = 3, .nextEdgeIndex = 3},  // 7
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 3, .faceIndex = 1, .nextEdgeIndex = 5},  // 8
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 0, .faceIndex = 2, .nextEdgeIndex = 10}, // 9
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 3, .faceIndex = 2, .nextEdgeIndex = 1},  // 10
+		ConvexPolytopeEdge<3, Scalar>{.vertexIndex = 2, .faceIndex = 3, .nextEdgeIndex = 7},  // 11
 	};
 
-	const auto getFaceNormal = [&](const ConvexPolytopeEdgeIndex firstEdgeIndex) -> vec3 {
-		vec3 normal{};
+	const auto getFaceNormal = [&](const ConvexPolytopeEdgeIndex firstEdgeIndex) -> vec<3, Scalar> {
+		vec<3, Scalar> normal{};
 		ConvexPolytopeEdgeIndex edgeIndex = firstEdgeIndex;
 		do {
-			const ConvexPolytopeEdge3D& edge = newEdges[edgeIndex];
+			const ConvexPolytopeEdge<3, Scalar>& edge = newEdges[edgeIndex];
 			const ConvexPolytopeEdgeIndex nextEdgeIndex = edge.nextEdgeIndex;
-			const ConvexPolytopeEdge3D& nextEdge = newEdges[nextEdgeIndex];
+			const ConvexPolytopeEdge<3, Scalar>& nextEdge = newEdges[nextEdgeIndex];
 
-			const vec3 vertex = result.vertices[vertexIndices[edge.vertexIndex]];
-			const vec3 nextVertex = result.vertices[vertexIndices[nextEdge.vertexIndex]];
+			const ConvexPolytopeVertex<3, Scalar> vertex = result.vertices[vertexIndices[edge.vertexIndex]];
+			const ConvexPolytopeVertex<3, Scalar> nextVertex = result.vertices[vertexIndices[nextEdge.vertexIndex]];
 
 			normal.x += (vertex.y - nextVertex.y) * (vertex.z + nextVertex.z);
 			normal.y += (vertex.z - nextVertex.z) * (vertex.x + nextVertex.x);
@@ -244,21 +247,21 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		return normalize(normal);
 	};
 
-	Buffer<ConvexPolytopeFace3D> newFaces{
-		ConvexPolytopeFace3D{.normal = getFaceNormal(0), .firstEdgeIndex = 0},
-		ConvexPolytopeFace3D{.normal = getFaceNormal(5), .firstEdgeIndex = 5},
-		ConvexPolytopeFace3D{.normal = getFaceNormal(1), .firstEdgeIndex = 1},
-		ConvexPolytopeFace3D{.normal = getFaceNormal(3), .firstEdgeIndex = 3},
+	Buffer<ConvexPolytopeFace<3, Scalar>> newFaces{
+		ConvexPolytopeFace<3, Scalar>{.normal = getFaceNormal(0), .firstEdgeIndex = 0},
+		ConvexPolytopeFace<3, Scalar>{.normal = getFaceNormal(5), .firstEdgeIndex = 5},
+		ConvexPolytopeFace<3, Scalar>{.normal = getFaceNormal(1), .firstEdgeIndex = 1},
+		ConvexPolytopeFace<3, Scalar>{.normal = getFaceNormal(3), .firstEdgeIndex = 3},
 	};
 
 	Allocation<bool> visitedVertices(result.vertices.size(), false);
 	for (const size_t i : vertexIndices) {
 		visitedVertices[i] = true;
 	}
-	for (const ConvexPolytopeFace3D& face : newFaces) {
-		const vec3 facePoint = result.vertices[vertexIndices[newEdges[face.firstEdgeIndex].vertexIndex]];
+	for (const ConvexPolytopeFace<3, Scalar>& face : newFaces) {
+		const ConvexPolytopeVertex<3, Scalar> facePoint = result.vertices[vertexIndices[newEdges[face.firstEdgeIndex].vertexIndex]];
 		for (size_t vertexIndex = 0; vertexIndex < result.vertices.size(); ++vertexIndex) {
-			if (dot(result.vertices[vertexIndex] - facePoint, vec3{face.normal}) > epsilon) {
+			if (dot(result.vertices[vertexIndex] - facePoint, face.normal) > epsilon) {
 				visitedVertices[vertexIndex] = false;
 			}
 		}
@@ -272,7 +275,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 	Buffer<ConvexPolytopeEdgeIndex> edgeIndicesAfterDeletion{};
 	Buffer<ConvexPolytopeFaceIndex> faceIndicesAfterDeletion{};
 	while (vertexIndices.size() < size_t{maxVertexCount}) {
-		float farthestExpansion = epsilon;
+		Scalar farthestExpansion = epsilon;
 		size_t farthestVertexIndex = result.vertices.size();
 		size_t farthestFaceIndex = 0;
 
@@ -281,12 +284,12 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 
 		// Find new vertex that maximizes the expansion of the hull.
 		for (size_t faceIndex = 0; faceIndex < faceCount; ++faceIndex) {
-			const ConvexPolytopeFace3D& face = newFaces[faceIndex];
-			const vec3 facePoint = result.vertices[vertexIndices[newEdges[face.firstEdgeIndex].vertexIndex]];
+			const ConvexPolytopeFace<3, Scalar>& face = newFaces[faceIndex];
+			const ConvexPolytopeVertex<3, Scalar> facePoint = result.vertices[vertexIndices[newEdges[face.firstEdgeIndex].vertexIndex]];
 
-			const size_t vertexIndex = findFarthestUnvisitedVertexInDirection<3>(result.vertices, visitedVertices, vec3{face.normal});
+			const size_t vertexIndex = findFarthestUnvisitedVertexInDirection<3, Scalar>(result.vertices, visitedVertices, face.normal);
 			if (vertexIndex < result.vertices.size()) {
-				const float expansion = dot(result.vertices[vertexIndex] - facePoint, vec3{face.normal});
+				const Scalar expansion = dot(result.vertices[vertexIndex] - facePoint, face.normal);
 				if (expansion > farthestExpansion) {
 					farthestExpansion = expansion;
 					farthestVertexIndex = vertexIndex;
@@ -297,7 +300,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		if (farthestVertexIndex >= result.vertices.size()) {
 			break;
 		}
-		const vec3 newVertex = result.vertices[farthestVertexIndex];
+		const ConvexPolytopeVertex<3, Scalar> newVertex = result.vertices[farthestVertexIndex];
 
 		// Find the horizon line of the current mesh when viewed from the new vertex.
 		horizonLine.clear();
@@ -308,9 +311,9 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		size_t edgesToDeleteCount = 0;
 		size_t facesToDeleteCount = 0;
 
-		const auto isFaceVisible = [&](const ConvexPolytopeFace3D& face) -> bool {
-			const vec3 facePoint = result.vertices[vertexIndices[newEdges[face.firstEdgeIndex].vertexIndex]];
-			const float signedDistanceAlongFaceNormal = dot(newVertex - facePoint, vec3{face.normal});
+		const auto isFaceVisible = [&](const ConvexPolytopeFace<3, Scalar>& face) -> bool {
+			const ConvexPolytopeVertex<3, Scalar> facePoint = result.vertices[vertexIndices[newEdges[face.firstEdgeIndex].vertexIndex]];
+			const Scalar signedDistanceAlongFaceNormal = dot(newVertex - facePoint, face.normal);
 			return signedDistanceAlongFaceNormal > -epsilon;
 		};
 
@@ -372,7 +375,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 			if (edgesToDelete[edgeIndex]) {
 				edgeIndicesAfterDeletion.push_back(Limits<ConvexPolytopeEdgeIndex>::MAX);
 			} else {
-				ConvexPolytopeEdge3D& newEdge = newEdges[remainingEdgeCount];
+				ConvexPolytopeEdge<3, Scalar>& newEdge = newEdges[remainingEdgeCount];
 				newEdge = newEdges[edgeIndex];
 				newEdge.faceIndex = static_cast<ConvexPolytopeFaceIndex>(faceIndicesAfterDeletion[newEdge.faceIndex]);
 				edgeIndicesAfterDeletion.push_back(static_cast<ConvexPolytopeEdgeIndex>(remainingEdgeCount));
@@ -383,12 +386,12 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		newEdges.resize(remainingEdgeCount);
 
 		// Fixup the edge indices of remaining faces.
-		for (ConvexPolytopeFace3D& face : newFaces) {
+		for (ConvexPolytopeFace<3, Scalar>& face : newFaces) {
 			GREM_ASSERT(edgeIndicesAfterDeletion[face.firstEdgeIndex] != Limits<ConvexPolytopeEdgeIndex>::MAX);
 			face.firstEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(edgeIndicesAfterDeletion[face.firstEdgeIndex]);
 		}
 		// Fixup the edge indices of remaining edges.
-		for (ConvexPolytopeEdge3D& edge : newEdges) {
+		for (ConvexPolytopeEdge<3, Scalar>& edge : newEdges) {
 			GREM_ASSERT(edgeIndicesAfterDeletion[edge.nextEdgeIndex] != Limits<ConvexPolytopeEdgeIndex>::MAX || edge.faceIndex == Limits<ConvexPolytopeFaceIndex>::MAX);
 			edge.nextEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(edgeIndicesAfterDeletion[edge.nextEdgeIndex]);
 		}
@@ -403,7 +406,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		if (edgesToDeleteCount >= 4) {
 			verticesToKeep.clear();
 			verticesToKeep.resize(vertexIndices.size(), false);
-			for (const ConvexPolytopeEdge3D& edge : newEdges) {
+			for (const ConvexPolytopeEdge<3, Scalar>& edge : newEdges) {
 				verticesToKeep[edge.vertexIndex] = true;
 			}
 
@@ -422,7 +425,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 			vertexIndices.resize(remainingVertexCount);
 
 			// Fixup the vertex indices of edges.
-			for (ConvexPolytopeEdge3D& edge : newEdges) {
+			for (ConvexPolytopeEdge<3, Scalar>& edge : newEdges) {
 				GREM_ASSERT(vertexIndicesAfterDeletion[edge.vertexIndex] != Limits<ConvexPolytopeVertexIndex>::MAX);
 				edge.vertexIndex = static_cast<ConvexPolytopeVertexIndex>(vertexIndicesAfterDeletion[edge.vertexIndex]);
 			}
@@ -433,29 +436,30 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		vertexIndices.push_back(farthestVertexIndex);
 
 		// Add new faces and edges towards the new vertex.
-		const auto getNewFaceNormal = [&](vec3 firstVertex, vec3 secondVertex) -> vec3 {
-			const vec3 result = normalize(cross(secondVertex - firstVertex, newVertex - firstVertex));
+		const auto getNewFaceNormal = [&](ConvexPolytopeVertex<3, Scalar> firstVertex, ConvexPolytopeVertex<3, Scalar> secondVertex) -> vec<3, Scalar> {
+			const vec<3, Scalar> result = normalize(cross(secondVertex - firstVertex, newVertex - firstVertex));
 			GREM_ASSERT(!any(isnan(result)));
 			return result;
 		};
 
 		size_t currentHorizonIndex = 0;
-		vec3 currentVertex = result.vertices[vertexIndices[newEdges[horizonLine[1]].vertexIndex]];
-		vec3 currentNormal = getNewFaceNormal(result.vertices[vertexIndices[newEdges[horizonLine[0]].vertexIndex]], currentVertex);
-		const vec3 firstNormal = currentNormal;
+		ConvexPolytopeVertex<3, Scalar> currentVertex = result.vertices[vertexIndices[newEdges[horizonLine[1]].vertexIndex]];
+		ConvexPolytopeVertex<3, Scalar> currentNormal = getNewFaceNormal(result.vertices[vertexIndices[newEdges[horizonLine[0]].vertexIndex]], currentVertex);
+		const vec<3, Scalar> firstNormal = currentNormal;
 		const ConvexPolytopeEdgeIndex firstUpEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(newEdges.size());
-		newEdges.push_back(ConvexPolytopeEdge3D{.vertexIndex = newEdges[horizonLine[0]].vertexIndex, .faceIndex = 0, .nextEdgeIndex = 0});
+		newEdges.push_back(ConvexPolytopeEdge<3, Scalar>{.vertexIndex = newEdges[horizonLine[0]].vertexIndex, .faceIndex = 0, .nextEdgeIndex = 0});
 		const ConvexPolytopeEdgeIndex firstDownEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(newEdges.size());
 		const ConvexPolytopeFaceIndex firstFaceIndex = static_cast<ConvexPolytopeFaceIndex>(newFaces.size());
 
 		const auto addNewFaceUntil = [&](size_t endHorizonIndex) -> void {
 			const ConvexPolytopeFaceIndex faceIndex = static_cast<ConvexPolytopeFaceIndex>(newFaces.size());
-			newFaces.push_back(ConvexPolytopeFace3D{.normal = currentNormal, .firstEdgeIndex = horizonLine[currentHorizonIndex]});
+			newFaces.push_back(ConvexPolytopeFace<3, Scalar>{.normal = currentNormal, .firstEdgeIndex = horizonLine[currentHorizonIndex]});
 
 			const ConvexPolytopeEdgeIndex downEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(newEdges.size());
-			newEdges.push_back(ConvexPolytopeEdge3D{.vertexIndex = newVertexIndex, .faceIndex = faceIndex, .nextEdgeIndex = horizonLine[currentHorizonIndex]});
+			newEdges.push_back(ConvexPolytopeEdge<3, Scalar>{.vertexIndex = newVertexIndex, .faceIndex = faceIndex, .nextEdgeIndex = horizonLine[currentHorizonIndex]});
 			const ConvexPolytopeEdgeIndex upEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(newEdges.size());
-			newEdges.push_back(ConvexPolytopeEdge3D{.vertexIndex = newEdges[horizonLine[endHorizonIndex]].vertexIndex, .faceIndex = faceIndex, .nextEdgeIndex = downEdgeIndex});
+			newEdges.push_back(
+				ConvexPolytopeEdge<3, Scalar>{.vertexIndex = newEdges[horizonLine[endHorizonIndex]].vertexIndex, .faceIndex = faceIndex, .nextEdgeIndex = downEdgeIndex});
 			for (size_t i = currentHorizonIndex; i < endHorizonIndex - 1; ++i) {
 				newEdges[horizonLine[i]].faceIndex = faceIndex;
 				newEdges[horizonLine[i]].nextEdgeIndex = horizonLine[i + 1];
@@ -465,9 +469,9 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		};
 
 		for (size_t horizonIndex = 1; horizonIndex < horizonLine.size(); ++horizonIndex) {
-			const vec3 nextVertex = result.vertices[vertexIndices[newEdges[horizonLine[(horizonIndex + 1) % horizonLine.size()]].vertexIndex]];
-			const vec3 nextNormal = getNewFaceNormal(currentVertex, nextVertex);
-			if (1.0f - dot(nextNormal, currentNormal) > Limits<float>::MACHINE_EPSILON) {
+			const ConvexPolytopeVertex<3, Scalar> nextVertex = result.vertices[vertexIndices[newEdges[horizonLine[(horizonIndex + 1) % horizonLine.size()]].vertexIndex]];
+			const vec<3, Scalar> nextNormal = getNewFaceNormal(currentVertex, nextVertex);
+			if (Scalar{1} - dot(nextNormal, currentNormal) > Limits<Scalar>::MACHINE_EPSILON) {
 				addNewFaceUntil(horizonIndex);
 				currentHorizonIndex = horizonIndex;
 				currentNormal = nextNormal;
@@ -476,12 +480,12 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		}
 
 		if (currentHorizonIndex > 0) {
-			if (1.0f - dot(firstNormal, currentNormal) > Limits<float>::MACHINE_EPSILON) {
+			if (Scalar{1} - dot(firstNormal, currentNormal) > Limits<Scalar>::MACHINE_EPSILON) {
 				const ConvexPolytopeFaceIndex faceIndex = static_cast<ConvexPolytopeFaceIndex>(newFaces.size());
-				newFaces.push_back(ConvexPolytopeFace3D{.normal = currentNormal, .firstEdgeIndex = horizonLine[currentHorizonIndex]});
+				newFaces.push_back(ConvexPolytopeFace<3, Scalar>{.normal = currentNormal, .firstEdgeIndex = horizonLine[currentHorizonIndex]});
 
 				const ConvexPolytopeEdgeIndex downEdgeIndex = static_cast<ConvexPolytopeEdgeIndex>(newEdges.size());
-				newEdges.push_back(ConvexPolytopeEdge3D{.vertexIndex = newVertexIndex, .faceIndex = faceIndex, .nextEdgeIndex = horizonLine[currentHorizonIndex]});
+				newEdges.push_back(ConvexPolytopeEdge<3, Scalar>{.vertexIndex = newVertexIndex, .faceIndex = faceIndex, .nextEdgeIndex = horizonLine[currentHorizonIndex]});
 
 				newEdges[firstUpEdgeIndex].faceIndex = faceIndex;
 				newEdges[firstUpEdgeIndex].nextEdgeIndex = downEdgeIndex;
@@ -514,7 +518,7 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 			newEdges.pop_back();
 
 			const ConvexPolytopeFaceIndex faceIndex = static_cast<ConvexPolytopeFaceIndex>(newFaces.size());
-			newFaces.push_back(ConvexPolytopeFace3D{.normal = currentNormal, .firstEdgeIndex = horizonLine[0]});
+			newFaces.push_back(ConvexPolytopeFace<3, Scalar>{.normal = currentNormal, .firstEdgeIndex = horizonLine[0]});
 
 			for (size_t i = 0; i < horizonLine.size(); ++i) {
 				newEdges[horizonLine[i]].faceIndex = faceIndex;
@@ -526,11 +530,11 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 		visitedVertices[farthestVertexIndex] = true;
 	}
 
-	for (ConvexPolytopeFace3D& face : newFaces) {
+	for (ConvexPolytopeFace<3, Scalar>& face : newFaces) {
 		face.normal = getFaceNormal(face.firstEdgeIndex);
 	}
 
-	Allocation<vec3> finalVertices(vertexIndices.size());
+	Allocation<ConvexPolytopeVertex<3, Scalar>> finalVertices(vertexIndices.size());
 	for (size_t i = 0; i < vertexIndices.size(); ++i) {
 		finalVertices[i] = result.vertices[vertexIndices[i]];
 	}
@@ -545,5 +549,27 @@ detail::ConvexPolytopeData<3> detail::buildConvexHull3D(Span<const ConvexPolytop
 	GREM_ASSERT(!contains(result.vertexEdgeIndices, Limits<ConvexPolytopeEdgeIndex>::MAX));
 	return result;
 }
+
+} // namespace
+
+namespace detail {
+
+ConvexPolytopeData<2, float> buildConvexHull2DFloat(Span<const ConvexPolytopeVertex<2, float>> vertices, const mat3& transformation, ConvexPolytopeVertexIndex maxVertexCount) {
+	return buildConvexHull2D<float>(vertices, transformation, maxVertexCount);
+}
+
+ConvexPolytopeData<2, double> buildConvexHull2DDouble(Span<const ConvexPolytopeVertex<2, double>> vertices, const dmat3& transformation, ConvexPolytopeVertexIndex maxVertexCount) {
+	return buildConvexHull2D<double>(vertices, transformation, maxVertexCount);
+}
+
+ConvexPolytopeData<3, float> buildConvexHull3DFloat(Span<const ConvexPolytopeVertex<3, float>> vertices, const mat4& transformation, ConvexPolytopeVertexIndex maxVertexCount) {
+	return buildConvexHull3D<float>(vertices, transformation, maxVertexCount);
+}
+
+ConvexPolytopeData<3, double> buildConvexHull3DDouble(Span<const ConvexPolytopeVertex<3, double>> vertices, const dmat4& transformation, ConvexPolytopeVertexIndex maxVertexCount) {
+	return buildConvexHull3D<double>(vertices, transformation, maxVertexCount);
+}
+
+} // namespace detail
 
 } // namespace grem

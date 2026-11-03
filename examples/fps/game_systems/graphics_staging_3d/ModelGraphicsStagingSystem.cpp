@@ -607,7 +607,7 @@ private:
 			if (!shape) {
 				return {};
 			}
-			const ConvexPolytope3D* convexPolytope = nullptr;
+			const ConvexPolytope<3, float>* convexPolytope = nullptr;
 			if (const phys::LocallyTransformedShape3D* const locallyTransformedShape = shape->get_if<phys::LocallyTransformedShape3D>()) {
 				if (const phys::ConvexPolytopeShape3D* const convexPolytopeShape = locallyTransformedShape->shape->get_if<phys::ConvexPolytopeShape3D>()) {
 					convexPolytope = convexPolytopeShape->getConvexPolytope().get();
@@ -620,8 +620,8 @@ private:
 			if (!convexPolytope) {
 				return {};
 			}
-			const Span<const ConvexPolytopeVertex3D> vertices = convexPolytope->getVertices();
-			const Span<const ConvexPolytopeEdge3D> edges = convexPolytope->getEdges();
+			const Span<const ConvexPolytopeVertex<3, float>> vertices = convexPolytope->getVertices();
+			const Span<const ConvexPolytopeEdge<3, float>> edges = convexPolytope->getEdges();
 			phys::Length3D rootTranslation = modelDescription.options.rootTranslation * phys::METERS;
 			if (modelDescription.centerOfMassOverride && *modelDescription.centerOfMassOverride != 0) {
 				rootTranslation -= *modelDescription.centerOfMassOverride;
@@ -631,7 +631,7 @@ private:
 			GREM_ASSERT(edges.size() % 2 == 0);
 			Buffer<HullVertex> hullWireframeVertices{};
 			hullWireframeVertices.reserve(edges.size());
-			for (const ConvexPolytope3D::Edge& edge : edges) {
+			for (const ConvexPolytope<3, float>::Edge& edge : edges) {
 				hullWireframeVertices.push_back(HullVertex{.vertexPosition{inverseRootTransformation(vertices[edge.vertexIndex] * phys::METERS).in(phys::METERS)}});
 			}
 			return HullMesh{device, hullWireframeVertices};
@@ -844,7 +844,7 @@ private:
 			if (!shape) {
 				return {};
 			}
-			const ConvexPolytope3D* convexPolytope = nullptr;
+			const ConvexPolytope<3, float>* convexPolytope = nullptr;
 			if (const phys::LocallyTransformedShape3D* const locallyTransformedShape = shape->get_if<phys::LocallyTransformedShape3D>()) {
 				if (const phys::ConvexPolytopeShape3D* const convexPolytopeShape = locallyTransformedShape->shape->get_if<phys::ConvexPolytopeShape3D>()) {
 					convexPolytope = convexPolytopeShape->getConvexPolytope().get();
@@ -864,7 +864,7 @@ private:
 			const phys::InverseLocalTransformation3D inverseRootTransformation =
 				inverseTranslateRotateScale(rootTranslation, modelDescription.options.rootRotation, modelDescription.options.rootScale);
 			return SharedPointer<gfx::Model3D>::create(device, renderer3D,
-				res::Model{*convexPolytope, inverseRootTransformation * phys::LocalTransformation3D{scale(phys::Scale3D{0.95f})}});
+				res::Model{*convexPolytope, mat4{inverseRootTransformation * phys::LocalTransformation3D{scale(phys::Scale3D{0.95_x})}}});
 		}
 
 		HashMap<ModelType, ModelInfo> info{};

@@ -87,7 +87,7 @@ void Simulation<N>::addObjectComponents(EntityRegistry<N>& registry, const Resou
 		mass = options.mass;
 	}
 	if (mass <= 0) {
-		mass = registry.template getComponent<Volume>(entityID) * (0.5f * GRAMS_PER_CUBIC_CENTIMETER);
+		mass = registry.template getComponent<Volume>(entityID) * (Scalar{0.5} * GRAMS_PER_CUBIC_CENTIMETER);
 		if (mass <= 0) {
 			mass = Mass::INF;
 		}
@@ -148,11 +148,11 @@ void Simulation<N>::addObjectComponents(EntityRegistry<N>& registry, const Resou
 		if (const Optional<Box<N>> shapeAABB = registry.template getComponent<Collider<N>>(entityID).shape.getBoundingBox(transformation)) {
 			if (registry.template getComponent<ObjectActivity>(entityID).isCorrectable) {
 				const SimulationOptions<N>& simulationOptions = resources.template getResource<SimulationOptions<N>>();
-				const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
+				const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * Scalar{2};
 				const Time stepInterval = simulationOptions.stepInterval;
 				const LinearVelocity<N> linearVelocity = registry.template getComponent<LinearVelocity<N>>(entityID);
 				const AngularVelocity<N> angularVelocity = registry.template getComponent<AngularVelocity<N>>(entityID);
-				const Distance approximateRadius = distance(shapeAABB->min, shapeAABB->max) * 0.5f;
+				const Distance approximateRadius = distance(shapeAABB->min, shapeAABB->max) * Scalar{0.5};
 				const Distance expansion =
 					minAABBExpansion + length(linearVelocity) * stepInterval + min(length(angularVelocity) * approximateRadius * stepInterval, approximateRadius);
 				bounds->boundingBox = shapeAABB->getExpanded(expansion);
@@ -222,9 +222,9 @@ void Simulation<N>::updateObjectBounds(EntityRegistry<N>& registry, const Resour
 		const AngularVelocity<N> angularVelocity = registry.template getComponent<AngularVelocity<N>>(objectID);
 		if (registry.template getComponent<ObjectActivity>(objectID).isCorrectable) {
 			const SimulationOptions<N>& simulationOptions = resources.template getResource<SimulationOptions<N>>();
-			const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
+			const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * Scalar{2};
 			const Time stepInterval = simulationOptions.stepInterval;
-			const Distance approximateRadius = distance(shapeAABB->min, shapeAABB->max) * 0.5f;
+			const Distance approximateRadius = distance(shapeAABB->min, shapeAABB->max) * Scalar{0.5};
 			const Distance expansion =
 				minAABBExpansion + length(linearVelocity) * stepInterval + min(length(angularVelocity) * approximateRadius * stepInterval, approximateRadius);
 			newBoundingBox = shapeAABB->getExpanded(expansion);
@@ -607,16 +607,16 @@ void Simulation<N>::drawDebugVisualization([[maybe_unused]] DebugVisualization<N
 				debugVisualization.drawWorldVector(pointA, normal, Color::DARK_ORANGE);
 				debugVisualization.drawWorldVector(pointB, -normal, Color::ORANGE);
 				if (getNormalComponent(point.momentumInTangentSpace) != 0) {
-					debugVisualization.drawWorldVector(pointA, normal, Color::MEDIUM_AQUA_MARINE, getNormalComponent(point.momentumInTangentSpace).in(Momentum::UNIT), 1.5f);
-					debugVisualization.drawWorldVector(pointB, -normal, Color::AQUA, getNormalComponent(point.momentumInTangentSpace).in(Momentum::UNIT), 1.5f);
+					debugVisualization.drawWorldVector(pointA, normal, Color::MEDIUM_AQUA_MARINE, getNormalComponent(point.momentumInTangentSpace).in(Momentum::UNIT), Scalar{1.5});
+					debugVisualization.drawWorldVector(pointB, -normal, Color::AQUA, getNormalComponent(point.momentumInTangentSpace).in(Momentum::UNIT), Scalar{1.5});
 				}
 				if (getTangentialComponent(point.momentumInTangentSpace) != 0) {
 					if constexpr (N == 2) {
-						debugVisualization.drawWorldVector(pointA, point.tangent, Color::CRIMSON, point.momentumInTangentSpace.getX().in(Momentum::UNIT), 1.5f);
+						debugVisualization.drawWorldVector(pointA, point.tangent, Color::CRIMSON, point.momentumInTangentSpace.getX().in(Momentum::UNIT), Scalar{1.5});
 					} else if constexpr (N == 3) {
 						const Direction3D bitangent = Direction3D::reinterpret(cross(normal, point.tangent));
-						debugVisualization.drawWorldVector(pointA, point.tangent, Color::CRIMSON, point.momentumInTangentSpace.getX().in(Momentum::UNIT), 1.5f);
-						debugVisualization.drawWorldVector(pointA, bitangent, Color::FOREST_GREEN, point.momentumInTangentSpace.getY().in(Momentum::UNIT), 1.5f);
+						debugVisualization.drawWorldVector(pointA, point.tangent, Color::CRIMSON, point.momentumInTangentSpace.getX().in(Momentum::UNIT), Scalar{1.5});
+						debugVisualization.drawWorldVector(pointA, bitangent, Color::FOREST_GREEN, point.momentumInTangentSpace.getY().in(Momentum::UNIT), Scalar{1.5});
 					}
 				}
 			}
@@ -652,7 +652,7 @@ void Simulation<N>::drawDebugVisualization([[maybe_unused]] DebugVisualization<N
 
 	// Draw velocities.
 	for (auto&& [objectID, position, linearVelocity] : registry.template getEntities<const Position<N>, const LinearVelocity<N>>()) {
-		debugVisualization.drawWorldVector(position, linearVelocity / LinearVelocity<N>::UNIT, Color::RED, 2.5f, 2.0f);
+		debugVisualization.drawWorldVector(position, linearVelocity / LinearVelocity<N>::UNIT, Color::RED, Scalar{2.5}, Scalar{2});
 	}
 #endif
 }

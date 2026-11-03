@@ -36,7 +36,7 @@ template <typename T>
 struct packed_size : meta::Constant<sizeof(std::remove_cvref_t<T>)> {};
 
 template <size_t N, typename UnitT>
-struct packed_size<phys::Quantity<N, UnitT>> : meta::Constant<N * sizeof(float)> {};
+struct packed_size<phys::Quantity<N, UnitT>> : meta::Constant<N * sizeof(phys::Scalar)> {};
 
 template <>
 struct packed_size<phys::ObjectActivity> : meta::Constant<sizeof(uint32_t)> {};
@@ -60,10 +60,10 @@ template <typename T>
 requires(requires { typename T::TriviallySerializableTag; }) struct is_trivially_serializable<T> : std::bool_constant<HOST_IS_LITTLE_ENDIAN> {};
 
 template <size_t N, typename UnitT>
-struct is_trivially_serializable<phys::Quantity<N, UnitT>> : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(phys::Quantity<N, UnitT>) == N * sizeof(float)> {};
+struct is_trivially_serializable<phys::Quantity<N, UnitT>> : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(phys::Quantity<N, UnitT>) == N * sizeof(phys::Scalar)> {};
 
 template <size_t N>
-struct is_trivially_serializable<phys::Orientation<N>> : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(phys::Orientation<N>) == sizeof(quat)> {};
+struct is_trivially_serializable<phys::Orientation<N>> : std::bool_constant<HOST_IS_LITTLE_ENDIAN && sizeof(phys::Orientation<N>) == sizeof(qua<phys::Scalar>)> {};
 
 template <>
 struct is_trivially_serializable<Duration>
@@ -165,22 +165,24 @@ template <size_t N, typename T>
 	}
 }
 
-inline void serialize(quat value, Writer output) {
+template <typename T>
+inline void serialize(qua<T> value, Writer output) {
 	serialize(value.x, output), serialize(value.y, output), serialize(value.z, output), serialize(value.w, output);
 }
 
-[[nodiscard]] inline bool deserialize(quat& value, SpanReader input) {
+template <typename T>
+[[nodiscard]] inline bool deserialize(qua<T>& value, SpanReader input) {
 	return deserialize(value.x, input) && deserialize(value.y, input) && deserialize(value.z, input) && deserialize(value.w, input);
 }
 
 template <size_t N, typename UnitT, size_t Index>
 inline void serialize(phys::ConstComponentProxy<N, UnitT, Index> value, Writer output) {
-	serialize(float{value.in(UnitT{})}, output);
+	serialize(phys::Scalar{value.in(UnitT{})}, output);
 }
 
 template <size_t N, typename UnitT, size_t Index>
 [[nodiscard]] inline bool deserialize(phys::ComponentProxy<N, UnitT, Index> value, SpanReader input) {
-	float component{};
+	phys::Scalar component{};
 	if (!deserialize(component, input)) {
 		return false;
 	}
@@ -193,7 +195,7 @@ inline void serialize(phys::Quantity<N, UnitT> value, Writer output) {
 	if constexpr (trivially_serializable<phys::Quantity<N, UnitT>>) {
 		output.write(asBytes(Span{&value, 1}));
 	} else if constexpr (N == 1) {
-		serialize(float{value.in(UnitT{})}, output);
+		serialize(phys::Scalar{value.in(UnitT{})}, output);
 	} else {
 		meta::forEachIndex<N>([&](auto i) -> void { serialize(value[i], output); });
 	}
@@ -204,7 +206,7 @@ template <size_t N, typename UnitT>
 	if constexpr (trivially_serializable<phys::Quantity<N, UnitT>>) {
 		return input.tryRead(asWritableBytes(Span{&value, 1}));
 	} else if constexpr (N == 1) {
-		float component{};
+		phys::Scalar component{};
 		if (!deserialize(component, input)) {
 			return false;
 		}
@@ -218,11 +220,11 @@ template <size_t N, typename UnitT>
 }
 
 inline void serialize(phys::Orientation2D value, Writer output) {
-	serialize(float{value}, output);
+	serialize(phys::Scalar{value}, output);
 }
 
 [[nodiscard]] inline bool deserialize(phys::Orientation2D& value, SpanReader input) {
-	float angle{};
+	phys::Scalar angle{};
 	if (!deserialize(angle, input)) {
 		return false;
 	}
@@ -231,11 +233,11 @@ inline void serialize(phys::Orientation2D value, Writer output) {
 }
 
 inline void serialize(phys::Orientation3D value, Writer output) {
-	serialize(quat{value}, output);
+	serialize(qua<phys::Scalar>{value}, output);
 }
 
 [[nodiscard]] inline bool deserialize(phys::Orientation3D& value, SpanReader input) {
-	quat quaternion{};
+	qua<phys::Scalar> quaternion{};
 	if (!deserialize(quaternion, input)) {
 		return false;
 	}

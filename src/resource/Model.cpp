@@ -4244,7 +4244,7 @@ Model::Model(StridedSpan<const vec3> positions, StridedSpan<const uint32_t> indi
 	assign(positions, indices, normals, tangents, textureCoordinatesChannel0, textureCoordinatesChannel1, colors, material);
 }
 
-Model::Model(const ConvexPolytope3D& polytope, const mat4& transformation) {
+Model::Model(const ConvexPolytope<3, float>& polytope, const mat4& transformation) {
 	assign(polytope, transformation);
 }
 
@@ -4384,25 +4384,25 @@ void Model::assign(StridedSpan<const vec3> positions, StridedSpan<const uint32_t
 	bindPoseBoundingRadius = boundingRadius;
 }
 
-void Model::assign(const ConvexPolytope3D& polytope, const mat4& transformation) {
+void Model::assign(const ConvexPolytope<3, float>& polytope, const mat4& transformation) {
 	reset();
 
 	GREM_PROFILE_FUNCTION();
 
-	const Span<const ConvexPolytopeVertex3D> vertices = polytope.getVertices();
-	const Span<const ConvexPolytopeEdge3D> edges = polytope.getEdges();
-	const Span<const ConvexPolytopeFace3D> faces = polytope.getFaces();
+	const Span<const ConvexPolytopeVertex<3, float>> vertices = polytope.getVertices();
+	const Span<const ConvexPolytopeEdge<3, float>> edges = polytope.getEdges();
+	const Span<const ConvexPolytopeFace<3, float>> faces = polytope.getFaces();
 	GREM_ASSERT(edges.size() % 2 == 0);
 
 	Buffer<vec3> positions{};
 	positions.reserve(vertices.size());
-	for (const ConvexPolytopeVertex3D& vertex : vertices) {
+	for (const ConvexPolytopeVertex<3, float>& vertex : vertices) {
 		positions.push_back(vec3{transformation * vec4{vertex, 1.0f}});
 	}
 
 	Buffer<uint32_t> indices{};
 	indices.reserve(faces.size() * 6); // Estimate 2 triangles per face.
-	for (const ConvexPolytopeFace3D& face : faces) {
+	for (const ConvexPolytopeFace<3, float>& face : faces) {
 		const ConvexPolytopeEdgeIndex firstEdgeIndex = face.firstEdgeIndex;
 		const ConvexPolytopeVertexIndex firstVertexIndex = edges[firstEdgeIndex].vertexIndex;
 		ConvexPolytopeEdgeIndex edgeIndex = edges[firstEdgeIndex].nextEdgeIndex;

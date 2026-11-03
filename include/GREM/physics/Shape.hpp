@@ -408,7 +408,7 @@ struct Ray {
 	 *         small to calculate a unit direction vector.
 	 */
 	[[nodiscard]] static constexpr Optional<Ray> between(Position<N> origin, Position<N> destination) {
-		if (const Optional<grem::Ray<N, float>> result = grem::Ray<N, float>::between(origin.in(UNIT), destination.in(UNIT))) {
+		if (const Optional<grem::Ray<N, Scalar>> result = grem::Ray<N, Scalar>::between(origin.in(UNIT), destination.in(UNIT))) {
 			return Ray::reinterpret(*result);
 		}
 		return {};
@@ -421,7 +421,8 @@ struct Ray {
 	 *
 	 * \return the corresponding physical ray.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Ray reinterpret(const grem::Ray<N, float>& ray) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Ray reinterpret(const grem::Ray<N, T>& ray) noexcept {
 		return {
 			.origin = Position<N>::reinterpret(ray.origin),
 			.direction = Direction<N>::reinterpret(ray.direction),
@@ -454,7 +455,7 @@ struct Ray {
 	 *
 	 * \warning Must be equal to the reciprocal of #direction.
 	 */
-	Scale<N> directionInverse = Scale<N>{1.0f} / direction;
+	Scale<N> directionInverse = Scale<N>{Scalar{1}} / direction;
 
 	/**
 	 * Convert this physical ray to a unitless ray given a desired unit.
@@ -464,7 +465,7 @@ struct Ray {
 	 * \return the corresponding ray in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Ray<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Ray<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {
 			.origin = origin.in(unit),
 			.direction = direction,
@@ -476,13 +477,13 @@ struct Ray {
 using Ray2D = Ray<2>; ///< Description of a ray in 2-dimensional space.
 using Ray3D = Ray<3>; ///< Description of a ray in 3-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Ray<N> operator*(const grem::Ray<N, float>& ray, typename Ray<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Ray<N> operator*(const grem::Ray<N, T>& ray, typename Ray<N>::Unit) {
 	return Ray<N>::reinterpret(ray);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Ray<N> operator*(typename Ray<N>::Unit, const grem::Ray<N, float>& ray) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Ray<N> operator*(typename Ray<N>::Unit, const grem::Ray<N, T>& ray) {
 	return Ray<N>::reinterpret(ray);
 }
 
@@ -553,7 +554,8 @@ struct RayHit {
 	 *
 	 * \return the corresponding physical ray hit.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr RayHit reinterpret(const grem::RayHit<N, float>& hit) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr RayHit reinterpret(const grem::RayHit<N, T>& hit) noexcept {
 		return {
 			.localOffset = Length<N>::reinterpret(hit.localOffset),
 			.distance = Distance::reinterpret(hit.distance),
@@ -573,20 +575,20 @@ struct RayHit {
 	 * \return the corresponding ray hit in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::RayHit<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::RayHit<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {.localOffset = localOffset.in(unit), .distance = distance.in(unit), .normal = normal};
 	}
 };
 using RayHit2D = RayHit<2>; ///< Result of a raycast hit in 2-dimensional space.
 using RayHit3D = RayHit<3>; ///< Result of a raycast hit in 3-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr RayHit<N> operator*(const grem::RayHit<N, float>& hit, typename RayHit<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr RayHit<N> operator*(const grem::RayHit<N, T>& hit, typename RayHit<N>::Unit) {
 	return RayHit<N>::reinterpret(hit);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr RayHit<N> operator*(typename RayHit<N>::Unit, const grem::RayHit<N, float>& hit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr RayHit<N> operator*(typename RayHit<N>::Unit, const grem::RayHit<N, T>& hit) {
 	return RayHit<N>::reinterpret(hit);
 }
 
@@ -611,7 +613,8 @@ struct RayHitInterior {
 	 *
 	 * \return the corresponding physical ray hit.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr RayHitInterior reinterpret(const grem::RayHitInterior<N, float>& hit) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr RayHitInterior reinterpret(const grem::RayHitInterior<N, T>& hit) noexcept {
 		return {.localOffset = Length<N>::reinterpret(hit.localOffset)};
 	}
 
@@ -625,7 +628,7 @@ struct RayHitInterior {
 	 * \return the corresponding ray hit in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::RayHitInterior<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::RayHitInterior<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {.localOffset = localOffset.in(unit)};
 	}
 };
@@ -664,15 +667,16 @@ struct RaycastResult : Variant<RayMiss, RayHit<N>, RayHitInterior<N>> {
 	 *
 	 * \return the corresponding physical raycast result.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr RaycastResult reinterpret(const grem::RaycastResult<N, float>& raycastResult) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr RaycastResult reinterpret(const grem::RaycastResult<N, T>& raycastResult) noexcept {
 		GREM_MATCH(raycastResult) {
 			GREM_CASE(const grem::RayMiss& miss) {
 				return RayMiss::reinterpret(miss);
 			}
-			GREM_CASE(const grem::RayHit<N, float>& hit) {
+			GREM_CASE(const grem::RayHit<N, T>& hit) {
 				return RayHit<N>::reinterpret(hit);
 			}
-			GREM_CASE(const grem::RayHitInterior<N, float>& hitInterior) {
+			GREM_CASE(const grem::RayHitInterior<N, T>& hitInterior) {
 				return RayHitInterior<N>::reinterpret(hitInterior);
 			}
 		}
@@ -690,21 +694,21 @@ struct RaycastResult : Variant<RayMiss, RayHit<N>, RayHitInterior<N>> {
 	 * \return the corresponding raycast result in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::RaycastResult<N, float> in(OtherUnitT unit) const requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::RaycastResult<N, Scalar> in(OtherUnitT unit) const requires(OtherUnitT::DIMENSION == LENGTH) {
 		(void)unit;
-		return match(*this)([](const auto& r) -> grem::RaycastResult<N, float> { return r.in(OtherUnitT{}); });
+		return match(*this)([](const auto& r) -> grem::RaycastResult<N, Scalar> { return r.in(OtherUnitT{}); });
 	}
 };
 using RaycastResult2D = RaycastResult<2>; ///< Result of a raycast in 2-dimensional space.
 using RaycastResult3D = RaycastResult<3>; ///< Result of a raycast in 3-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr RaycastResult<N> operator*(const grem::RaycastResult<N, float>& raycastResult, typename RaycastResult<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr RaycastResult<N> operator*(const grem::RaycastResult<N, T>& raycastResult, typename RaycastResult<N>::Unit) {
 	return RaycastResult<N>::reinterpret(raycastResult);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr RaycastResult<N> operator*(typename RaycastResult<N>::Unit, const grem::RaycastResult<N, float>& raycastResult) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr RaycastResult<N> operator*(typename RaycastResult<N>::Unit, const grem::RaycastResult<N, T>& raycastResult) {
 	return RaycastResult<N>::reinterpret(raycastResult);
 }
 
@@ -759,7 +763,8 @@ struct LineSegment {
 	 *
 	 * \return the corresponding physical line segment.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr LineSegment reinterpret(const grem::LineSegment<N, float>& line) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr LineSegment reinterpret(const grem::LineSegment<N, T>& line) noexcept {
 		return {.pointA = Position<N>::reinterpret(line.pointA), .pointB = Position<N>::reinterpret(line.pointB)};
 	}
 
@@ -775,7 +780,7 @@ struct LineSegment {
 	 * \return the corresponding line segment in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::LineSegment<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::LineSegment<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {.pointA = pointA.in(unit), .pointB = pointB.in(unit)};
 	}
 
@@ -791,13 +796,13 @@ struct LineSegment {
 using LineSegment2D = LineSegment<2>; ///< Description of a line segment in 2-dimensional space.
 using LineSegment3D = LineSegment<3>; ///< Description of a line segment in 3-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr LineSegment<N> operator*(const grem::LineSegment<N, float>& line, typename LineSegment<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr LineSegment<N> operator*(const grem::LineSegment<N, T>& line, typename LineSegment<N>::Unit) {
 	return LineSegment<N>::reinterpret(line);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr LineSegment<N> operator*(typename LineSegment<N>::Unit, const grem::LineSegment<N, float>& line) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr LineSegment<N> operator*(typename LineSegment<N>::Unit, const grem::LineSegment<N, T>& line) {
 	return LineSegment<N>::reinterpret(line);
 }
 
@@ -820,7 +825,8 @@ struct Box {
 	 *
 	 * \return the corresponding physical box.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Box reinterpret(const grem::Box<N, float>& box) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Box reinterpret(const grem::Box<N, T>& box) noexcept {
 		return {.min = Position<N>::reinterpret(box.min), .max = Position<N>::reinterpret(box.max)};
 	}
 
@@ -835,7 +841,7 @@ struct Box {
 	 * \return the corresponding box in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Box<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Box<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {.min = min.in(unit), .max = max.in(unit)};
 	}
 
@@ -933,13 +939,13 @@ struct Box {
 using Box2D = Box<2>; ///< Description of an axis-aligned box in 2-dimensional space.
 using Box3D = Box<3>; ///< Description of an axis-aligned box in 3-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Box<N> operator*(const grem::Box<N, float>& box, typename Box<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Box<N> operator*(const grem::Box<N, T>& box, typename Box<N>::Unit) {
 	return Box<N>::reinterpret(box);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Box<N> operator*(typename Box<N>::Unit, const grem::Box<N, float>& box) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Box<N> operator*(typename Box<N>::Unit, const grem::Box<N, T>& box) {
 	return Box<N>::reinterpret(box);
 }
 
@@ -962,7 +968,8 @@ struct Sphere {
 	 *
 	 * \return the corresponding physical sphere.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Sphere reinterpret(const grem::Sphere<N, float>& sphere) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Sphere reinterpret(const grem::Sphere<N, T>& sphere) noexcept {
 		return {.center = Position<N>::reinterpret(sphere.center), .radius = Distance::reinterpret(sphere.radius)};
 	}
 
@@ -977,7 +984,7 @@ struct Sphere {
 	 * \return the corresponding sphere in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Sphere<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Sphere<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {.center = center.in(unit), .radius = radius.in(unit)};
 	}
 
@@ -1049,13 +1056,13 @@ using Sphere2D = Sphere<2>; ///< Description of a sphere in 2-dimensional space.
 using Sphere3D = Sphere<3>; ///< Description of a sphere in 3-dimensional space.
 using Circle = Sphere2D;    ///< Description of a circle in 2-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Sphere<N> operator*(const grem::Sphere<N, float>& sphere, typename Sphere<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Sphere<N> operator*(const grem::Sphere<N, T>& sphere, typename Sphere<N>::Unit) {
 	return Sphere<N>::reinterpret(sphere);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Sphere<N> operator*(typename Sphere<N>::Unit, const grem::Sphere<N, float>& sphere) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Sphere<N> operator*(typename Sphere<N>::Unit, const grem::Sphere<N, T>& sphere) {
 	return Sphere<N>::reinterpret(sphere);
 }
 
@@ -1078,7 +1085,8 @@ struct Triangle {
 	 *
 	 * \return the corresponding physical triangle.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Triangle reinterpret(const grem::Triangle<N, float>& triangle) noexcept {
+	template <typename T>
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Triangle reinterpret(const grem::Triangle<N, T>& triangle) noexcept {
 		return {
 			.pointA = Position<N>::reinterpret(triangle.pointA),
 			.pointB = Position<N>::reinterpret(triangle.pointB),
@@ -1099,7 +1107,7 @@ struct Triangle {
 	 * \return the corresponding triangle in the given unit.
 	 */
 	template <typename OtherUnitT>
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Triangle<N, float> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr grem::Triangle<N, Scalar> in(OtherUnitT unit) const noexcept requires(OtherUnitT::DIMENSION == LENGTH) {
 		return {
 			.pointA = pointA.in(unit),
 			.pointB = pointB.in(unit),
@@ -1161,13 +1169,13 @@ struct Triangle {
 using Triangle2D = Triangle<2>; ///< Description of a triangle in 2-dimensional space.
 using Triangle3D = Triangle<3>; ///< Description of a triangle in 3-dimensional space.
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Triangle<N> operator*(const grem::Triangle<N, float>& triangle, typename Triangle<N>::Unit) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Triangle<N> operator*(const grem::Triangle<N, T>& triangle, typename Triangle<N>::Unit) {
 	return Triangle<N>::reinterpret(triangle);
 }
 
-template <size_t N>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Triangle<N> operator*(typename Triangle<N>::Unit, const grem::Triangle<N, float>& triangle) {
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Triangle<N> operator*(typename Triangle<N>::Unit, const grem::Triangle<N, T>& triangle) {
 	return Triangle<N>::reinterpret(triangle);
 }
 
@@ -1204,8 +1212,8 @@ template <size_t N>
  */
 template <size_t N>
 [[nodiscard]] inline Box<N> getTransformedBoundingBox(const Transformation<N>& transformation, const Box<N>& box) {
-	const Length<N> localCenterOffset = midpoint(box.min, box.max) - 0;
-	const Length<N> halfExtents = (box.max - box.min) * 0.5f;
+	const Length<N> localCenterOffset = +midpoint(box.min, box.max);
+	const Length<N> halfExtents = (box.max - box.min) * Scalar{0.5};
 	return detail::getTransformedBoundingBox<N>(Transformation<N>{transformation(localCenterOffset), transformation.getBasis()}, halfExtents);
 }
 
@@ -2238,16 +2246,16 @@ static_assert(convex_shape_3d<TaperedCylinderShape3D>);
 template <size_t N>
 class ConvexPolytopeShape {
 public:
-	using Vertex = typename ConvexPolytope<N>::Vertex; ///< Vertex type of the convex polytope shape.
-	using Face = typename ConvexPolytope<N>::Face;     ///< Face type of the convex polytope shape.
-	using Edge = typename ConvexPolytope<N>::Edge;     ///< Edge type of the convex polytope shape.
+	using Vertex = typename ConvexPolytope<N, float>::Vertex; ///< Vertex type of the convex polytope shape.
+	using Face = typename ConvexPolytope<N, float>::Face;     ///< Face type of the convex polytope shape.
+	using Edge = typename ConvexPolytope<N, float>::Edge;     ///< Edge type of the convex polytope shape.
 
 	/**
 	 * Construct a convex polytope shape from an existing convex polytope.
 	 *
 	 * \param polytope shared pointer to the polytope. Must not be nullptr.
 	 */
-	GREM_ALWAYS_INLINE explicit ConvexPolytopeShape(SharedPointer<ConvexPolytope<N>> polytope) noexcept
+	GREM_ALWAYS_INLINE explicit ConvexPolytopeShape(SharedPointer<ConvexPolytope<N, float>> polytope) noexcept
 		: polytope(std::move(polytope)) {
 		GREM_ASSERT(this->polytope);
 	}
@@ -2271,7 +2279,7 @@ public:
 	 *
 	 * \return a read-only reference to the underlying convex polytope.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE const SharedPointer<ConvexPolytope<N>>& getConvexPolytope() const noexcept {
+	[[nodiscard]] GREM_ALWAYS_INLINE const SharedPointer<ConvexPolytope<N, float>>& getConvexPolytope() const noexcept {
 		return polytope;
 	}
 
@@ -2353,7 +2361,7 @@ public:
 	[[nodiscard]] GREM_API(physics) ConvexPolytopeEdgeIndex getSomeEdgeIndexOfVertex(ConvexPolytopeVertexIndex vertexIndex) const requires(N == 3);
 
 private:
-	SharedPointer<ConvexPolytope<N>> polytope;
+	SharedPointer<ConvexPolytope<N, float>> polytope;
 };
 extern template class ConvexPolytopeShape<2>;
 extern template class ConvexPolytopeShape<3>;
@@ -2370,16 +2378,16 @@ static_assert(convex_polytope_shape_3d<ConvexPolytopeShape3D>);
 template <size_t N>
 class TriangleMeshShape {
 public:
-	using Vertex = typename TriangleMesh<N>::Vertex;           ///< Vertex type of the triangle mesh shape.
-	using VertexIndex = typename TriangleMesh<N>::VertexIndex; ///< Vertex index type of the triangle mesh shape.
-	using FaceIndex = typename TriangleMesh<N>::FaceIndex;     ///< Face index type of the triangle mesh shape.
+	using Vertex = typename TriangleMesh<N, float>::Vertex;           ///< Vertex type of the triangle mesh shape.
+	using VertexIndex = typename TriangleMesh<N, float>::VertexIndex; ///< Vertex index type of the triangle mesh shape.
+	using FaceIndex = typename TriangleMesh<N, float>::FaceIndex;     ///< Face index type of the triangle mesh shape.
 
 	/**
 	 * Construct a triangle mesh shape from an existing triangle mesh.
 	 *
 	 * \param mesh shared pointer to the mesh. Must not be nullptr.
 	 */
-	GREM_ALWAYS_INLINE explicit TriangleMeshShape(SharedPointer<TriangleMesh<N>> mesh) noexcept
+	GREM_ALWAYS_INLINE explicit TriangleMeshShape(SharedPointer<TriangleMesh<N, float>> mesh) noexcept
 		: mesh(std::move(mesh)) {
 		GREM_ASSERT(this->mesh);
 	}
@@ -2418,7 +2426,7 @@ public:
 	 *
 	 * \return a read-only reference to the underlying triangle mesh.
 	 */
-	[[nodiscard]] GREM_ALWAYS_INLINE const SharedPointer<TriangleMesh<N>>& getTriangleMesh() const noexcept {
+	[[nodiscard]] GREM_ALWAYS_INLINE const SharedPointer<TriangleMesh<N, float>>& getTriangleMesh() const noexcept {
 		return mesh;
 	}
 
@@ -2445,7 +2453,7 @@ public:
 	[[nodiscard]] GREM_API(physics) RaycastResult<N> castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const;
 
 private:
-	SharedPointer<TriangleMesh<N>> mesh;
+	SharedPointer<TriangleMesh<N, float>> mesh;
 };
 extern template class TriangleMeshShape<2>;
 extern template class TriangleMeshShape<3>;
@@ -2472,7 +2480,7 @@ struct LocallyTransformedShape {
 	SharedPointer<Shape<N>> shape;     ///< Shape being transformed. Must not be nullptr.
 	Length<N> localOffset{};           ///< Local offset of the transformed shape relative to the outer shape.
 	Orientation<N> localOrientation{}; ///< Local orientation of the transformed shape relative to the outer shape.
-	Scale<N> localScale{1.0f};         ///< Local scale of the transformed shape relative to the outer shape. Each component must be positive.
+	Scale<N> localScale{Scalar{1}};    ///< Local scale of the transformed shape relative to the outer shape. Each component must be positive.
 
 	/** \copydoc ShapeView<3>::calculateVolume() */
 	[[nodiscard]] GREM_API(physics) Volume calculateVolume() const;
@@ -2813,7 +2821,7 @@ struct SubCollider {
 	Collider<N> collider;              ///< Collider being transformed.
 	Length<N> localOffset{};           ///< Local offset of the transformed shape relative to the outer shape.
 	Orientation<N> localOrientation{}; ///< Local orientation of the transformed shape relative to the outer shape.
-	Scale<N> localScale{1.0f};         ///< Local scale of the transformed shape relative to the outer shape. Each component must be positive.
+	Scale<N> localScale{Scalar{1}};    ///< Local scale of the transformed shape relative to the outer shape. Each component must be positive.
 };
 
 /**
@@ -3500,7 +3508,7 @@ struct TriangleShape {
 		const Length<N> offsetA = basis * pointA;
 		const Length<N> offsetB = basis * pointB;
 		const Length<N> offsetC = basis * pointC;
-		return 0.5f * abs(dot(cross(offsetB - offsetA, offsetC - offsetA), direction));
+		return Scalar{0.5} * abs(dot(cross(offsetB - offsetA, offsetC - offsetA), direction));
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE RaycastResult<N> castLocalRay(Length<N> localRayOrigin, Direction<N> localRayDirection, Distance maxLocalRayDistance) const {

@@ -32,21 +32,22 @@ namespace grem {
  *
  * \tparam N number of vector dimensions (must be 2 or 3).
  * \tparam T type of element to store in the tree.
+ * \tparam Scalar scalar type of the axis-aligned boxes stored in the tree.
  */
-template <size_t N, typename T>
+template <size_t N, typename Scalar, typename T>
 class LinearBoundingVolumeHierarchy {
 public:
 	static_assert(N == 2 || N == 3);
 
-	using value_type = Pair<Box<N, float>, T>;                   ///< Value type of the container.
-	using reference = Pair<const Box<N, float>, T>&;             ///< Reference type of the container.
-	using const_reference = const Pair<const Box<N, float>, T>&; ///< Const reference type of the container.
-	using pointer = Pair<const Box<N, float>, T>*;               ///< Pointer type of the container.
-	using const_pointer = const Pair<const Box<N, float>, T>*;   ///< Const pointer type of the container.
-	using size_type = size_t;                                    ///< Size type of the container.
-	using difference_type = ptrdiff_t;                           ///< Difference type of the container.
-	using iterator = pointer;                                    ///< Iterator type of the container.
-	using const_iterator = const_pointer;                        ///< Const iterator type of the container.
+	using value_type = Pair<Box<N, Scalar>, T>;                   ///< Value type of the container.
+	using reference = Pair<const Box<N, Scalar>, T>&;             ///< Reference type of the container.
+	using const_reference = const Pair<const Box<N, Scalar>, T>&; ///< Const reference type of the container.
+	using pointer = Pair<const Box<N, Scalar>, T>*;               ///< Pointer type of the container.
+	using const_pointer = const Pair<const Box<N, Scalar>, T>*;   ///< Const pointer type of the container.
+	using size_type = size_t;                                     ///< Size type of the container.
+	using difference_type = ptrdiff_t;                            ///< Difference type of the container.
+	using iterator = pointer;                                     ///< Iterator type of the container.
+	using const_iterator = const_pointer;                         ///< Const iterator type of the container.
 
 	/**
 	 * Construct an empty tree.
@@ -166,7 +167,7 @@ public:
 	 * \sa insert()
 	 */
 	template <typename... Args>
-	iterator emplace(const Box<N, float>& elementBoundingBox, Args&&... args) {
+	iterator emplace(const Box<N, Scalar>& elementBoundingBox, Args&&... args) {
 		if (elements.size() >= static_cast<size_t>(INVALID_ELEMENT)) {
 			throw std::length_error{"Maximum element count exceeded."};
 		}
@@ -193,7 +194,7 @@ public:
 	 *
 	 * \sa emplace()
 	 */
-	iterator insert(const Box<N, float>& elementBoundingBox, const T& value) {
+	iterator insert(const Box<N, Scalar>& elementBoundingBox, const T& value) {
 		return emplace(elementBoundingBox, value);
 	}
 
@@ -215,7 +216,7 @@ public:
 	 *
 	 * \sa emplace()
 	 */
-	iterator insert(const Box<N, float>& elementBoundingBox, T&& value) {
+	iterator insert(const Box<N, Scalar>& elementBoundingBox, T&& value) {
 		return emplace(elementBoundingBox, std::move(value));
 	}
 
@@ -237,7 +238,7 @@ public:
 	 *
 	 * \param callback function to execute, which should accept the following
 	 *        parameters (though they don't need to be used):
-	 *        - `const grem::Box<N, float>& boundingBox`: an axis-aligned box
+	 *        - `const grem::Box<N, Scalar>& boundingBox`: an axis-aligned box
 	 *          that defines the region that an element's bounding box must be
 	 *          intersecting in order to belong to the node.
 	 *        - `const T* element`: a non-owning read-only pointer to the
@@ -250,7 +251,7 @@ public:
 	 * \param predicate condition that must be met in order to traverse deeper
 	 *        into the tree. Must return bool and accept the following
 	 *        parameter:
-	 *        - `const grem::Box<N, float>& boundingBox`: an axis-aligned box
+	 *        - `const grem::Box<N, Scalar>& boundingBox`: an axis-aligned box
 	 *          spanning all elements in the branch.
 	 *        .
 	 *        The predicate function should return a bool that is true if the
@@ -298,7 +299,7 @@ public:
 	 *
 	 * \param callback function to execute, which should accept the following
 	 *        parameters (though they don't need to be used):
-	 *        - `const grem::Box<N, float>& boundingBox`: an axis-aligned box
+	 *        - `const grem::Box<N, Scalar>& boundingBox`: an axis-aligned box
 	 *          that defines the region that an element's bounding box must be
 	 *          intersecting in order to belong to the node.
 	 *        - `const T* element`: a non-owning read-only pointer to the
@@ -331,7 +332,7 @@ public:
 	 */
 	template <typename Callback>
 	auto traverseNodes(Callback&& callback) const {
-		return traverseNodes(std::forward<Callback>(callback), [](const Box<N, float>&) -> bool { return true; });
+		return traverseNodes(std::forward<Callback>(callback), [](const Box<N, Scalar>&) -> bool { return true; });
 	}
 
 	/**
@@ -348,7 +349,7 @@ public:
 	 * \param predicate condition that must be met in order to traverse deeper
 	 *        into the tree. Must return bool and accept the following
 	 *        parameter:
-	 *        - `const grem::Box<N, float>& boundingBox`: an axis-aligned box
+	 *        - `const grem::Box<N, Scalar>& boundingBox`: an axis-aligned box
 	 *          spanning all elements in the branch.
 	 *        .
 	 *        The predicate function should return a bool that is true if the
@@ -430,7 +431,7 @@ public:
 	 */
 	template <typename Callback>
 	auto traverseElements(Callback&& callback) const {
-		return traverseElements(std::forward<Callback>(callback), [](const Box<N, float>&) -> bool { return true; });
+		return traverseElements(std::forward<Callback>(callback), [](const Box<N, Scalar>&) -> bool { return true; });
 	}
 
 	/**
@@ -468,8 +469,8 @@ public:
 	 * \sa traverseElements()
 	 */
 	template <typename Callback>
-	auto test(Point<N, float> point, Callback&& callback) const {
-		return traverseElements(std::forward<Callback>(callback), [&point](const Box<N, float>& boundingBox) -> bool { return boundingBox.contains(point); });
+	auto test(Point<N, Scalar> point, Callback&& callback) const {
+		return traverseElements(std::forward<Callback>(callback), [&point](const Box<N, Scalar>& boundingBox) -> bool { return boundingBox.contains(point); });
 	}
 
 	/**
@@ -491,8 +492,8 @@ public:
 	 * \sa traverseNodes()
 	 * \sa traverseElements()
 	 */
-	[[nodiscard]] bool test(Point<N, float> point) const noexcept {
-		return traverseElements([](const T&) -> bool { return true; }, [&point](const Box<N, float>& boundingBox) -> bool { return boundingBox.contains(point); });
+	[[nodiscard]] bool test(Point<N, Scalar> point) const noexcept {
+		return traverseElements([](const T&) -> bool { return true; }, [&point](const Box<N, Scalar>& boundingBox) -> bool { return boundingBox.contains(point); });
 	}
 
 	/**
@@ -530,8 +531,8 @@ public:
 	 * \sa traverseElements()
 	 */
 	template <typename Callback>
-	auto test(const Box<N, float>& box, Callback&& callback) const {
-		return traverseElements(std::forward<Callback>(callback), [&box](const Box<N, float>& boundingBox) -> bool { return intersects(boundingBox, box); });
+	auto test(const Box<N, Scalar>& box, Callback&& callback) const {
+		return traverseElements(std::forward<Callback>(callback), [&box](const Box<N, Scalar>& boundingBox) -> bool { return intersects(boundingBox, box); });
 	}
 
 	/**
@@ -554,8 +555,8 @@ public:
 	 * \sa traverseNodes()
 	 * \sa traverseElements()
 	 */
-	[[nodiscard]] bool test(const Box<N, float>& box) const noexcept {
-		return traverseElements([](const T&) -> bool { return true; }, [&box](const Box<N, float>& boundingBox) -> bool { return intersects(boundingBox, box); });
+	[[nodiscard]] bool test(const Box<N, Scalar>& box) const noexcept {
+		return traverseElements([](const T&) -> bool { return true; }, [&box](const Box<N, Scalar>& boundingBox) -> bool { return intersects(boundingBox, box); });
 	}
 
 private:
@@ -569,7 +570,7 @@ private:
 		NodeIndex firstChildIndex = INVALID_NODE;
 		NodeIndex secondChildIndex = INVALID_NODE;
 		ElementIndex elementIndex = INVALID_ELEMENT;
-		Box<N, float> boundingBox{};
+		Box<N, Scalar> boundingBox{};
 	};
 
 	[[nodiscard]] static uint32_t separateMortonCodeBits(uint32_t x) noexcept {
@@ -587,17 +588,17 @@ private:
 		return x;
 	}
 
-	[[nodiscard]] static uint32_t getMortonCode(const Point<N, float>& normalizedPosition) noexcept {
+	[[nodiscard]] static uint32_t getMortonCode(const Point<N, Scalar>& normalizedPosition) noexcept {
 		if constexpr (N == 2) {
-			constexpr float MAX_EXTENT = 0b1111111111111111; // Use 16 bits, which fits in a uint32_t when expanded to 2 dimensions.
-			const uint32_t x = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.x * MAX_EXTENT, 0.0f, MAX_EXTENT)));
-			const uint32_t y = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.y * MAX_EXTENT, 0.0f, MAX_EXTENT)));
+			constexpr Scalar MAX_EXTENT = 0b1111111111111111; // Use 16 bits, which fits in a uint32_t when expanded to 2 dimensions.
+			const uint32_t x = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.x * MAX_EXTENT, Scalar{0}, MAX_EXTENT)));
+			const uint32_t y = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.y * MAX_EXTENT, Scalar{0}, MAX_EXTENT)));
 			return x | (y << 1);
 		} else if constexpr (N == 3) {
-			constexpr float MAX_EXTENT = 0b1111111111; // Use 10 bits, which fits in a uint32_t when expanded to 3 dimensions.
-			const uint32_t x = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.x * MAX_EXTENT, 0.0f, MAX_EXTENT)));
-			const uint32_t y = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.y * MAX_EXTENT, 0.0f, MAX_EXTENT)));
-			const uint32_t z = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.z * MAX_EXTENT, 0.0f, MAX_EXTENT)));
+			constexpr Scalar MAX_EXTENT = 0b1111111111; // Use 10 bits, which fits in a uint32_t when expanded to 3 dimensions.
+			const uint32_t x = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.x * MAX_EXTENT, Scalar{0}, MAX_EXTENT)));
+			const uint32_t y = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.y * MAX_EXTENT, Scalar{0}, MAX_EXTENT)));
+			const uint32_t z = separateMortonCodeBits(static_cast<uint32_t>(clamp(normalizedPosition.z * MAX_EXTENT, Scalar{0}, MAX_EXTENT)));
 			return x | (y << 1) | (z << 2);
 		}
 	}
@@ -643,20 +644,20 @@ private:
 			return;
 		}
 
-		Box<N, float> worldBoundingBox{.min{Limits<float>::MAX}, .max{Limits<float>::MIN}};
+		Box<N, Scalar> worldBoundingBox{.min{Limits<Scalar>::MAX}, .max{Limits<Scalar>::MIN}};
 		for (const value_type& element : elements) {
 			worldBoundingBox.min = min(worldBoundingBox.min, element.first.min);
 			worldBoundingBox.max = max(worldBoundingBox.max, element.first.max);
 		}
 
-		const Point<N, float> worldCenter = (worldBoundingBox.min + worldBoundingBox.max) * 0.5f;
-		const Length<N, float> worldExtents = worldBoundingBox.max - worldBoundingBox.min;
-		const vec<N, float> inverseWorldExtents = 1.0f / worldExtents;
+		const Point<N, Scalar> worldCenter = (worldBoundingBox.min + worldBoundingBox.max) * Scalar{0.5};
+		const Length<N, Scalar> worldExtents = worldBoundingBox.max - worldBoundingBox.min;
+		const vec<N, Scalar> inverseWorldExtents = Scalar{1} / worldExtents;
 
 		elementIndicesOrderedByMortonCode.clear();
 		for (size_t elementIndex = 0; elementIndex < elements.size(); ++elementIndex) {
-			const Box<N, float>& boundingBox = elements[elementIndex].first;
-			const Point<N, float> center = (boundingBox.min + boundingBox.max) * 0.5f;
+			const Box<N, Scalar>& boundingBox = elements[elementIndex].first;
+			const Point<N, Scalar> center = (boundingBox.min + boundingBox.max) * Scalar{0.5};
 			elementIndicesOrderedByMortonCode.push_back({getMortonCode((center + worldCenter) * inverseWorldExtents), static_cast<ElementIndex>(elementIndex)});
 		}
 
@@ -730,19 +731,21 @@ private:
  * Binary tree-based space subdivision container, optimized for intersection
  * queries between 2D axis-aligned boxes.
  *
+ * \tparam Scalar scalar type of the axis-aligned boxes stored in the tree.
  * \tparam T type of element to store in the tree.
  */
-template <typename T>
-using BoundingVolumeHierarchy2D = LinearBoundingVolumeHierarchy<2, T>;
+template <typename Scalar, typename T>
+using BoundingVolumeHierarchy2D = LinearBoundingVolumeHierarchy<2, Scalar, T>;
 
 /**
  * Binary tree-based space subdivision container, optimized for intersection
  * queries between 3D axis-aligned boxes.
  *
+ * \tparam Scalar scalar type of the axis-aligned boxes stored in the tree.
  * \tparam T type of element to store in the tree.
  */
-template <typename T>
-using BoundingVolumeHierarchy3D = LinearBoundingVolumeHierarchy<3, T>;
+template <typename Scalar, typename T>
+using BoundingVolumeHierarchy3D = LinearBoundingVolumeHierarchy<3, Scalar, T>;
 
 } // namespace grem
 

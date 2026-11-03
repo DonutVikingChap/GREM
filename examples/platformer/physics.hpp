@@ -25,7 +25,7 @@ inline constexpr phys::CollisionLayer COLLISION_LAYER_VEHICLE{7};
 [[nodiscard]] inline phys::Shape3D buildModelShape(
 	const res::Model& model, res::Model::TransformationView transformation,
 	FunctionView<bool(res::Model::JointIndex jointIndex)> jointFilter = [](res::Model::JointIndex) -> bool { return true; }) {
-	Buffer<ConvexPolytopeVertex3D> vertices{};
+	Buffer<ConvexPolytopeVertex<3, float>> vertices{};
 	for (const res::Model::Instance& instance : model.instances) {
 		if (!jointFilter(instance.jointIndex)) {
 			continue;
@@ -37,7 +37,7 @@ inline constexpr phys::CollisionLayer COLLISION_LAYER_VEHICLE{7};
 			static_cast<size_t>(mesh.vertexCount)};
 		vertices.reserve(vertices.size() + meshPositions.size());
 		for (const vec3 position : meshPositions) {
-			vertices.push_back(ConvexPolytopeVertex3D{vec3{jointMatrix * vec4{position, 1.0f}}});
+			vertices.push_back(vec3{jointMatrix * vec4{position, 1.0f}});
 		}
 	}
 	return phys::ConvexPolytopeShape3D{vertices, 16};

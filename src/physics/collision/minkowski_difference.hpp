@@ -38,13 +38,13 @@ template <size_t N>
 	const SquaredDistance squaredDistanceAB = length2(ab);
 	if (squaredDistanceAB < SquaredDistance::MACHINE_EPSILON) {
 		if (length2(a) < length2(b)) {
-			return {1.0f, 0.0f};
+			return {Scalar{1}, Scalar{0}};
 		}
-		return {0.0f, 1.0f};
+		return {Scalar{0}, Scalar{1}};
 	}
 
 	const Scale1D v = -dot(a, ab) / squaredDistanceAB;
-	const Scale1D u = 1.0f - v;
+	const Scale1D u = Scalar{1} - v;
 	return {u, v};
 }
 
@@ -63,17 +63,17 @@ template <size_t N>
 		if (denominator < length2(SquaredDistance::MACHINE_EPSILON)) {
 			if (squaredDistanceAB <= squaredDistanceAC) {
 				const auto [u, w] = getBarycentricCoordinatesClosestToOriginOnMinkowskiLine(a, c);
-				return {u, 0.0f, w};
+				return {u, Scalar{0}, w};
 			}
 			const auto [u, v] = getBarycentricCoordinatesClosestToOriginOnMinkowskiLine(a, b);
-			return {u, v, 0.0f};
+			return {u, v, Scalar{0}};
 		}
-		const auto scale = 1.0f / denominator;
+		const auto scale = Scalar{1} / denominator;
 		const Area aAlongAB = dot(a, ab);
 		const Area aAlongAC = dot(a, ac);
 		const Scale1D v = (abAlongAC * aAlongAC - squaredDistanceAC * aAlongAB) * scale;
 		const Scale1D w = (abAlongAC * aAlongAB - squaredDistanceAB * aAlongAC) * scale;
-		const Scale1D u = 1.0f - v - w;
+		const Scale1D u = Scalar{1} - v - w;
 		return {u, v, w};
 	}
 
@@ -82,18 +82,18 @@ template <size_t N>
 	if (denominator < length2(SquaredDistance::MACHINE_EPSILON)) {
 		if (squaredDistanceAC <= squaredDistanceBC) {
 			const auto [v, w] = getBarycentricCoordinatesClosestToOriginOnMinkowskiLine(b, c);
-			return {0.0f, v, w};
+			return {Scalar{0}, v, w};
 		}
 		const auto [u, w] = getBarycentricCoordinatesClosestToOriginOnMinkowskiLine(a, c);
-		return {u, 0.0f, w};
+		return {u, Scalar{0}, w};
 	}
 
-	const auto scale = 1.0f / denominator;
+	const auto scale = Scalar{1} / denominator;
 	const Area cAlongAC = dot(c, ac);
 	const Area cAlongBC = dot(c, bc);
 	const Scale1D u = (squaredDistanceBC * cAlongAC - bcAlongAC * cAlongBC) * scale;
 	const Scale1D v = (squaredDistanceAC * cAlongBC - bcAlongAC * cAlongAC) * scale;
-	const Scale1D w = 1.0f - u - v;
+	const Scale1D w = Scalar{1} - u - v;
 	return {u, v, w};
 }
 
@@ -101,8 +101,8 @@ template <size_t N>
 [[nodiscard]] inline MinkowskiVertex<N> getPointClosestToOriginOnMinkowskiLine(const MinkowskiVertex<N>& a, const MinkowskiVertex<N>& b, auto projection) noexcept {
 	const auto [u, v] = getBarycentricCoordinatesClosestToOriginOnMinkowskiLine(projection(a), projection(b));
 	return {
-		((a.first - 0) * u + (b.first - 0) * v),
-		((a.second - 0) * u + (b.second - 0) * v),
+		((+a.first) * u + (+b.first) * v),
+		((+a.second) * u + (+b.second) * v),
 	};
 }
 
@@ -110,8 +110,8 @@ template <size_t N>
 	auto projection) noexcept {
 	const auto [u, v, w] = getBarycentricCoordinatesClosestToOriginOnMinkowskiPlane(projection(a), projection(b), projection(c));
 	return {
-		((a.first - 0) * u + (b.first - 0) * v + (c.first - 0) * w),
-		((a.second - 0) * u + (b.second - 0) * v + (c.second - 0) * w),
+		((+a.first) * u + (+b.first) * v + (+c.first) * w),
+		((+a.second) * u + (+b.second) * v + (+c.second) * w),
 	};
 }
 
@@ -125,8 +125,8 @@ template <size_t N>
 		return b;
 	}
 	return {
-		((a.first - 0) * u + (b.first - 0) * v),
-		((a.second - 0) * u + (b.second - 0) * v),
+		((+a.first) * u + (+b.first) * v),
+		((+a.second) * u + (+b.second) * v),
 	};
 }
 
@@ -154,11 +154,11 @@ template <size_t N>
 
 	if (abAlongA * acAlongB <= abAlongB * acAlongA && abAlongA <= 0 && abAlongB >= 0) {
 		const Scale1D t = abAlongA / (abAlongA - abAlongB);
-		const Scale1D u = 1.0f - t;
+		const Scale1D u = Scalar{1} - t;
 		const Scale1D w = t;
 		return {
-			((a.first - 0) * u + (c.first - 0) * w),
-			((a.second - 0) * u + (c.second - 0) * w),
+			((+a.first) * u + (+c.first) * w),
+			((+a.second) * u + (+c.second) * w),
 		};
 	}
 
@@ -170,11 +170,11 @@ template <size_t N>
 
 	if (abAlongC * acAlongA <= abAlongA * acAlongC && acAlongA <= 0 && acAlongC >= 0) {
 		const Scale1D t = acAlongA / (acAlongA - acAlongC);
-		const Scale1D u = 1.0f - t;
+		const Scale1D u = Scalar{1} - t;
 		const Scale1D w = t;
 		return {
-			((a.first - 0) * u + (c.first - 0) * w),
-			((a.second - 0) * u + (c.second - 0) * w),
+			((+a.first) * u + (+c.first) * w),
+			((+a.second) * u + (+c.second) * w),
 		};
 	}
 
@@ -182,18 +182,18 @@ template <size_t N>
 	const Area bcAlongC = acAlongC - abAlongC;
 	if (abAlongB * acAlongC <= abAlongC * acAlongB && bcAlongB <= 0 && bcAlongC >= 0) {
 		const Scale1D t = bcAlongB / (bcAlongC - bcAlongB);
-		const Scale1D v = 1.0f - t;
+		const Scale1D v = Scalar{1} - t;
 		const Scale1D w = t;
 		return {
-			((b.first - 0) * v + (c.first - 0) * w),
-			((b.second - 0) * v + (c.second - 0) * w),
+			((+b.first) * v + (+c.first) * w),
+			((+b.second) * v + (+c.second) * w),
 		};
 	}
 
 	const auto [u, v, w] = getBarycentricCoordinatesClosestToOriginOnMinkowskiPlane(vA, vB, vC);
 	return {
-		((a.first - 0) * u + (b.first - 0) * v + (c.first - 0) * w),
-		((a.second - 0) * u + (b.second - 0) * v + (c.second - 0) * w),
+		((+a.first) * u + (+b.first) * v + (+c.first) * w),
+		((+a.second) * u + (+b.second) * v + (+c.second) * w),
 	};
 }
 

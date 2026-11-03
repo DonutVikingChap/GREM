@@ -61,13 +61,13 @@ public:
 		const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 		const InverseTransformation<N> inverseTransformationB = inverse(transformationB);
 
-		const TriangleMesh<N>& mesh = *triangleMeshShapeB.getTriangleMesh();
-		const Span<const TriangleMeshVertex<N>> vertices = mesh.getVertices();
+		const TriangleMesh<N, float>& mesh = *triangleMeshShapeB.getTriangleMesh();
+		const Span<const TriangleMeshVertex<N, float>> vertices = mesh.getVertices();
 		const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 		const Optional<Box<N>> meshLocalBounds = convexPolytopeShapeA.getBoundingBox(Transformation<N>{0, inverseTransformationB * transformationA});
 		const Box<N> expandedMeshLocalAABB =
 			(meshLocalBounds) ? meshLocalBounds->getExpanded(options.maxCollisionTouchingDistance) : Box<N>{.min = Position<N>::MIN, .max = Position<N>::MAX};
-		mesh.getFaceOrthtree().test(expandedMeshLocalAABB.in(Box<N>::UNIT), [&](const TriangleMeshFaceIndex& faceIndex) -> void {
+		mesh.getFaceOrthtree().test(static_cast<grem::Box<N, float>>(expandedMeshLocalAABB.in(Box<N>::UNIT)), [&](const TriangleMeshFaceIndex& faceIndex) -> void {
 			const size_t indexOffset = static_cast<size_t>(faceIndex) * 3;
 			const Array meshLocalTrianglePoints{
 				vertices[indices[indexOffset + 0]] * Length<N>::UNIT,

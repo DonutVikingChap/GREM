@@ -47,7 +47,7 @@ private:
 
 			const MovementDescription& movementDescription = schema.getMovementDescription(movementType);
 			const phys::Time deltaTime = simulationOptions.stepInterval;
-			const phys::Time timeSinceJump = static_cast<float>(tickIndex - movementState.lastJumpTickIndex) * deltaTime;
+			const phys::Time timeSinceJump = static_cast<phys::Scalar>(tickIndex - movementState.lastJumpTickIndex) * deltaTime;
 			const bool canJump =
 				movementState.groundNormal && timeSinceJump >= movementDescription.jumpRegroundDelay && !movementState.flags.contains(MovementState::ALREADY_JUMPED);
 
@@ -101,7 +101,7 @@ private:
 			const PlayerID playerID = playerEntities.getComponentOr<PlayerID>(entityID, PlayerID{});
 
 			if (flying) {
-				const phys::Scale1D desiredVerticalComponent = static_cast<float>(jumping) - static_cast<float>(crouching);
+				const phys::Scale1D desiredVerticalComponent = static_cast<phys::Scalar>(jumping) - static_cast<phys::Scalar>(crouching);
 				const phys::Scale3D desiredDirectionScale{movementState.desiredDirectionScale.getX(), desiredVerticalComponent, movementState.desiredDirectionScale.getY()};
 				flyMove(linearVelocity, desiredDirectionScale, targetSpeed, movementDescription.accelerationDuration, movementDescription.minGroundSpeed, deltaTime);
 				gravityAcceleration = {};
@@ -144,9 +144,9 @@ private:
 				if (grounded && horizontalSpeed > 0 && !movementDescription.footstepSoundTypes.empty()) {
 					if ((fmod(oldBobbingPhase + 0.6_turns, 1_turns) < 0.5_turns) != (fmod(newBobbingPhase + 0.6_turns, 1_turns) < 0.5_turns)) {
 						rng::Xoroshiro128PlusPlusEngine::result_type seed = static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(tickIndex - TickIndex{});
-						seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(stepPosition.getX().in(phys::METERS), 65536.0f));
-						seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(stepPosition.getY().in(phys::METERS), 65536.0f));
-						seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(stepPosition.getZ().in(phys::METERS), 65536.0f));
+						seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{stepPosition.getX().in(phys::METERS)}, phys::Scalar{65536}));
+						seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{stepPosition.getY().in(phys::METERS)}, phys::Scalar{65536}));
+						seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{stepPosition.getZ().in(phys::METERS)}, phys::Scalar{65536}));
 						rng::Xoroshiro128PlusPlusEngine numberGenerator{seed};
 						rng::UniformIntegerDistribution<size_t> distribution{0, movementDescription.footstepSoundTypes.size() - 1};
 						if (playerID) {
@@ -259,7 +259,8 @@ private:
 		const WeaponDescription::ProceduralAnimation& proceduralAnimation = weaponDescription.proceduralAnimation;
 
 		if (grounded && horizontalSpeed > 0) {
-			const phys::Frequency speedScaledBobbingRate = log2(1.0f + 2.0f * float{(horizontalSpeed * proceduralAnimation.bobbingRate).in(phys::HERTZ)}) * phys::HERTZ;
+			const phys::Frequency speedScaledBobbingRate =
+				log2(phys::Scalar{1} + phys::Scalar{2} * phys::Scalar{(horizontalSpeed * proceduralAnimation.bobbingRate).in(phys::HERTZ)}) * phys::HERTZ;
 			return bobbingPhase + speedScaledBobbingRate * 0.5_turns * deltaTime;
 		}
 

@@ -32,16 +32,16 @@ struct BroadphaseID : LooseOrthtreeID {
 	constexpr BroadphaseID(LooseOrthtreeID id) noexcept
 		: LooseOrthtreeID(id) {}
 
-	constexpr BroadphaseID(LooseOrthtree<2, EntityID>::iterator pos) noexcept
+	constexpr BroadphaseID(LooseOrthtree<2, Scalar, EntityID>::iterator pos) noexcept
 		: LooseOrthtreeID(pos) {}
 
-	constexpr BroadphaseID(LooseOrthtree<2, EntityID>::const_iterator pos) noexcept
+	constexpr BroadphaseID(LooseOrthtree<2, Scalar, EntityID>::const_iterator pos) noexcept
 		: LooseOrthtreeID(pos) {}
 
-	constexpr BroadphaseID(LooseOrthtree<3, EntityID>::iterator pos) noexcept
+	constexpr BroadphaseID(LooseOrthtree<3, Scalar, EntityID>::iterator pos) noexcept
 		: LooseOrthtreeID(pos) {}
 
-	constexpr BroadphaseID(LooseOrthtree<3, EntityID>::const_iterator pos) noexcept
+	constexpr BroadphaseID(LooseOrthtree<3, Scalar, EntityID>::const_iterator pos) noexcept
 		: LooseOrthtreeID(pos) {}
 
 	using LooseOrthtreeID::operator==;
@@ -56,7 +56,7 @@ struct BroadphaseID : LooseOrthtreeID {
 template <size_t N>
 class Broadphase {
 private:
-	using Tree = LooseOrthtree<N, EntityID>;
+	using Tree = LooseOrthtree<N, Scalar, EntityID>;
 
 public:
 	using value_type = typename Tree::value_type;                     ///< Value type of the container.
@@ -237,9 +237,9 @@ public:
 	 */
 	template <typename Callback, typename Predicate>
 	auto traverseNodes(Callback&& callback, Predicate&& predicate) const { // NOLINT(cppcoreguidelines-missing-std-forward)
-		return tree.traverseNodes([callback = std::forward<Callback>(callback)](const grem::Box<N, float>& boundingBox, const const_local_iterator& first,
+		return tree.traverseNodes([callback = std::forward<Callback>(callback)](const grem::Box<N, Scalar>& boundingBox, const const_local_iterator& first,
 									  const const_local_iterator& last) mutable { return callback(boundingBox * Box<N>::UNIT, first, last); },
-			[predicate = std::forward<Predicate>(predicate)](const grem::Box<N, float>& boundingBox) mutable { return predicate(boundingBox * Box<N>::UNIT); });
+			[predicate = std::forward<Predicate>(predicate)](const grem::Box<N, Scalar>& boundingBox) mutable { return predicate(boundingBox * Box<N>::UNIT); });
 	}
 
 	/**
@@ -327,7 +327,7 @@ public:
 	template <typename Callback, typename Predicate>
 	auto traverseEntities(Callback&& callback, Predicate&& predicate) const { // NOLINT(cppcoreguidelines-missing-std-forward)
 		return tree.traverseElements(std::forward<Callback>(callback),
-			[predicate = std::forward<Predicate>(predicate)](const grem::Box<N, float>& boundingBox) mutable { return predicate(boundingBox * Box<N>::UNIT); });
+			[predicate = std::forward<Predicate>(predicate)](const grem::Box<N, Scalar>& boundingBox) mutable { return predicate(boundingBox * Box<N>::UNIT); });
 	}
 
 	/**

@@ -439,10 +439,10 @@ struct Model {
 	};
 
 	/** Parameters describing a convex polytope shape. */
-	using ConvexPolytopeShape = SharedPointer<ConvexPolytope3D>;
+	using ConvexPolytopeShape = SharedPointer<ConvexPolytope<3, float>>;
 
 	/** Parameters describing a triangle mesh shape. */
-	using TriangleMeshShape = SharedPointer<TriangleMesh3D>;
+	using TriangleMeshShape = SharedPointer<TriangleMesh<3, float>>;
 
 	/** Collision shape in a model. */
 	using Shape = Variant<PlaneShape, SphereShape, BoxShape, CylinderShape, CapsuleShape, ConvexPolytopeShape, TriangleMeshShape>;
@@ -1200,7 +1200,7 @@ struct Model {
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	GREM_API(resource) Model(const ConvexPolytope3D& polytope, const mat4& transformation = mat4{1.0f});
+	Model(const ConvexPolytope<3, float>& polytope, const mat4& transformation = mat4{1.0f});
 
 	/**
 	 * Load a model from a file.
@@ -1362,7 +1362,7 @@ struct Model {
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	GREM_API(resource) void assign(const ConvexPolytope3D& polytope, const mat4& transformation = mat4{1.0f});
+	void assign(const ConvexPolytope<3, float>& polytope, const mat4& transformation = mat4{1.0f});
 
 	/**
 	 * Load and assign a model from a file.

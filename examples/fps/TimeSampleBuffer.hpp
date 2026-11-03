@@ -41,10 +41,10 @@ public:
 		const Duration mean = (sampleCount <= 1) ? sampleSum : sampleSum / sampleCount;
 		const SquaredMicroseconds variance =
 			(sampleCount <= 1)
-				? SquaredMicroseconds{}
-				: SquaredMicroseconds{
+		        ? SquaredMicroseconds{}
+		        : SquaredMicroseconds{
 					  (sampleSumOfMicrosecondsSquares - SquaredMicroseconds{sampleSumMicroseconds.count() * sampleSumMicroseconds.count()} / sampleCount) / (sampleCount - 1)};
-		const Duration standardDeviation = duration_cast<Duration>(DurationBase<float, Microseconds::period>{sqrt(static_cast<float>(variance.count()))});
+		const Duration standardDeviation = duration_cast<Duration>(FloatMicroseconds{sqrt(static_cast<float>(variance.count()))});
 		return {.mean = mean, .standardDeviation = standardDeviation};
 	}
 

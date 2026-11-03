@@ -252,7 +252,7 @@ private:
 					linearVelocity.setY(0);
 
 					// Play landing sound.
-					const phys::Time timeSinceLastLanding = static_cast<float>(tickIndex - movementState.lastLandingTickIndex) * deltaTime;
+					const phys::Time timeSinceLastLanding = static_cast<phys::Scalar>(tickIndex - movementState.lastLandingTickIndex) * deltaTime;
 					if (movementDescription.landingSoundType != SoundType{} && timeSinceLastLanding >= movementDescription.jumpRegroundDelay) {
 						const PlayerID playerID = playerEntities.getComponentOr<PlayerID>(entityID, PlayerID{});
 						if (playerID) {

@@ -76,7 +76,7 @@ bool Broadphase<N>::testShape(Length1D minPenetrationDepth, ShapeView<N> shape, 
 	};
 
 	if (const Optional<Box<N>> shapeBoundingBox = shape.getBoundingBox(transformation)) {
-		const Box<N> expandedShapeBoundingBox = shapeBoundingBox->getExpanded(options.maxCollisionTouchingDistance * 2.0f);
+		const Box<N> expandedShapeBoundingBox = shapeBoundingBox->getExpanded(options.maxCollisionTouchingDistance * Scalar{2});
 		traverseEntities(
 			[&](const EntityID& objectID) -> bool {
 				if (entities.containsEntity(objectID) && intersects(entities.template getComponent<ObjectBounds<N>>(objectID).boundingBox, expandedShapeBoundingBox)) {
@@ -124,7 +124,7 @@ bool Broadphase<N>::collide(ShapeView<N> shape, CollisionFilter filter, const Tr
 	};
 
 	if (const Optional<Box<N>> shapeBoundingBox = shape.getBoundingBox(transformation)) {
-		const Box<N> expandedShapeBoundingBox = shapeBoundingBox->getExpanded(options.maxCollisionTouchingDistance * 2.0f);
+		const Box<N> expandedShapeBoundingBox = shapeBoundingBox->getExpanded(options.maxCollisionTouchingDistance * Scalar{2});
 		traverseEntities(
 			[&](const EntityID& objectID) -> bool {
 				if (entities.containsEntity(objectID) && intersects(entities.template getComponent<ObjectBounds<N>>(objectID).boundingBox, expandedShapeBoundingBox)) {
@@ -201,7 +201,7 @@ bool Broadphase<N>::shapecast(ConvexShapeView<N> convexShape, CollisionFilter fi
 		.maxDistance = maxDistance,
 	};
 	const Length<N> rayExpansion =
-		(convexShapeBoundingBox) ? (convexShapeBoundingBox->max - convexShapeBoundingBox->min) * 0.5f + Length<N>{options.maxCollisionTouchingDistance} : Length<N>::MAX;
+		(convexShapeBoundingBox) ? (convexShapeBoundingBox->max - convexShapeBoundingBox->min) * Scalar{0.5} + Length<N>{options.maxCollisionTouchingDistance} : Length<N>::MAX;
 
 	bool foundCollision = false;
 	traverseEntities(

@@ -25,11 +25,11 @@ private:
 		const ParticleDescription& particleDescription = schema.getParticleDescription(particleType);
 		if (particleDescription.landingDecalMaterialType != DecalMaterialType{}) {
 			rng::Xoroshiro128PlusPlusEngine::result_type seed = static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(tickIndex - TickIndex{});
-			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(hitPosition.getX().in(phys::METERS), 65536.0f));
-			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(hitPosition.getY().in(phys::METERS), 65536.0f));
-			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(hitPosition.getZ().in(phys::METERS), 65536.0f));
+			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{hitPosition.getX().in(phys::METERS)}, phys::Scalar{65536}));
+			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{hitPosition.getY().in(phys::METERS)}, phys::Scalar{65536}));
+			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{hitPosition.getZ().in(phys::METERS)}, phys::Scalar{65536}));
 			rng::Xoroshiro128PlusPlusEngine numberGenerator{seed};
-			rng::UniformRealDistribution<float> distribution{-1.0f, 1.0f};
+			rng::UniformRealDistribution<phys::Scalar> distribution{phys::Scalar{-1}, phys::Scalar{1}};
 			const phys::Scale3D randomVector{distribution(numberGenerator), distribution(numberGenerator), distribution(numberGenerator)};
 			const phys::Direction3D decalUp = tryNormalize(randomVector).value_or(phys::Y_AXIS_3D);
 			const phys::Position3D decalPosition = hitPosition;

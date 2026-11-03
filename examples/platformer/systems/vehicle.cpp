@@ -652,7 +652,7 @@ void poseVehicles(exec::Entities<ObjectModelInstance, const phys::Orientation3D,
 			res::Model::Joint& localJoint = modelInstance.pose.localJoints[wheelInfo.jointIndex];
 			localJoint = info.model.getBindPose().localJoints[wheelInfo.jointIndex];
 			localJoint.translation += vec3{inverseScale * inverseOrientation(suspensionOffset).in(phys::METERS)};
-			localJoint.rotation = inverseOrientation * suspensionOrientation * phys::Orientation3D::pitch(0 - rotationAngle) * localJoint.rotation;
+			localJoint.rotation = inverseOrientation * suspensionOrientation * phys::Orientation3D::pitch(-(+rotationAngle)) * localJoint.rotation;
 		}
 	}
 }

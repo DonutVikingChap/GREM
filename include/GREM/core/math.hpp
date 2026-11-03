@@ -1069,7 +1069,6 @@ using std::cos;
 using std::cosh;
 using std::erf;
 using std::erfc;
-using std::exp;
 using std::exp2;
 using std::expm1;
 using std::fdim;
@@ -1144,6 +1143,18 @@ template <typename T>
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL fract(T a) requires(floating_point<T>) {
 	return a - floor(a);
+}
+
+/**
+ * Calculate the value of Euler's number raised to a power.
+ *
+ * \param a exponent.
+ *
+ * \return `e ^ a`.
+ */
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL exp(T a) noexcept requires(floating_point<T>) {
+	return std::exp(a);
 }
 
 /**

@@ -122,14 +122,14 @@ private:
 
 			rng::Xoroshiro128PlusPlusEngine::result_type seed =
 				static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(currentPlayer.subtickBeginTimestamp.getTickIndex() - TickIndex{});
-			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(fireAngles.getX().in(phys::DEGREES), 360.0f));
-			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(fireAngles.getY().in(phys::DEGREES), 360.0f));
+			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{fireAngles.getX().in(phys::DEGREES)}, phys::Scalar{360}));
+			seed ^= static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(wrap(phys::Scalar{fireAngles.getY().in(phys::DEGREES)}, phys::Scalar{360}));
 			rng::Xoroshiro128PlusPlusEngine numberGenerator{seed};
-			rng::UniformRealDistribution<float> recoilStrengthPitchDistribution{
+			rng::UniformRealDistribution<phys::Scalar> recoilStrengthPitchDistribution{
 				recoilStrengthMin.getX().in(phys::RADIANS_PER_SECOND),
 				recoilStrengthMax.getX().in(phys::RADIANS_PER_SECOND),
 			};
-			rng::UniformRealDistribution<float> recoilStrengthYawDistribution{
+			rng::UniformRealDistribution<phys::Scalar> recoilStrengthYawDistribution{
 				recoilStrengthMin.getY().in(phys::RADIANS_PER_SECOND),
 				recoilStrengthMax.getY().in(phys::RADIANS_PER_SECOND),
 			};
@@ -178,8 +178,10 @@ private:
 
 					++weaponIntermediateState->projectilesToFire;
 					--weaponState->loadedRoundCount;
-					weaponState->recoilStrengthOfLatestShot =
-						vec2{recoilStrengthPitchDistribution(numberGenerator), -recoilStrengthYawDistribution(numberGenerator)} * phys::RADIANS_PER_SECOND;
+					weaponState->recoilStrengthOfLatestShot = {
+						recoilStrengthPitchDistribution(numberGenerator) * phys::RADIANS_PER_SECOND,
+						-recoilStrengthYawDistribution(numberGenerator) * phys::RADIANS_PER_SECOND,
+					};
 					weaponState->lastFiredTimestamp = nextFireTimestamp;
 					weaponState->recoilAngularRates = calculateRecoilAngularRates(phys::Time{}, weaponState->recoilStrengthOfLatestShot, weaponDescription);
 					nextFireTimestamp.addTime(cycleDuration, tickInterval);

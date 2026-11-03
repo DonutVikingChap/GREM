@@ -32,18 +32,18 @@ struct PlatformerModelShaderBlobShadow {
 	float blobShadowRadius;
 	uint32_t blobShadowInstanceIdentifier;
 
-	[[nodiscard]] Box<2, float> getHorizontalBoundingBox() const {
+	[[nodiscard]] Box<2, phys::Scalar> getHorizontalBoundingBox() const {
 		return {
 			.min{blobShadowPosition.x - blobShadowRadius, blobShadowPosition.z - blobShadowRadius},
 			.max{blobShadowPosition.x + blobShadowRadius, blobShadowPosition.z + blobShadowRadius},
 		};
 	}
 
-	[[nodiscard]] Box<3, float> getBoundingBox(const Box<3, float>& visibleBounds) const {
-		const Box<2, float> horizontalBox = getHorizontalBoundingBox();
+	[[nodiscard]] Box<3, phys::Scalar> getBoundingBox(const Box<3, phys::Scalar>& visibleBounds) const {
+		const Box<2, phys::Scalar> horizontalBox = getHorizontalBoundingBox();
 		return {
 			.min{horizontalBox.min.x, visibleBounds.min.y, horizontalBox.min.y},
-			.max{horizontalBox.max.x, blobShadowPosition.y + blobShadowRadius * 2.0f, horizontalBox.max.y},
+			.max{horizontalBox.max.x, blobShadowPosition.y + blobShadowRadius * phys::Scalar{2}, horizontalBox.max.y},
 		};
 	}
 };

@@ -74,7 +74,7 @@ public:
 					CollisionAlgorithmResult<N> collision{.manifold = subCollision.manifold};
 					for (ContactPoint<N>& point : collision.manifold.points) {
 						point.offsets.second = subColliderB.localOffset + point.offsets.second;
-						point.localOffsets.second = localTransformationB(point.localOffsets.second) - 0;
+						point.localOffsets.second = +localTransformationB(point.localOffsets.second);
 					}
 					callback(collision);
 				});

@@ -21,7 +21,7 @@ namespace grem::physics {
 template <size_t N>
 class GilbertJohnsonKeerthiAlgorithm {
 public:
-	static constexpr Direction<N> DEFAULT_INITIAL_DIRECTION = Direction<N>::reinterpret(Scale<N>{(N == 3) ? numbers::INV_SQRT3 : 1.0f / numbers::SQRT2});
+	static constexpr Direction<N> DEFAULT_INITIAL_DIRECTION = Direction<N>::reinterpret(Scale<N>{(N == 3) ? numbers::INV_SQRT3 : Scalar{1} / numbers::sqrt2_v<Scalar>});
 
 	struct FindAnyIntersectionResult {
 		MinkowskiSimplex<N> simplex{};
@@ -113,14 +113,14 @@ public:
 
 		// Reference: Gino van den Bergen: "Ray Casting against General Convex Objects with Application to Continuous Collision Detection": Playlogic Game Factory (2004): http://dtecta.com/papers/jgt04raycast.pdf
 
-		const SquaredDistance collisionDistanceErrorToleranceSquared = max(length2(collisionDistanceErrorTolerance), SquaredDistance::MACHINE_EPSILON * 100.0f);
+		const SquaredDistance collisionDistanceErrorToleranceSquared = max(length2(collisionDistanceErrorTolerance), SquaredDistance::MACHINE_EPSILON * Scalar{100});
 
 		FindRayIntersectionResult result{.vertex = support(rayDirection)};
 
 		Position<N> rayPosition = rayOrigin;
 
 		const auto projection = [&](const MinkowskiVertex<N>& vertex) -> Length<N> {
-			return (rayPosition - 0) - (vertex.first - vertex.second);
+			return (rayPosition - Position<N>{}) - (vertex.first - vertex.second);
 		};
 
 		Length<N> offsetToRayPosition = projection(result.vertex);

@@ -99,7 +99,7 @@ public:
 				}
 
 				const SpriteDescription& spriteDescription = schema.getSpriteDescription(spriteType);
-				size_t frameIndex = static_cast<size_t>(animationTime * spriteDescription.frameRate);
+				size_t frameIndex = static_cast<size_t>(phys::Scalar{animationTime * spriteDescription.frameRate});
 				if (spriteDescription.looping) {
 					frameIndex %= spriteInfo.frameSpriteIDs.size();
 				} else if (frameIndex >= spriteInfo.frameSpriteIDs.size()) {
@@ -164,8 +164,8 @@ public:
 				const rng::Xoroshiro128PlusPlusEngine::result_type seed =
 					static_cast<rng::Xoroshiro128PlusPlusEngine::result_type>(lastFiredTimestamp.getTickIndex() - TickIndex{});
 				rng::Xoroshiro128PlusPlusEngine numberGenerator{seed};
-				rng::UniformRealDistribution<float> rollDistribution{0.0f, 2.0f * numbers::PI};
-				rng::UniformRealDistribution<float> scaleDistribution{0.75f, 1.0f};
+				rng::UniformRealDistribution<phys::Scalar> rollDistribution{phys::Scalar{0}, phys::Scalar{2} * numbers::PI};
+				rng::UniformRealDistribution<phys::Scalar> scaleDistribution{phys::Scalar{0.75}, phys::Scalar{1}};
 				const phys::Orientation3D muzzleFlashLocalOrientation =
 					phys::Orientation3D::roll(rollDistribution(numberGenerator)) * weaponDescription.proceduralAnimation.muzzleFlashLocalOrientation;
 				const phys::Position3D muzzleFlashPosition = (*weaponDisplayTransformation)(weaponDescription.proceduralAnimation.muzzleFlashLocalOffset);
@@ -180,7 +180,7 @@ public:
 					GREM_ASSERT(!spriteInfo.frameSpriteIDs.empty());
 
 					const SpriteDescription& spriteDescription = schema.getSpriteDescription(spriteType);
-					const size_t frameIndex = static_cast<size_t>(timeSinceFire * spriteDescription.frameRate);
+					const size_t frameIndex = static_cast<size_t>(phys::Scalar{timeSinceFire * spriteDescription.frameRate});
 					if (frameIndex >= spriteInfo.frameSpriteIDs.size()) {
 						continue;
 					}

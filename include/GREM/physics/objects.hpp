@@ -90,42 +90,42 @@ struct Material {
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient staticFriction = 0.8f;
+	Coefficient staticFriction = Scalar{0.8};
 
 	/**
 	 * Coefficient of kinetic friction of the object.
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient kineticFriction = 0.707f;
+	Coefficient kineticFriction = Scalar{0.707};
 
 	/**
 	 * Coefficient of rolling resistance of the object.
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient rollingResistance = 0.01f;
+	Coefficient rollingResistance = Scalar{0.01};
 
 	/**
 	 * Coefficient of restitution of the object.
 	 *
 	 * Must be between 0 and 1 (inclusive).
 	 */
-	Coefficient restitution = 0.5f;
+	Coefficient restitution = Scalar{0.5};
 
 	/**
 	 * Linear drag coefficient of the object.
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient linearDrag = 0.5f;
+	Coefficient linearDrag = Scalar{0.5};
 
 	/**
 	 * Angular drag coefficient of the object.
 	 *
 	 * Must be non-negative.
 	 */
-	Coefficient angularDrag = 0.5f;
+	Coefficient angularDrag = Scalar{0.5};
 
 	/**
 	 * How to combine the friction when this object collides with another.
@@ -264,7 +264,7 @@ struct ObjectOptions {
 	/**
 	 * Initial scale of the object in shape-local space.
 	 */
-	Scale<N> scale{1.0f};
+	Scale<N> scale{Scalar{1}};
 
 	/**
 	 * Initial linear velocity of the object's center of mass.
@@ -280,7 +280,7 @@ struct ObjectOptions {
 	 * Gravity acceleration that will be applied to the object on every
 	 * simulation step.
 	 */
-	LinearAcceleration<N> gravityAcceleration = -Y_AXIS<N> * 9.82f * METERS_PER_SECOND_SQUARED;
+	LinearAcceleration<N> gravityAcceleration = -Y_AXIS<N> * Scalar{9.82} * METERS_PER_SECOND_SQUARED;
 
 	/**
 	 * Effective fluid density of the object's surroundings, which will be used
@@ -289,7 +289,7 @@ struct ObjectOptions {
 	 * \sa Material::linearDrag
 	 * \sa Material::angularDrag
 	 */
-	Density surroundingFluidDensity = 1.2041f * KILOGRAMS_PER_CUBIC_METER;
+	Density surroundingFluidDensity = Scalar{1.2041} * KILOGRAMS_PER_CUBIC_METER;
 
 	/**
 	 * World-space offset of the center of buoyancy of the object relative to
@@ -477,7 +477,7 @@ using ObjectOptions3D = ObjectOptions<3>; ///< Configuration options for an obje
  *         of the mass otherwise.
  */
 [[nodiscard]] inline InverseMass calculateInverseMass(Mass mass) {
-	return (mass == 0) ? InverseMass::INF : (isinf(mass)) ? InverseMass{} : InverseMass{Coefficient{1} / mass};
+	return (mass == 0) ? InverseMass::INF : (isinf(mass)) ? InverseMass{} : InverseMass{Scalar{1} / mass};
 }
 
 /**
@@ -490,7 +490,7 @@ using ObjectOptions3D = ObjectOptions<3>; ///< Configuration options for an obje
  *         the reciprocal of the inverse mass otherwise.
  */
 [[nodiscard]] inline Mass calculateMass(InverseMass inverseMass) {
-	return (inverseMass == 0) ? Mass::INF : Mass{Coefficient{1} / inverseMass};
+	return (inverseMass == 0) ? Mass::INF : Mass{Scalar{1} / inverseMass};
 }
 
 /**
@@ -504,9 +504,7 @@ using ObjectOptions3D = ObjectOptions<3>; ///< Configuration options for an obje
  *         infinite, the reciprocal of the moment of inertia otherwise.
  */
 [[nodiscard]] inline InverseMomentOfInertia2D calculateInverseMomentOfInertia(MomentOfInertia2D momentOfInertia) {
-	return (momentOfInertia == 0)     ? InverseMomentOfInertia2D::INF
-	       : (isinf(momentOfInertia)) ? InverseMomentOfInertia2D{}
-	                                  : InverseMomentOfInertia2D{Coefficient{1} / momentOfInertia};
+	return (momentOfInertia == 0) ? InverseMomentOfInertia2D::INF : (isinf(momentOfInertia)) ? InverseMomentOfInertia2D{} : InverseMomentOfInertia2D{Scalar{1} / momentOfInertia};
 }
 
 /**
@@ -540,7 +538,7 @@ using ObjectOptions3D = ObjectOptions<3>; ///< Configuration options for an obje
  *         of inertia otherwise.
  */
 [[nodiscard]] inline MomentOfInertia2D calculateMomentOfInertia(InverseMomentOfInertia2D inverseMomentOfInertia) {
-	return (inverseMomentOfInertia == 0) ? MomentOfInertia2D::INF : MomentOfInertia2D{Coefficient{1} / inverseMomentOfInertia};
+	return (inverseMomentOfInertia == 0) ? MomentOfInertia2D::INF : MomentOfInertia2D{Scalar{1} / inverseMomentOfInertia};
 }
 
 /**
@@ -790,7 +788,9 @@ template <size_t N>
 	const InverseMomentOfInertiaTensor<N>& inverseMomentOfInertiaTensorB) {
 	const InverseMomentOfInertiaTensor<N> combinedInverseEffectiveMomentOfInertiaTensor = inverseMomentOfInertiaTensorA + inverseMomentOfInertiaTensorB;
 	const MomentOfInertiaTensor<N> combinedEffectiveMomentOfInertiaTensor =
-		(combinedInverseEffectiveMomentOfInertiaTensor == 0) ? MomentOfInertiaTensor<N>{0.0f * KILOGRAM_SQUARE_METERS} : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
+		(combinedInverseEffectiveMomentOfInertiaTensor == 0)
+	        ? MomentOfInertiaTensor<N>{Scalar{0} * KILOGRAM_SQUARE_METERS}
+	        : inverse(combinedInverseEffectiveMomentOfInertiaTensor);
 	return combinedEffectiveMomentOfInertiaTensor;
 }
 

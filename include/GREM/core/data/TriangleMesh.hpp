@@ -18,10 +18,14 @@
 
 namespace grem {
 
-template <size_t N>
-using TriangleMeshVertex = vec<N, float>;           ///< Vertex in a triangle mesh.
-using TriangleMeshVertex2D = TriangleMeshVertex<2>; ///< Vertex in a 2-dimensional triangle mesh.
-using TriangleMeshVertex3D = TriangleMeshVertex<3>; ///< Vertex in a 3-dimensional triangle mesh.
+/**
+ * Vertex in a triangle mesh.
+ *
+ * \tparam N number of dimensions of the world space (must be 2 or 3).
+ * \tparam Scalar scalar coordinate component type.
+ */
+template <size_t N, typename Scalar>
+using TriangleMeshVertex = vec<N, Scalar>;
 
 using TriangleMeshVertexIndex = uint32_t; ///< Index of a vertex in a triangle mesh.
 using TriangleMeshFaceIndex = uint32_t;   ///< Index of a triangle in a triangle mesh, equal to the index of the first vertex index divided by 3.
@@ -30,13 +34,14 @@ using TriangleMeshFaceIndex = uint32_t;   ///< Index of a triangle in a triangle
  * Triangle mesh.
  *
  * \tparam N number of dimensions of the world space (must be 2 or 3).
+ * \tparam Scalar scalar coordinate component type.
  */
-template <size_t N>
+template <size_t N, typename Scalar>
 class TriangleMesh {
 public:
-	using Vertex = TriangleMeshVertex<N>;        ///< Vertex type of the triangle mesh.
-	using VertexIndex = TriangleMeshVertexIndex; ///< Vertex index type of the triangle mesh.
-	using FaceIndex = TriangleMeshFaceIndex;     ///< Face index type of the triangle mesh.
+	using Vertex = TriangleMeshVertex<N, Scalar>; ///< Vertex type of the triangle mesh.
+	using VertexIndex = TriangleMeshVertexIndex;  ///< Vertex index type of the triangle mesh.
+	using FaceIndex = TriangleMeshFaceIndex;      ///< Face index type of the triangle mesh.
 
 	/**
 	 * Construct a triangle mesh from a set of vertices.
@@ -53,11 +58,11 @@ public:
 	TriangleMesh(Allocation<Vertex> vertices, Allocation<VertexIndex> indices)
 		: vertices(std::move(vertices))
 		, indices(std::move(indices))
-		, boundingBox([&]() -> Box<N, float> {
+		, boundingBox([&]() -> Box<N, Scalar> {
 			if (this->vertices.empty()) {
-				return Box<N, float>{};
+				return Box<N, Scalar>{};
 			}
-			Box<N, float> result{
+			Box<N, Scalar> result{
 				.min = this->vertices.front(),
 				.max = this->vertices.front(),
 			};
@@ -67,21 +72,21 @@ public:
 			}
 			return result;
 		}())
-		, boundingRadius([&]() -> float {
-			float result = 0.0f;
+		, boundingRadius([&]() -> Scalar {
+			Scalar result = Scalar{0};
 			for (const Vertex vertex : this->vertices) {
 				result = max(result, length2(vertex));
 			}
 			return sqrt(result);
 		}())
-		, faceOrthtree(boundingBox, [&]() -> float {
-			const Length<N, float> extents = boundingBox.max - boundingBox.min;
-			float result = extents[0];
+		, faceOrthtree(boundingBox, [&]() -> Scalar {
+			const Length<N, Scalar> extents = boundingBox.max - boundingBox.min;
+			Scalar result = extents[0];
 			for (size_t i = 1; i < N; ++i) {
 				result = max(result, extents[i]);
 			}
 			return result;
-		}() * 0.01f) {
+		}() * Scalar{0.002}) {
 		GREM_ASSERT(this->indices.size() % 3 == 0);
 		GREM_ASSERT(this->indices.size() / 3 <= size_t{Limits<FaceIndex>::MAX});
 		const FaceIndex faceCount = static_cast<FaceIndex>(this->indices.size() / 3);
@@ -90,12 +95,12 @@ public:
 			GREM_ASSERT(this->indices[indexOffset + 0] < this->vertices.size());
 			GREM_ASSERT(this->indices[indexOffset + 1] < this->vertices.size());
 			GREM_ASSERT(this->indices[indexOffset + 2] < this->vertices.size());
-			const Triangle<N, float> triangle{
+			const Triangle<N, Scalar> triangle{
 				.pointA = this->vertices[this->indices[indexOffset + 0]],
 				.pointB = this->vertices[this->indices[indexOffset + 1]],
 				.pointC = this->vertices[this->indices[indexOffset + 2]],
 			};
-			const Box<N, float> triangleAABB = triangle.getBoundingBox();
+			const Box<N, Scalar> triangleAABB = triangle.getBoundingBox();
 			faceOrthtree.insert(triangleAABB, faceIndex);
 		}
 	}
@@ -143,7 +148,7 @@ public:
 	 * \return a local axis-aligned bounding box that contains all vertices in
 	 *         the triangle mesh.
 	 */
-	[[nodiscard]] Box<N, float> getBoundingBox() const noexcept {
+	[[nodiscard]] Box<N, Scalar> getBoundingBox() const noexcept {
 		return boundingBox;
 	}
 
@@ -152,7 +157,7 @@ public:
 	 *
 	 * \return the bounding radius of the triangle mesh.
 	 */
-	[[nodiscard]] float getBoundingRadius() const noexcept {
+	[[nodiscard]] Scalar getBoundingRadius() const noexcept {
 		return boundingRadius;
 	}
 
@@ -164,19 +169,17 @@ public:
 	 *         indices, which are equal to the indices of the first
 	 *         corresponding vertex indices divided by 3.
 	 */
-	[[nodiscard]] const LooseOrthtree<N, FaceIndex>& getFaceOrthtree() const noexcept {
+	[[nodiscard]] const LooseOrthtree<N, Scalar, FaceIndex>& getFaceOrthtree() const noexcept {
 		return faceOrthtree;
 	}
 
 private:
 	Allocation<Vertex> vertices;
 	Allocation<VertexIndex> indices;
-	Box<N, float> boundingBox;
-	float boundingRadius;
-	LooseOrthtree<N, FaceIndex> faceOrthtree;
+	Box<N, Scalar> boundingBox;
+	Scalar boundingRadius;
+	LooseOrthtree<N, Scalar, FaceIndex> faceOrthtree;
 };
-using TriangleMesh2D = TriangleMesh<2>; ///< Triangle mesh in 2-dimensional space.
-using TriangleMesh3D = TriangleMesh<3>; ///< Triangle mesh in 3-dimensional space.
 
 } // namespace grem
 

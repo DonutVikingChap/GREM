@@ -45,8 +45,8 @@ public:
 		const Plane<N> plane{.point = transformationB.getOrigin(), .normal = transformationB.getDirection(Y_AXIS<N>)};
 		const Length<N> meshLocalPlaneOffset = inverseTransformationA(plane.point);
 		const Direction<N> meshLocalPlaneNormal = inverseTransformationA.getDirection(plane.normal);
-		const TriangleMesh<N>& mesh = *triangleMeshShapeA.getTriangleMesh();
-		const Span<const TriangleMeshVertex<N>> vertices = mesh.getVertices();
+		const TriangleMesh<N, float>& mesh = *triangleMeshShapeA.getTriangleMesh();
+		const Span<const TriangleMeshVertex<N, float>> vertices = mesh.getVertices();
 		const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 		const Length1D maxCollisionDistance = min(-minPenetrationDepth, options.maxCollisionTouchingDistance);
 		if (mesh.getFaceOrthtree().traverseElements(
@@ -67,7 +67,7 @@ public:
 					const Length<N> meshLocalMin = meshLocalBoundingBox.min * Length<N>::UNIT;
 					const Length<N> meshLocalMax = meshLocalBoundingBox.max * Length<N>::UNIT;
 					const Length<N> meshLocalCenter = midpoint(meshLocalMin, meshLocalMax);
-					const Length<N> halfExtents = (meshLocalMax - meshLocalMin) * 0.5f;
+					const Length<N> halfExtents = (meshLocalMax - meshLocalMin) * Scalar{0.5};
 					const Length<N> meshLocalNearPoint = meshLocalCenter + copysign(halfExtents, -meshLocalPlaneNormal);
 					const Length<N> meshLocalFarPoint = meshLocalCenter + copysign(halfExtents, meshLocalPlaneNormal);
 					return dot(meshLocalNearPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance ||
@@ -96,8 +96,8 @@ public:
 		const Plane<N> plane{.point = transformationB.getOrigin(), .normal = transformationB.getDirection(Y_AXIS<N>)};
 		const Length<N> meshLocalPlaneOffset = inverseTransformationA(plane.point);
 		const Direction<N> meshLocalPlaneNormal = inverseTransformationA.getDirection(plane.normal);
-		const TriangleMesh<N>& mesh = *triangleMeshShapeA.getTriangleMesh();
-		const Span<const TriangleMeshVertex<N>> vertices = mesh.getVertices();
+		const TriangleMesh<N, float>& mesh = *triangleMeshShapeA.getTriangleMesh();
+		const Span<const TriangleMeshVertex<N, float>> vertices = mesh.getVertices();
 		const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 		mesh.getFaceOrthtree().traverseElements(
 			[&](const TriangleMeshFaceIndex& faceIndex) -> void {
@@ -131,7 +131,7 @@ public:
 				const Length<N> meshLocalMin = meshLocalBoundingBox.min * Length<N>::UNIT;
 				const Length<N> meshLocalMax = meshLocalBoundingBox.max * Length<N>::UNIT;
 				const Length<N> meshLocalCenter = midpoint(meshLocalMin, meshLocalMax);
-				const Length<N> halfExtents = (meshLocalMax - meshLocalMin) * 0.5f;
+				const Length<N> halfExtents = (meshLocalMax - meshLocalMin) * Scalar{0.5};
 				const Length<N> meshLocalNearPoint = meshLocalCenter + copysign(halfExtents, -meshLocalPlaneNormal);
 				const Length<N> meshLocalFarPoint = meshLocalCenter + copysign(halfExtents, meshLocalPlaneNormal);
 				return dot(meshLocalNearPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance ||

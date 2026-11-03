@@ -108,7 +108,7 @@ struct LocalPlayer {
 	phys::Distance aimDistance{};
 	Duration stepSpamTimer{};
 	Duration crateSpamTimer{};
-	Frustum<float> frustum{};
+	Frustum<phys::Scalar> frustum{};
 	Region2D viewRegion{};
 	gfx::Viewport viewport{};
 	gfx::Camera3D camera;
@@ -126,15 +126,15 @@ struct LocalPlayer {
 			};
 			const auto readExtraProperty = [&](StringView key, json::Reader& reader) -> void {
 				if (key == "fieldOfView") {
-					fieldOfView = reader.readNumber<float>() * phys::DEGREES;
+					fieldOfView = reader.readNumber<phys::Scalar>() * phys::DEGREES;
 				} else if (key == "aimSensitivityPitch") {
-					aimSensitivity.setX(reader.readNumber<float>());
+					aimSensitivity.setX(reader.readNumber<phys::Scalar>());
 				} else if (key == "aimSensitivityYaw") {
-					aimSensitivity.setY(reader.readNumber<float>());
+					aimSensitivity.setY(reader.readNumber<phys::Scalar>());
 				} else if (key == "turnSensitivityPitch") {
-					turnSensitivity.setX(reader.readNumber<float>() * phys::DEGREES_PER_SECOND);
+					turnSensitivity.setX(reader.readNumber<phys::Scalar>() * phys::DEGREES_PER_SECOND);
 				} else if (key == "turnSensitivityYaw") {
-					turnSensitivity.setY(reader.readNumber<float>() * phys::DEGREES_PER_SECOND);
+					turnSensitivity.setY(reader.readNumber<phys::Scalar>() * phys::DEGREES_PER_SECOND);
 				}
 			};
 			inputManager.loadConfiguration(std::move(*fileContents), configurationFilepath, getOutputIndex, readExtraProperty);
@@ -156,11 +156,11 @@ struct LocalPlayer {
 			return {};
 		};
 		const Array extraProperties{
-			Pair<StringView, json::Variant>{"fieldOfView", static_cast<float>(fieldOfView.in(phys::DEGREES))},
-			Pair<StringView, json::Variant>{"aimSensitivityPitch", static_cast<float>(aimSensitivity.getX())},
-			Pair<StringView, json::Variant>{"aimSensitivityYaw", static_cast<float>(aimSensitivity.getY())},
-			Pair<StringView, json::Variant>{"turnSensitivityPitch", static_cast<float>(turnSensitivity.getX().in(phys::DEGREES_PER_SECOND))},
-			Pair<StringView, json::Variant>{"turnSensitivityYaw", static_cast<float>(turnSensitivity.getY().in(phys::DEGREES_PER_SECOND))},
+			Pair<StringView, json::Variant>{"fieldOfView", static_cast<phys::Scalar>(fieldOfView.in(phys::DEGREES))},
+			Pair<StringView, json::Variant>{"aimSensitivityPitch", static_cast<phys::Scalar>(aimSensitivity.getX())},
+			Pair<StringView, json::Variant>{"aimSensitivityYaw", static_cast<phys::Scalar>(aimSensitivity.getY())},
+			Pair<StringView, json::Variant>{"turnSensitivityPitch", static_cast<phys::Scalar>(turnSensitivity.getX().in(phys::DEGREES_PER_SECOND))},
+			Pair<StringView, json::Variant>{"turnSensitivityYaw", static_cast<phys::Scalar>(turnSensitivity.getY().in(phys::DEGREES_PER_SECOND))},
 		};
 		inputManager.saveConfiguration(filesystem, configurationFilepath, getActionName, extraProperties);
 	}
@@ -1165,7 +1165,8 @@ public:
 				.position = localPlayerPerspective.viewPosition.in(phys::METERS),
 				.orientation = phys::Orientation3D::fromAngles(phys::PitchYawRoll{localPlayerPerspective.aimAngles, 0_radians}),
 			});
-			localPlayer.frustum = Frustum<float>::fromViewProjectionMatrix(localPlayer.camera.getProjectionMatrix() * localPlayer.camera.getViewMatrix());
+			localPlayer.frustum =
+				Frustum<phys::Scalar>::fromViewProjectionMatrix(mat<4, 4, phys::Scalar>{localPlayer.camera.getProjectionMatrix() * localPlayer.camera.getViewMatrix()});
 		}
 
 		const bool isSplitScreen = localPlayers.size() >= 2;
@@ -2032,7 +2033,7 @@ private:
 			}
 		});
 
-		graphics.renderer3D.renderAllShadowMapsForFullZoomedOutView(graphics.lights, resources.getResource<MapInfo>().bounds.in(phys::METERS),
+		graphics.renderer3D.renderAllShadowMapsForFullZoomedOutView(graphics.lights, static_cast<Box<3, float>>(resources.getResource<MapInfo>().bounds.in(phys::METERS)),
 			[&](gfx::RenderPass& renderPass, const gfx::Camera3D& camera) -> void {
 				graphics.renderer3D.drawUnlitUnorderedFrame(renderPass,
 					{{graphics.shadowCasterInstances3D, {.skipAlphaBlendedModelMeshInstances = true, .skipAll2DInstances = true}}}, camera);
@@ -2285,7 +2286,7 @@ private:
 				}
 			});
 
-			nextTickLocalPlayerCommand.desiredDirectionScale = phys::Orientation2D{0 - localPlayer.visualAimAngles.getY()}(flipY(movementInputScale));
+			nextTickLocalPlayerCommand.desiredDirectionScale = phys::Orientation2D{-(+localPlayer.visualAimAngles.getY())}(flipY(movementInputScale));
 		}
 	}
 

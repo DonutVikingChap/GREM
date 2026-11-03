@@ -106,7 +106,7 @@ struct CollectibleModelInstance {
 
 void poseCollectible(CollectibleModelInstance& modelInstance, phys::Position3D position, phys::EntityID entityID, Duration totalElapsedTime, const WorldView& worldView,
 	const Collectible& collectible, const CollectibleModel& model) {
-	const float time = duration_cast<FloatSeconds>(totalElapsedTime + collectible.timeOffset).count();
+	const phys::Scale1D time = phys::Time{totalElapsedTime + collectible.timeOffset}.in(phys::SECONDS);
 	const phys::Position3D displayPosition = position + phys::Y_AXIS_3D * sin(time * phys::PI) * 0.2_meters;
 	const phys::Orientation3D displayOrientation = phys::Orientation3D::yaw(time) * phys::Orientation3D::pitch(time * 2_x) * phys::Orientation3D::yaw(time * 2_x);
 	modelInstance.transformation.assign(translateRotate(displayPosition, displayOrientation), model.model.getBindPose().localJoints,
@@ -300,7 +300,7 @@ struct CollectibleSystem final : System {
 		for (const auto& [entityID, effectInstance] : simulation.registry.getEntities<const CollectibleEffectInstance>()) {
 			if (worldView.isPotentiallyVisible(phys::Sphere3D{.center = effectInstance.position, .radius = settings.effect.size * numbers::SQRT2})) {
 				const phys::Time time = mix(effectInstance.previousTime, effectInstance.time, frameInfo.tickInterpolationAlpha);
-				const size_t frameIndex = min(static_cast<size_t>(time * (static_cast<float>(frameCount) / settings.effect.duration)), frameCount - 1);
+				const size_t frameIndex = min(static_cast<size_t>(phys::Scalar{time * (static_cast<phys::Scalar>(frameCount) / settings.effect.duration)}), frameCount - 1);
 				const gfx::SpriteID spriteID = effect.spriteFrames[frameIndex];
 				graphics.instances3D.putSpriteInstance(graphics.spriteAtlas, spriteID,
 					gfx::SpriteInstance3D{

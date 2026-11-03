@@ -112,7 +112,10 @@ protected:
 					break;
 				}
 				GREM_CASE(const evt::MouseMovedEvent& moved) {
-					const phys::Position2D newPosition = vec2{moved.mousePosition.x, static_cast<float>(window.getSize().height) - moved.mousePosition.y} * PIXEL_LENGTH_UNIT;
+					const phys::Position2D newPosition{
+						static_cast<phys::Scalar>(moved.mousePosition.x) * PIXEL_LENGTH_UNIT,
+						(static_cast<phys::Scalar>(window.getSize().height) - static_cast<phys::Scalar>(moved.mousePosition.y)) * PIXEL_LENGTH_UNIT,
+					};
 					cursorMotion += newPosition - cursorPosition;
 					cursorPosition = newPosition;
 					break;
@@ -148,8 +151,10 @@ protected:
 
 		const Offset2D windowPosition = window.getPosition();
 		if (windowPosition != lastWindowPosition) {
-			const phys::Length2D windowMotion =
-				vec2{static_cast<float>(windowPosition.x - lastWindowPosition.x), static_cast<float>(lastWindowPosition.y - windowPosition.y)} * PIXEL_LENGTH_UNIT;
+			const phys::Length2D windowMotion = {
+				static_cast<phys::Scalar>(windowPosition.x - lastWindowPosition.x) * PIXEL_LENGTH_UNIT,
+				static_cast<phys::Scalar>(lastWindowPosition.y - windowPosition.y) * PIXEL_LENGTH_UNIT,
+			};
 			lastWindowPosition = windowPosition;
 
 			for (auto&& [entityID, position, activity] : simulation.registry.getEntities<phys::Position2D, phys::ObjectActivity>()) {
@@ -427,7 +432,10 @@ private:
 		const float shapeColorR = shapeColorComponentDistribution(numberGenerator);
 		const float shapeColorG = shapeColorComponentDistribution(numberGenerator);
 		const float shapeColorB = shapeColorComponentDistribution(numberGenerator);
-		const phys::Length2D size = vec2{static_cast<float>(shapeSizeXInSixteensOfPixels * 16), static_cast<float>(shapeSizeYInSixteensOfPixels * 16)} * PIXEL_LENGTH_UNIT;
+		const phys::Length2D size{
+			static_cast<phys::Scalar>(shapeSizeXInSixteensOfPixels * 16) * PIXEL_LENGTH_UNIT,
+			static_cast<phys::Scalar>(shapeSizeYInSixteensOfPixels * 16) * PIXEL_LENGTH_UNIT,
+		};
 		const ShapeCategory shapeCategory = static_cast<ShapeCategory>(shapeCategoryIndex);
 		const Color color = Color::fromLinear(shapeColorR, shapeColorG, shapeColorB);
 		return createShapeObject(position, size, shapeCategory, color);

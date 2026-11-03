@@ -377,7 +377,7 @@ struct CollisionAlgorithmOptions {
 	 *
 	 * \warning Must be greater than or equal to Distance::MACHINE_EPSILON.
 	 */
-	Distance collisionDistanceErrorTolerance = 0.0001f * METERS;
+	Distance collisionDistanceErrorTolerance = Scalar{0.0001} * METERS;
 
 	/**
 	 * Maximum separation distance of a contact point before it is considered to
@@ -385,7 +385,7 @@ struct CollisionAlgorithmOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Distance maxCollisionTouchingDistance = 0.01f * METERS;
+	Distance maxCollisionTouchingDistance = Scalar{0.01} * METERS;
 
 	/**
 	 * Margin to use around shapes when performing Gilbert-Johnson-Keerthi-based
@@ -393,7 +393,7 @@ struct CollisionAlgorithmOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Distance gjkRaycastMargin = 0.0001f * METERS;
+	Distance gjkRaycastMargin = Scalar{0.0001} * METERS;
 
 	/**
 	 * Bias distance factor that determines by how much face contacts are
@@ -401,14 +401,14 @@ struct CollisionAlgorithmOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Distance biasFaceOverEdge = 0.00001f * METERS;
+	Distance biasFaceOverEdge = Scalar{0.00001} * METERS;
 
 	/**
 	 * Bias distance factor that determines by how much the second face is
 	 * preferred to be chosen as the reference face in a face contact in convex
 	 * polytope collisions.
 	 */
-	Length1D biasReferenceFaceBOverA = 0.00001f * METERS;
+	Length1D biasReferenceFaceBOverA = Scalar{0.00001} * METERS;
 
 	/**
 	 * Maximum number of iterations to run per query of the
@@ -532,8 +532,8 @@ using CollisionAlgorithmImplementation3D = CollisionAlgorithmImplementation<3>;
 template <size_t N>
 class CollisionAlgorithm {
 public:
-	static constexpr size_t MAX_CAPACITY = max(sizeof(void*) * 20, size_t{144});     ///< Maximum capacity for concrete collision algorithm implementations.
-	static constexpr size_t MAX_ALIGNMENT = max(alignof(void*), alignof(float) * 4); ///< Maximum alignment for concrete collision algorithm implementations.
+	static constexpr size_t MAX_CAPACITY = max(sizeof(void*) * 20, size_t{144}); ///< Maximum capacity for concrete collision algorithm implementations.
+	static constexpr size_t MAX_ALIGNMENT = max(alignof(void*), size_t{16});     ///< Maximum alignment for concrete collision algorithm implementations.
 
 	/**
 	 * Create a boxed collision algorithm with a specific implementation.

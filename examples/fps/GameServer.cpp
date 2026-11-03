@@ -322,7 +322,8 @@ public:
 		, mapFilepath(std::move(mapFilepath))
 		, maxClientCount(options.maxClientCount)
 		, maxLocalPlayerCountPerClient(min(options.maxLocalPlayerCountPerClient, MAX_LOCAL_PLAYER_COUNT))
-		, maxTicksPerFrame((options.minFrameRate <= 0 || options.tickRate <= options.minFrameRate) ? size_t{1} : static_cast<size_t>(options.tickRate / options.minFrameRate))
+		, maxTicksPerFrame(
+			  (options.minFrameRate <= 0 || options.tickRate <= options.minFrameRate) ? size_t{1} : static_cast<size_t>(phys::Scalar{options.tickRate / options.minFrameRate}))
 		, maxOutgoingDataRatePerClient(options.maxOutgoingDataRatePerClient)
 		, maxSendSkipTicks(options.maxSendSkipTicks)
 		, mapLoadGracePeriod(options.mapLoadGracePeriod)

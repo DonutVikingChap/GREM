@@ -108,7 +108,7 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	void drawWorldAABBWireframe(const grem::Box<N, float>& aabb, Color color) {
+	void drawWorldAABBWireframe(const grem::Box<N, Scalar>& aabb, Color color) {
 		drawWorldAABBWireframe(aabb * Box<N>::UNIT, color);
 	}
 
@@ -123,7 +123,7 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	void drawWorldPoint(Position<N> point, Color color, Coefficient radiusCoefficient = 1.0f) {
+	void drawWorldPoint(Position<N> point, Color color, Coefficient radiusCoefficient = Scalar{1}) {
 		worldDrawCommands.emplace_back(DrawWorldPointCommand{.point = point, .color = color, .radiusCoefficient = radiusCoefficient});
 	}
 
@@ -140,7 +140,7 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	void drawWorldLineSegment(Position<N> pointA, Position<N> pointB, Color color, Coefficient thicknessCoefficient = 1.0f) {
+	void drawWorldLineSegment(Position<N> pointA, Position<N> pointB, Color color, Coefficient thicknessCoefficient = Scalar{1}) {
 		worldDrawCommands.emplace_back(DrawWorldLineSegmentCommand{.pointA = pointA, .pointB = pointB, .color = color, .thicknessCoefficient = thicknessCoefficient});
 	}
 
@@ -159,8 +159,8 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	void drawWorldVector(Position<N> point, Scale<N> directionScale, Color color, Coefficient lengthCoefficient = 1.0f, Coefficient thicknessCoefficient = 1.0f) {
-		drawWorldLineSegment(point, point + directionScale * 0.25f * METERS * lengthCoefficient, color, thicknessCoefficient);
+	void drawWorldVector(Position<N> point, Scale<N> directionScale, Color color, Coefficient lengthCoefficient = Scalar{1}, Coefficient thicknessCoefficient = Scalar{1}) {
+		drawWorldLineSegment(point, point + directionScale * Scalar{0.25} * METERS * lengthCoefficient, color, thicknessCoefficient);
 	}
 
 	/**
@@ -214,9 +214,10 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	void putWorldVisualizationInstances(graphics::Renderer2D& renderer2D, graphics::Instances2D& instances, Length2D lengthUnit = Length2D{1.0f * METERS}) const requires(N == 2) {
+	void putWorldVisualizationInstances(graphics::Renderer2D& renderer2D, graphics::Instances2D& instances, Length2D lengthUnit = Length2D{Scalar{1} * METERS}) const
+		requires(N == 2) {
 		(void)renderer2D;
-		const Scale2D lengthScale = 1.0f * METERS / lengthUnit;
+		const Scale2D lengthScale = Scalar{1} * METERS / lengthUnit;
 		for (const WorldDrawCommand& worldDrawCommand : worldDrawCommands) {
 			GREM_MATCH(worldDrawCommand) {
 				GREM_CASE(const DrawWorldCubeCommand& command) break;
@@ -235,7 +236,7 @@ public:
 				GREM_CASE(const DrawWorldPointCommand& command) {
 					instances.putRectangleInstance(graphics::RectangleInstance2D{
 						.position = lengthScale * command.point.in(Position2D::UNIT),
-						.size = vec2{4.0f * command.radiusCoefficient},
+						.size{static_cast<float>(Scalar{4} * command.radiusCoefficient)},
 						.origin{0.5f, 0.5f},
 						.color = command.color,
 					});
@@ -246,8 +247,8 @@ public:
 					if (difference != 0) {
 						instances.putRectangleInstance(graphics::RectangleInstance2D{
 							.position = lengthScale * command.pointA.in(Position2D::UNIT),
-							.angle = (-90.0f * DEGREES).as(RADIANS) + getAngle(difference),
-							.size{2.0f * command.thicknessCoefficient, length(lengthScale * difference.in(Distance::UNIT))},
+							.angle = (Scalar{-90} * DEGREES).as(RADIANS) + getAngle(difference),
+							.size{static_cast<float>(Scalar{2} * command.thicknessCoefficient), static_cast<float>(length(lengthScale * difference.in(Distance::UNIT)))},
 							.origin{0.5f, 0.0f},
 							.color = command.color,
 						});
@@ -270,8 +271,9 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	void putWorldVisualizationInstances(graphics::Renderer3D& renderer3D, graphics::Instances3D& instances, Length3D lengthUnit = Length3D{1.0f * METERS}) const requires(N == 3) {
-		const mat4 lengthScale = scale(vec3{1.0f * METERS / lengthUnit});
+	void putWorldVisualizationInstances(graphics::Renderer3D& renderer3D, graphics::Instances3D& instances, Length3D lengthUnit = Length3D{Scalar{1} * METERS}) const
+		requires(N == 3) {
+		const mat4 lengthScale{mat3{scale(Scalar{1} * METERS / lengthUnit)}};
 		for (const WorldDrawCommand& worldDrawCommand : worldDrawCommands) {
 			GREM_MATCH(worldDrawCommand) {
 				GREM_CASE(const DrawWorldCubeCommand& command) {
@@ -286,14 +288,14 @@ public:
 				}
 				GREM_CASE(const DrawWorldAABBWireframeCommand& command) {
 					const Position3D aabbCenter = midpoint(command.aabb.min, command.aabb.max);
-					const Length3D aabbHalfExtents = (command.aabb.max - command.aabb.min) * 0.5f;
+					const Length3D aabbHalfExtents = (command.aabb.max - command.aabb.min) * Scalar{0.5};
 					const mat4 transformation = translateScale(aabbCenter, aabbHalfExtents.in(Length3D::UNIT));
 					instances.putShadedModelInstance(renderer3D.getHDRWireframeModel3DShaderPipelineSet(), renderer3D.getCubeModel3D(), lengthScale * transformation,
 						graphics::ModelInstance3D{.color = command.color});
 					break;
 				}
 				GREM_CASE(const DrawWorldPointCommand& command) {
-					const mat4 transformation = translateScale(command.point, Scale3D{0.02f * command.radiusCoefficient});
+					const mat4 transformation = translateScale(command.point, Scale3D{Scalar{0.02} * command.radiusCoefficient});
 					instances.putShadedModelInstance(renderer3D.getHDRUnlitModel3DShaderPipelineSet(), renderer3D.getCubeModel3D(), lengthScale * transformation,
 						graphics::ModelInstance3D{.color = command.color});
 					break;
@@ -301,9 +303,10 @@ public:
 				GREM_CASE(const DrawWorldLineSegmentCommand& command) {
 					const Length3D difference = command.pointB - command.pointA;
 					if (difference != 0) {
-						const Position3D midpoint = command.pointA + difference * 0.5f;
-						const mat4 transformation = translateRotateScale(midpoint, rotation(vec3{0.0f, 0.0f, 1.0f}, vec3{normalize(difference.in(Length3D::UNIT))}),
-							Scale3D{0.01f * command.thicknessCoefficient, 0.01f * command.thicknessCoefficient, 0.5f * length(difference).in(Distance::UNIT)});
+						const Position3D midpoint = command.pointA + difference * Scalar{0.5};
+						const mat4 transformation = translateRotateScale(midpoint, Orientation3D::rotation(Z_AXIS_3D, normalize(difference.in(Length3D::UNIT))),
+							Scale3D{Scalar{0.01} * command.thicknessCoefficient, Scalar{0.01f} * command.thicknessCoefficient,
+								Scalar{0.5} * length(difference).in(Distance::UNIT)});
 						instances.putShadedModelInstance(renderer3D.getHDRUnlitModel3DShaderPipelineSet(), renderer3D.getCubeModel3D(), lengthScale * transformation,
 							graphics::ModelInstance3D{.color = command.color});
 					}

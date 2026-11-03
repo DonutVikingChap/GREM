@@ -54,8 +54,8 @@ template <size_t N>
 			result = {pointA};
 		}
 
-		const Coefficient t = dot(position - pointA, pointB - pointA) / distance2(pointA, pointB);
-		if (t > Coefficient{0} && t < Coefficient{1}) {
+		const Scale1D t = dot(position - pointA, pointB - pointA) / distance2(pointA, pointB);
+		if (t > Scale1D{Scalar{0}} && t < Scale1D{Scalar{1}}) {
 			const Position<N> otherClosestPointOnEdge = mix(pointA, pointB, t);
 			const SquaredDistance squaredEdgeDistance = distance2(position, otherClosestPointOnEdge);
 			if (squaredEdgeDistance < squaredDistance) {
@@ -70,7 +70,7 @@ template <size_t N>
 template <size_t N>
 struct SoftConstraintParameters {
 	Rate<N> biasRate{};
-	Scale<N> massScale{1.0f};
+	Scale<N> massScale{Scalar{1}};
 	Scale<N> momentumScale{};
 };
 
@@ -78,14 +78,14 @@ template <size_t N>
 [[nodiscard]] SoftConstraintParameters<N> getSoftConstraintParameters(Rate<N> stiffness, Scale<N> dampingRatio, Time deltaTime, Frequency inverseDeltaTime) {
 	// Reference: Erin Catto: "Soft Constraints": Game Developers Conference (2011): https://box2d.org/files/ErinCatto_SoftConstraints_GDC2011.pdf
 
-	const Rate<N> hertz = min(stiffness, Rate<N>{0.25f * inverseDeltaTime});
+	const Rate<N> hertz = min(stiffness, Rate<N>{Scalar{0.25} * inverseDeltaTime});
 	const Scale<N> zeta = dampingRatio;
 	const Time h = deltaTime;
 
-	const Quantity<N, AngularSpeed::Unit> omega = 2.0f * PI * hertz;
-	const Quantity<N, Angle::Unit> a1 = 2.0f * zeta + h * omega;
+	const Quantity<N, AngularSpeed::Unit> omega = Scalar{2} * PI * hertz;
+	const Quantity<N, Angle::Unit> a1 = Scalar{2} * zeta + h * omega;
 	const Scale<N> a2 = h * omega * a1;
-	const Scale<N> a3 = 1.0f / (1.0f + a2);
+	const Scale<N> a3 = Scalar{1} / (Scalar{1} + a2);
 	return {
 		.biasRate = select(equal(stiffness, 0), Rate<N>{}, omega / a1),
 		.massScale = select(equal(stiffness, 0), Scale<N>{}, a2 * a3),
@@ -103,8 +103,8 @@ void updateObjectActivityAndBounds(
 	const Time stepInterval = simulationOptions.stepInterval;
 	const SquaredSpeed maxRestingSquaredSpeed = length2(simulationOptions.maxRestingSpeed);
 	const SquaredAngularSpeed maxRestingSquaredAngularSpeed = length2(simulationOptions.maxRestingAngularSpeed);
-	const uint16_t stepsRestingThreshold = static_cast<uint16_t>(clamp(float{ceil(simulationOptions.restingTimeThreshold / stepInterval)}, 1.0f, 65535.0f));
-	const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * 2.0f;
+	const uint16_t stepsRestingThreshold = static_cast<uint16_t>(clamp(Scalar{ceil(simulationOptions.restingTimeThreshold / stepInterval)}, Scalar{1}, Scalar{65535}));
+	const Distance minAABBExpansion = simulationOptions.collisionAlgorithmOptions.maxCollisionTouchingDistance * Scalar{2};
 
 	for (auto&& [objectID, activity, linearVelocity, angularVelocity, bounds, broadphaseID, collider, position, orientation, scale, flags, inverseMass, momentOfInertiaTensor,
 			 inverseMomentOfInertiaTensor, gravityAcceleration, externalForce, externalTorque, centerOfBuoyancy, fluidDensity, volume] : objectEntities) {
@@ -133,7 +133,7 @@ void updateObjectActivityAndBounds(
 					const AngularVelocity<N> predictedAngularVelocity =
 						angularVelocity +
 						inverseMomentOfInertiaTensor * (externalTorque - buoyancyTorque - cross(angularVelocity, momentOfInertiaTensor * angularVelocity)) * stepInterval;
-					const Distance approximateRadius = distance(shapeAABB->min, shapeAABB->max) * 0.5f;
+					const Distance approximateRadius = distance(shapeAABB->min, shapeAABB->max) * Scalar{0.5};
 					const Distance expansion = minAABBExpansion + length(predictedLinearVelocity) * stepInterval +
 					                           min(length(predictedAngularVelocity) * approximateRadius * stepInterval, approximateRadius);
 					bounds.boundingBox = shapeAABB->getExpanded(expansion);
@@ -182,7 +182,7 @@ void updateBroadphase(execution::Entities<BroadphaseID, const Collider<N>, const
 		if (any(lessThan(worldBoundingBox.min, rootBox.min) | greaterThan(worldBoundingBox.max, rootBox.max))) {
 			const Position<N> worldCenter = midpoint(worldBoundingBox.min, worldBoundingBox.max);
 			const Length<N> worldExtents = worldBoundingBox.max - worldBoundingBox.min;
-			const Length<N> newRootHalfExtents = worldExtents * 0.75f;
+			const Length<N> newRootHalfExtents = worldExtents * Scalar{0.75};
 			return Box<N>{.min = worldCenter - newRootHalfExtents, .max = worldCenter + newRootHalfExtents};
 		}
 
@@ -619,9 +619,9 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 					const Position<N> pointB = transformationB(point.localOffsets.second);
 					const Length1D penetrationDepth = dot(pointA - pointB, manifold.normal);
 					largestPenetrationDepth = max(largestPenetrationDepth, penetrationDepth);
-					averageContactPoint += midpoint(pointA, pointB) - 0;
+					averageContactPoint += +midpoint(pointA, pointB);
 				}
-				averageContactPoint *= 1.0f / static_cast<float>(manifold.points.size());
+				averageContactPoint *= Scalar{1} / static_cast<Scalar>(manifold.points.size());
 
 				InplaceArrayList<Position<N>, 2> featurePoints{};
 				const ContactFeatureType otherContactFeatureType = (objectID == objectIDs.first) ? manifold.featureTypes.second : manifold.featureTypes.first;
@@ -641,7 +641,7 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 							contactManifoldInvalidation.voidedPoints.push_back(otherTransformation(otherConvexPolytopeShape.getLocalVertexOffset(otherVertexIndex)));
 						});
 						if constexpr (N == 3) {
-							if (abs(dot(otherLocalNormal, otherConvexPolytopeShape.getLocalFaceNormal(otherFaceIndex))) < cos(22.5f * DEGREES)) {
+							if (abs(dot(otherLocalNormal, otherConvexPolytopeShape.getLocalFaceNormal(otherFaceIndex))) < cos(Scalar{22.5} * DEGREES)) {
 								featurePoints = findClosestFeaturePoints<3>(Span{contactManifoldInvalidation.voidedPoints}.subspan(voidedPointOffset), averageContactPoint);
 							}
 						} else {
@@ -653,8 +653,8 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 						break;
 					}
 					case ContactFeatureType::TRIANGLE_MESH_FACE: {
-						const TriangleMesh<N>& otherMesh = *otherCollider.shape.template as<TriangleMeshShape<N>>().getTriangleMesh();
-						const Span<const TriangleMeshVertex<N>> otherVertices = otherMesh.getVertices();
+						const TriangleMesh<N, float>& otherMesh = *otherCollider.shape.template as<TriangleMeshShape<N>>().getTriangleMesh();
+						const Span<const TriangleMeshVertex<N, float>> otherVertices = otherMesh.getVertices();
 						const Span<const TriangleMeshVertexIndex> otherIndices = otherMesh.getIndices();
 						const TriangleMeshVertexIndex otherFaceIndex =
 							static_cast<TriangleMeshVertexIndex>((objectID < otherObjectID) ? manifold.featureIndices.second : manifold.featureIndices.first);
@@ -676,7 +676,7 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 							const Length<N> ab = otherTrianglePoints[1] - otherTrianglePoints[0];
 							const Length<N> ac = otherTrianglePoints[2] - otherTrianglePoints[0];
 							const Direction<N> normal = normalize(cross(ab, ac));
-							if (abs(dot(manifold.normal, normal)) < cos(22.5f * DEGREES)) {
+							if (abs(dot(manifold.normal, normal)) < cos(Scalar{22.5} * DEGREES)) {
 								featurePoints = findClosestFeaturePoints<3>(otherTrianglePoints, averageContactPoint);
 							}
 						} else {
@@ -692,8 +692,8 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 					}
 					case ContactFeatureType::TRIANGLE_MESH_EDGE:
 						if constexpr (N == 3) {
-							const TriangleMesh<N>& otherMesh = *otherCollider.shape.template as<TriangleMeshShape<N>>().getTriangleMesh();
-							const Span<const TriangleMeshVertex<N>> otherVertices = otherMesh.getVertices();
+							const TriangleMesh<N, float>& otherMesh = *otherCollider.shape.template as<TriangleMeshShape<N>>().getTriangleMesh();
+							const Span<const TriangleMeshVertex<N, float>> otherVertices = otherMesh.getVertices();
 							const Span<const TriangleMeshVertexIndex> otherIndices = otherMesh.getIndices();
 							const uint32_t otherFirstVertexIndexIndex =
 								static_cast<uint32_t>((objectID < otherObjectID) ? manifold.featureIndices.second : manifold.featureIndices.first);
@@ -704,10 +704,10 @@ void removeGhostContactManifolds(execution::Entities<const Collider<N>, const Po
 
 							const Position<N> otherEdgeOrigin = otherTransformation(otherLocalEdgeOrigin);
 							const Position<N> otherEdgeTarget = otherTransformation(otherLocalEdgeTarget);
-							const Coefficient t = dot(position - otherEdgeOrigin, otherEdgeTarget - otherEdgeOrigin) / distance2(otherEdgeOrigin, otherEdgeTarget);
-							if (t <= Coefficient{0}) {
+							const Scale1D t = dot(position - otherEdgeOrigin, otherEdgeTarget - otherEdgeOrigin) / distance2(otherEdgeOrigin, otherEdgeTarget);
+							if (t <= Scale1D{Scalar{0}}) {
 								featurePoints = {otherEdgeOrigin};
-							} else if (t >= Coefficient{1}) {
+							} else if (t >= Scale1D{Scalar{1}}) {
 								featurePoints = {otherEdgeTarget};
 							} else {
 								featurePoints = {otherEdgeOrigin, otherEdgeTarget};
@@ -816,7 +816,7 @@ void integrateLinearVelocities(execution::Entities<LinearVelocity<N>, const Orie
 								   const FluidDensity, const Volume, const Material, const Collider<N>, const ObjectActiveTag>
 								   activeObjectEntities,
 	const SimulationOptions<N>& simulationOptions) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 
 	for (auto&& [objectID, linearVelocity, orientation, scale, inverseMass, externalForce, gravityAcceleration, fluidDensity, volume, material, collider, activeTag] :
 		activeObjectEntities) {
@@ -829,7 +829,7 @@ void integrateLinearVelocities(execution::Entities<LinearVelocity<N>, const Orie
 		if (newSpeed > 0) {
 			const Direction<N> direction = Direction<N>::reinterpret(newLinearVelocity / newSpeed);
 			if (const Optional<Area> referenceArea = collider.shape.getReferenceArea(rotateScale(orientation, scale), direction)) {
-				const Force1D dragForce = -0.5f * Density{fluidDensity} * newSquaredSpeed * material.linearDrag * *referenceArea;
+				const Force1D dragForce = Scalar{-0.5} * Density{fluidDensity} * newSquaredSpeed * material.linearDrag * *referenceArea;
 				const LinearVelocity1D speedDelta = inverseMass * dragForce * deltaTime;
 				if (newSpeed + speedDelta <= 0) {
 					addedLinearVelocity = -linearVelocity;
@@ -850,7 +850,7 @@ void integrateAngularVelocities(
 		const LinearAcceleration<N>, const FluidDensity, const CenterOfBuoyancy<N>, const Volume, const Material, const Collider<N>, const ObjectActiveTag>
 		activeObjectEntities,
 	const SimulationOptions<N>& simulationOptions) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 
 	for (auto&& [objectID, angularVelocity, orientation, scale, momentOfInertiaTensor, inverseMomentOfInertiaTensor, externalTorque, gravityAcceleration, fluidDensity,
 			 centerOfBuoyancy, volume, material, collider, activeTag] : activeObjectEntities) {
@@ -866,7 +866,8 @@ void integrateAngularVelocities(
 			if (const Optional<Distance> effectiveRadius = collider.shape.getBoundingRadius(rotateScale(orientation, scale))) {
 				const AngularScale<N> axis = newAngularVelocity / newAngularSpeed;
 				// This "drag torque" approximation is kinda bogus, but it's probably better than nothing. :)
-				const Torque2D dragTorque = -0.5f * Density{fluidDensity} * newSquaredAngularSpeed * material.angularDrag * length2(length2(*effectiveRadius)) * *effectiveRadius;
+				const Torque2D dragTorque =
+					Scalar{-0.5} * Density{fluidDensity} * newSquaredAngularSpeed * material.angularDrag * length2(length2(*effectiveRadius)) * *effectiveRadius;
 				const AngularVelocity<N> angularVelocityDelta = inverseMomentOfInertiaTensor * axis * dragTorque * deltaTime;
 				if (dot(newAngularVelocity + angularVelocityDelta, newAngularVelocity) <= 0) {
 					addedAngularVelocity = -angularVelocity;
@@ -1111,7 +1112,7 @@ void applyJointDrives(execution::Entities<JointLinearConstraintImpulses<N>, cons
 		const InverseMomentOfInertiaTensor<N>>
 		objectEntities,
 	const SimulationOptions<N>& simulationOptions) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 
 	for (auto&& [jointID, angularConstraintImpulses, connectedObjects, attachmentOrientations, angularConstraint, activeTag] : angularConstraintJointEntities) {
 		auto&& [objectIDA, activityA, linearVelocityA, angularVelocityA, positionA, orientationA, scaleA, inverseMassA, inverseMomentOfInertiaTensorA] =
@@ -1239,7 +1240,7 @@ void apply3DOnlyJointDrives(
 		twistConstraintJointEntities,
 	execution::Entities<ObjectActivity, AngularVelocity3D, const Orientation3D, const InverseMass, const InverseMomentOfInertiaTensor3D> objectEntities,
 	const SimulationOptions3D& simulationOptions) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 
 	for (auto&& [jointID, twistConstraintImpulses, connectedObjects, attachmentOrientations, twistConstraint, activeTag] : twistConstraintJointEntities) {
 		auto&& [objectIDA, activityA, angularVelocityA, orientationA, inverseMassA, inverseMomentOfInertiaTensorA] = objectEntities[connectedObjects.first];
@@ -1294,7 +1295,7 @@ void solveJointConstraintsImplementation(
 		const InverseMomentOfInertiaTensor<N>>
 		objectEntities,
 	const SimulationOptions<N>& simulationOptions, bool useBias) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 	const Frequency inverseDeltaTime = inverse(deltaTime);
 
 	for (auto&& [jointID, angularConstraintImpulses, connectedObjects, attachmentOffsets, attachmentOrientations, angularConstraint, activeTag] : angularConstraintJointEntities) {
@@ -1580,7 +1581,7 @@ void solve3DOnlyJointConstraintsImplementation(
 		twistConstraintJointEntities,
 	execution::Entities<ObjectActivity, AngularVelocity3D, const Orientation3D, const InverseMass, const InverseMomentOfInertiaTensor3D> objectEntities,
 	const SimulationOptions3D& simulationOptions, bool useBias) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 	const Frequency inverseDeltaTime = inverse(deltaTime);
 
 	for (auto&& [jointID, coneConstraintImpulses, connectedObjects, attachmentOrientations, coneConstraint, activeTag] : coneConstraintJointEntities) {
@@ -1747,7 +1748,7 @@ void solveContactConstraintsImplementation(
 		const InverseMass, const InverseMomentOfInertiaTensor<N>>
 		objectEntities,
 	Span<const ContactIndex> contactIndices, Contacts<N>& contacts, const SimulationOptions<N>& simulationOptions, bool useBias) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 	const Frequency inverseDeltaTime = inverse(deltaTime);
 	const Momentum maxMomentum = simulationOptions.contactMaxMomentum;
 
@@ -1913,7 +1914,7 @@ void solveOverflowContactConstraints(execution::Entities<ObjectActivity, LinearV
 
 template <size_t N>
 void integratePositions(execution::Entities<Position<N>, const LinearVelocity<N>, const ObjectActiveTag> activeObjectEntities, const SimulationOptions<N>& simulationOptions) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 
 	for (auto&& [objectID, position, linearVelocity, activeTag] : activeObjectEntities) {
 		position += linearVelocity * deltaTime;
@@ -1924,7 +1925,7 @@ void integratePositions(execution::Entities<Position<N>, const LinearVelocity<N>
 template <size_t N>
 void integrateOrientations(execution::Entities<Orientation<N>, const AngularVelocity<N>, const ObjectActiveTag> activeObjectEntities,
 	const SimulationOptions<N>& simulationOptions) {
-	const Time deltaTime = simulationOptions.stepInterval / static_cast<float>(simulationOptions.subStepCount);
+	const Time deltaTime = simulationOptions.stepInterval / static_cast<Scalar>(simulationOptions.subStepCount);
 
 	for (auto&& [objectID, orientation, angularVelocity, activeTag] : activeObjectEntities) {
 		orientation += angularVelocity * deltaTime;
@@ -1949,7 +1950,7 @@ void applyContactRestitutionImplementation(
 			gravityAccelerationB] = objectEntities[objectIDs.second];
 
 		const Coefficient restitution = calculateCombinedRestitution(materialA.restitution, materialB.restitution, materialA.restitutionCombine, materialB.restitutionCombine);
-		const LinearVelocity<N> gravityInducedRelativeVelocity = 2.0f * (gravityAccelerationA - gravityAccelerationB) * stepInterval;
+		const LinearVelocity<N> gravityInducedRelativeVelocity = Scalar{2} * (gravityAccelerationA - gravityAccelerationB) * stepInterval;
 
 		for (ContactManifold<N>& manifold : contact.manifolds) {
 			if (!manifold.filterTestResult.respondsToCollision()) {

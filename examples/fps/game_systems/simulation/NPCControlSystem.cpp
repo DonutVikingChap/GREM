@@ -70,11 +70,11 @@ private:
 				const phys::Direction2D direction = normalize(linearVelocity.get(phys::X, phys::Z));
 				npcState.desiredDirectionScale = expDecay(npcState.desiredDirectionScale, direction, 8_per_second, deltaTime);
 				if (const Optional<phys::Angle> angle = tryGetAngle(npcState.desiredDirectionScale.get(phys::Y, phys::X))) {
-					orientation = phys::Orientation3D::fromAngles(0, *angle, 0);
+					orientation = phys::Orientation3D::fromAngles(0_degrees, *angle, 0_degrees);
 				}
 			}
 
-			npcState.mood += deltaTime.in(phys::SECONDS);
+			npcState.mood += static_cast<float>(deltaTime.in(phys::SECONDS));
 		}
 	}
 

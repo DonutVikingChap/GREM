@@ -122,6 +122,15 @@ struct Offset<3> {
 	}
 
 	/**
+	 * Convert this offset to a double-precision floating-point 3D vector.
+	 *
+	 * \return a 3D vector representing the offset.
+	 */
+	constexpr operator dvec3() const noexcept {
+		return dvec3{static_cast<double>(x), static_cast<double>(y), static_cast<double>(z)};
+	}
+
+	/**
 	 * Convert this offset to an integer 3D vector.
 	 *
 	 * \return a 3D vector representing the offset.
@@ -248,6 +257,16 @@ struct Extent<3> {
 	 */
 	constexpr operator vec3() const noexcept {
 		return vec3{static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)};
+	}
+
+	/**
+	 * Convert this extent to a double-precision floating-point 3D vector.
+	 *
+	 * \return a 3D vector holding the width, height and depth of the extent in
+	 *         its x, y and z components, respectively.
+	 */
+	constexpr operator dvec3() const noexcept {
+		return dvec3{static_cast<double>(width), static_cast<double>(height), static_cast<double>(depth)};
 	}
 
 	/**
@@ -406,6 +425,15 @@ struct Offset<2> {
 	}
 
 	/**
+	 * Convert this offset to a double-precision floating-point 2D vector.
+	 *
+	 * \return a 2D vector representing the offset.
+	 */
+	constexpr operator dvec2() const noexcept {
+		return dvec2{static_cast<double>(x), static_cast<double>(y)};
+	}
+
+	/**
 	 * Convert this offset to an integer 2D vector.
 	 *
 	 * \return a 2D vector representing the offset.
@@ -527,6 +555,16 @@ struct Extent<2> {
 	 */
 	constexpr operator vec2() const noexcept {
 		return vec2{static_cast<float>(width), static_cast<float>(height)};
+	}
+
+	/**
+	 * Convert this extent to a double-precision floating-point 2D vector.
+	 *
+	 * \return a 2D vector holding the width and height of the extent in its x
+	 *         and y components, respectively.
+	 */
+	constexpr operator dvec2() const noexcept {
+		return dvec2{static_cast<double>(width), static_cast<double>(height)};
 	}
 
 	/**

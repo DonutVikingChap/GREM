@@ -6,6 +6,7 @@
 
 #include <GREM/build_config.hpp>
 
+#include <GREM/core/concepts.hpp>
 #include <GREM/core/data/Allocation.hpp>
 #include <GREM/core/data/Span.hpp>
 #include <GREM/core/fundamentals.hpp>
@@ -18,17 +19,17 @@
 namespace grem {
 
 /**
- * Index of a vertex in a polytope.
+ * Index of a vertex in a convex polytope.
  */
 using ConvexPolytopeVertexIndex = uint8_t;
 
 /**
- * Index of an edge in a polytope.
+ * Index of an edge in a convex polytope.
  */
 using ConvexPolytopeEdgeIndex = uint8_t;
 
 /**
- * Index of a face in a polytope.
+ * Index of a face in a convex polytope.
  */
 using ConvexPolytopeFaceIndex = uint8_t;
 
@@ -36,26 +37,25 @@ using ConvexPolytopeFaceIndex = uint8_t;
  * Vertex of a convex polytope.
  *
  * \tparam N number of dimensions of the world space (must be 2 or 3).
+ * \tparam Scalar scalar coordinate component type.
  */
-template <size_t N>
-using ConvexPolytopeVertex = vec<N, float>;
-
-using ConvexPolytopeVertex2D = ConvexPolytopeVertex<2>; ///< Vertex of a convex polytope (polygon) in 2-dimensional space.
-using ConvexPolytopeVertex3D = ConvexPolytopeVertex<3>; ///< Vertex of a convex polytope (polyhedron) in 3-dimensional space.
+template <size_t N, typename Scalar>
+using ConvexPolytopeVertex = vec<N, Scalar>;
 
 /**
  * Edge of a convex polytope.
  *
  * \tparam N number of dimensions of the world space (must be 2 or 3).
+ * \tparam Scalar scalar coordinate component type.
  */
-template <size_t N>
+template <size_t N, typename Scalar>
 struct ConvexPolytopeEdge;
 
-template <>
-struct ConvexPolytopeEdge<2> {};
+template <typename Scalar>
+struct ConvexPolytopeEdge<2, Scalar> {};
 
-template <>
-struct ConvexPolytopeEdge<3> {
+template <typename Scalar>
+struct ConvexPolytopeEdge<3, Scalar> {
 	/**
 	 * Index of the vertex corresponding to the first point of the edge.
 	 *
@@ -82,33 +82,31 @@ struct ConvexPolytopeEdge<3> {
 	ConvexPolytopeEdgeIndex nextEdgeIndex;
 };
 
-using ConvexPolytopeEdge2D = ConvexPolytopeEdge<2>; ///< Edge on a convex polytope (polygon) in 2-dimensional space.
-using ConvexPolytopeEdge3D = ConvexPolytopeEdge<3>; ///< Edge on a convex polytope (polyhedron) in 3-dimensional space.
-
 /**
  * Face on a convex polytope.
  *
  * \tparam N number of dimensions of the world space (must be 2 or 3).
+ * \tparam Scalar scalar coordinate component type.
  */
-template <size_t N>
+template <size_t N, typename Scalar>
 struct ConvexPolytopeFace;
 
-template <>
-struct ConvexPolytopeFace<2> {
+template <typename Scalar>
+struct ConvexPolytopeFace<2, Scalar> {
 	/**
 	 * Direction perpendicular to the face, pointing outwards from the center of
 	 * the shape.
 	 */
-	vec<2, float> normal;
+	vec<2, Scalar> normal;
 };
 
-template <>
-struct ConvexPolytopeFace<3> {
+template <typename Scalar>
+struct ConvexPolytopeFace<3, Scalar> {
 	/**
 	 * Direction perpendicular to the face, pointing outwards from the center of
 	 * the shape.
 	 */
-	vec<3, float> normal;
+	vec<3, Scalar> normal;
 
 	/**
 	 * Index of the first edge that makes up the face.
@@ -119,31 +117,45 @@ struct ConvexPolytopeFace<3> {
 	ConvexPolytopeEdgeIndex firstEdgeIndex;
 };
 
-using ConvexPolytopeFace2D = ConvexPolytopeFace<2>; ///< Face on a convex polytope (polygon) in 2-dimensional space.
-using ConvexPolytopeFace3D = ConvexPolytopeFace<3>; ///< Face on a convex polytope (polyhedron) in 3-dimensional space.
-
 namespace detail {
 
 struct NoEdges {};
 
-template <size_t N>
+template <size_t N, typename Scalar>
 struct ConvexPolytopeData {
-	Allocation<ConvexPolytopeVertex<N>> vertices{};
+	Allocation<ConvexPolytopeVertex<N, Scalar>> vertices{};
 	[[no_unique_address]] std::conditional_t<N == 3, Allocation<ConvexPolytopeEdgeIndex>, NoEdges> vertexEdgeIndices{};
-	[[no_unique_address]] std::conditional_t<N == 3, Allocation<ConvexPolytopeEdge3D>, NoEdges> edges{};
-	Allocation<ConvexPolytopeFace<N>> faces{};
+	[[no_unique_address]] std::conditional_t<N == 3, Allocation<ConvexPolytopeEdge<3, Scalar>>, NoEdges> edges{};
+	Allocation<ConvexPolytopeFace<N, Scalar>> faces{};
 };
 
-GREM_API(core) ConvexPolytopeData<2> buildConvexHull2D(Span<const ConvexPolytopeVertex2D> vertices, const mat3& transformation, ConvexPolytopeVertexIndex maxVertexCount);
-GREM_API(core) ConvexPolytopeData<3> buildConvexHull3D(Span<const ConvexPolytopeVertex3D> vertices, const mat4& transformation, ConvexPolytopeVertexIndex maxVertexCount);
+GREM_API(core)
+ConvexPolytopeData<2, float> buildConvexHull2DFloat(Span<const ConvexPolytopeVertex<2, float>> vertices, const mat3& transformation, ConvexPolytopeVertexIndex maxVertexCount);
 
-template <size_t N>
-[[nodiscard]] inline ConvexPolytopeData<N> buildConvexHull(Span<const ConvexPolytopeVertex<N>> vertices, const mat<N + 1, N + 1, float>& transformation,
+GREM_API(core)
+ConvexPolytopeData<2, double> buildConvexHull2DDouble(Span<const ConvexPolytopeVertex<2, double>> vertices, const dmat3& transformation, ConvexPolytopeVertexIndex maxVertexCount);
+
+GREM_API(core)
+ConvexPolytopeData<3, float> buildConvexHull3DFloat(Span<const ConvexPolytopeVertex<3, float>> vertices, const mat4& transformation, ConvexPolytopeVertexIndex maxVertexCount);
+
+GREM_API(core)
+ConvexPolytopeData<3, double> buildConvexHull3DDouble(Span<const ConvexPolytopeVertex<3, double>> vertices, const dmat4& transformation, ConvexPolytopeVertexIndex maxVertexCount);
+
+template <size_t N, typename Scalar>
+[[nodiscard]] inline ConvexPolytopeData<N, Scalar> buildConvexHull(Span<const ConvexPolytopeVertex<N, Scalar>> vertices, const mat<N + 1, N + 1, Scalar>& transformation,
 	ConvexPolytopeVertexIndex maxVertexCount) {
 	if constexpr (N == 2) {
-		return buildConvexHull2D(vertices, transformation, maxVertexCount);
+		if constexpr (same_as<Scalar, float>) {
+			return buildConvexHull2DFloat(vertices, transformation, maxVertexCount);
+		} else {
+			return buildConvexHull2DDouble(vertices, transformation, maxVertexCount);
+		}
 	} else {
-		return buildConvexHull3D(vertices, transformation, maxVertexCount);
+		if constexpr (same_as<Scalar, float>) {
+			return buildConvexHull3DFloat(vertices, transformation, maxVertexCount);
+		} else {
+			return buildConvexHull3DDouble(vertices, transformation, maxVertexCount);
+		}
 	}
 }
 
@@ -153,13 +165,14 @@ template <size_t N>
  * Convex polytope.
  *
  * \tparam N number of dimensions of the world space (must be 2 or 3).
+ * \tparam Scalar scalar coordinate component type.
  */
-template <size_t N>
+template <size_t N, typename Scalar>
 class ConvexPolytope {
 public:
-	using Vertex = ConvexPolytopeVertex<N>; ///< Vertex type of the convex polytope.
-	using Edge = ConvexPolytopeEdge<N>;     ///< Edge type of the convex polytope.
-	using Face = ConvexPolytopeFace<N>;     ///< Face type of the convex polytope.
+	using Vertex = ConvexPolytopeVertex<N, Scalar>; ///< Vertex type of the convex polytope.
+	using Edge = ConvexPolytopeEdge<N, Scalar>;     ///< Edge type of the convex polytope.
+	using Face = ConvexPolytopeFace<N, Scalar>;     ///< Face type of the convex polytope.
 
 	/**
 	 * Construct a convex polygon from pre-calculated data.
@@ -174,7 +187,7 @@ public:
 	 *
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	ConvexPolytope(Allocation<Vertex> vertices, Allocation<Face> faces, const Box<2, float>& boundingBox, float boundingRadius) requires(N == 2)
+	ConvexPolytope(Allocation<Vertex> vertices, Allocation<Face> faces, const Box<2, Scalar>& boundingBox, Scalar boundingRadius) requires(N == 2)
 		: data{.vertices = std::move(vertices), .faces = std::move(faces)}
 		, boundingBox(boundingBox)
 		, boundingRadius(boundingRadius) {}
@@ -195,7 +208,7 @@ public:
 	 *        Must be greater than or equal to the largest vertex vector length.
 	 */
 	ConvexPolytope(Allocation<Vertex> vertices, Allocation<ConvexPolytopeEdgeIndex> vertexEdgeIndices, Allocation<Edge> edges, Allocation<Face> faces,
-		const Box<3, float>& boundingBox, float boundingRadius) requires(N == 3)
+		const Box<3, Scalar>& boundingBox, Scalar boundingRadius) requires(N == 3)
 		: data{.vertices = std::move(vertices), .vertexEdgeIndices = std::move(vertexEdgeIndices), .edges = std::move(edges), .faces = std::move(faces)}
 		, boundingBox(boundingBox)
 		, boundingRadius(boundingRadius) {}
@@ -213,10 +226,10 @@ public:
 	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	ConvexPolytope(Span<const Vertex> vertices, const mat<N + 1, N + 1, float>& transformation, ConvexPolytopeVertexIndex maxVertexCount = Limits<ConvexPolytopeVertexIndex>::MAX)
+	ConvexPolytope(Span<const Vertex> vertices, const mat<N + 1, N + 1, Scalar>& transformation, ConvexPolytopeVertexIndex maxVertexCount = Limits<ConvexPolytopeVertexIndex>::MAX)
 		: data(detail::buildConvexHull<N>(vertices, transformation, maxVertexCount))
-		, boundingBox(calculateBoundingBox<N, float>(data.vertices))
-		, boundingRadius(calculateBoundingRadius<N, float>(data.vertices)) {}
+		, boundingBox(calculateBoundingBox<N, Scalar>(data.vertices))
+		, boundingRadius(calculateBoundingRadius<N, Scalar>(data.vertices)) {}
 
 	/**
 	 * Construct a convex polytope from a set of vertices.
@@ -230,7 +243,7 @@ public:
 	 * \throws std::bad_alloc on allocation failure.
 	 */
 	explicit ConvexPolytope(Span<const Vertex> vertices, ConvexPolytopeVertexIndex maxVertexCount = Limits<ConvexPolytopeVertexIndex>::MAX)
-		: ConvexPolytope(vertices, mat<N + 1, N + 1, float>{1.0f}, maxVertexCount) {}
+		: ConvexPolytope(vertices, mat<N + 1, N + 1, Scalar>{Scalar{1}}, maxVertexCount) {}
 
 	/**
 	 * Get the vertices of the convex polytope.
@@ -274,7 +287,7 @@ public:
 	 * \return a local axis-aligned bounding box that contains all vertices in
 	 *         the convex polytope.
 	 */
-	[[nodiscard]] Box<N, float> getBoundingBox() const noexcept {
+	[[nodiscard]] Box<N, Scalar> getBoundingBox() const noexcept {
 		return boundingBox;
 	}
 
@@ -283,17 +296,15 @@ public:
 	 *
 	 * \return the bounding radius of the convex polytope.
 	 */
-	[[nodiscard]] float getBoundingRadius() const noexcept {
+	[[nodiscard]] Scalar getBoundingRadius() const noexcept {
 		return boundingRadius;
 	}
 
 private:
-	detail::ConvexPolytopeData<N> data{};
-	Box<N, float> boundingBox{};
-	float boundingRadius{};
+	detail::ConvexPolytopeData<N, Scalar> data{};
+	Box<N, Scalar> boundingBox{};
+	Scalar boundingRadius{};
 };
-using ConvexPolytope2D = ConvexPolytope<2>; ///< Convex polytope in 2-dimensional space.
-using ConvexPolytope3D = ConvexPolytope<3>; ///< Convex polytope in 3-dimensional space.
 
 } // namespace grem
 

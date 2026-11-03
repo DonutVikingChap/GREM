@@ -178,8 +178,8 @@ template <size_t N>
 		GREM_CASE(const TriangleMeshShape<N>& triangleMeshShapeB) {
 			const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 			const InverseTransformation<N> inverseTransformationB = inverse(transformationB);
-			const TriangleMesh<N>& mesh = *triangleMeshShapeB.getTriangleMesh();
-			const Span<const TriangleMeshVertex<N>> vertices = mesh.getVertices();
+			const TriangleMesh<N, float>& mesh = *triangleMeshShapeB.getTriangleMesh();
+			const Span<const TriangleMeshVertex<N, float>> vertices = mesh.getVertices();
 			const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 			const Optional<Box<N>> meshLocalBounds = convexShapeA.getBoundingBox(Transformation<N>{0, inverseTransformationB * transformationA});
 			const Length<N> meshLocalRayVector = inverseTransformationB.getRelative(direction * maxDistance);
@@ -190,7 +190,7 @@ template <size_t N>
 				.maxDistance = meshLocalMaxRayDistance,
 			};
 			const Length<N> meshLocalRayExpansion =
-				(meshLocalBounds) ? (meshLocalBounds->max - meshLocalBounds->min) * 0.5f + Length<N>{options.maxCollisionTouchingDistance} : Length<N>::MAX;
+				(meshLocalBounds) ? (meshLocalBounds->max - meshLocalBounds->min) * Scalar{0.5} + Length<N>{options.maxCollisionTouchingDistance} : Length<N>::MAX;
 
 			ShapecastResult<N> shapecastResult{};
 			CollisionFilterTestResult shapecastTestResult{};

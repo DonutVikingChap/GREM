@@ -22,11 +22,11 @@
 #include <GREM/core/time.hpp>
 #include <GREM/physics/Error.hpp>
 
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 #include <immintrin.h> // _MM_..., __m128..., _mm_...
 #endif
 
-#include <type_traits> // std::is_void_v, std::conditional_t, std::remove_..._t, std::bool_constant, std::false_type, std::true_type
+#include <type_traits> // std::conditional_t, std::remove_..._t, std::bool_constant, std::false_type, std::true_type
 #include <utility>     // std::declval
 
 namespace grem::physics {
@@ -1426,6 +1426,19 @@ struct Zero {
 	}
 
 	/**
+	 * Explicitly construct a zero from a compile-time double.
+	 *
+	 * \param value value to construct the zero from. Must be equal to 0.0.
+	 *
+	 * \throws physics::Error if the value is not equal to 0.0.
+	 */
+	GREM_ALWAYS_INLINE consteval explicit Zero(double value) {
+		if (!(value == 0.0)) {
+			throw physics::Error{"Zero constructed from a non-zero value."};
+		}
+	}
+
+	/**
 	 * Explicitly construct a zero from a compile-time int.
 	 *
 	 * \param value value to construct the zero from. Must be equal to 0.
@@ -1455,6 +1468,14 @@ struct Zero {
 		}
 	}
 };
+
+#ifdef GREM_PHYSICS_USE_DOUBLE_PRECISION
+/** Underlying scalar type of physics quantity components. */
+using Scalar = double;
+#else
+/** Underlying scalar type of physics quantity components. */
+using Scalar = float;
+#endif
 
 /**
  * Tag type for specifying a specific vector components.
@@ -1512,13 +1533,13 @@ struct Quantity<1, UnitT> {
 		return Quantity{other._private_value};
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Quantity reinterpret(float value) {
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Quantity reinterpret(floating_point auto value) {
 		return Quantity{value};
 	}
 
-	float _private_value = 0.0f;
+	Scalar _private_value{};
 
-	[[nodiscard]] constexpr float _private_getUnderlyingValue() const {
+	[[nodiscard]] constexpr Scalar _private_getUnderlyingValue() const {
 		return _private_value;
 	}
 
@@ -1531,21 +1552,21 @@ struct Quantity<1, UnitT> {
 
 	GREM_ALWAYS_INLINE constexpr Quantity(Zero) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(float value) requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
-		: _private_value(value) {}
+	GREM_ALWAYS_INLINE constexpr Quantity(floating_point auto value) requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
+		: _private_value(static_cast<Scalar>(value)) {}
 
 	template <unit OtherUnitT>
 	GREM_ALWAYS_INLINE constexpr Quantity(const Quantity<1, OtherUnitT>& q)
 		requires(!same_as<OtherUnitT, UnitT> && OtherUnitT::DIMENSION == DIMENSION &&
 				 (OtherUnitT::MagnitudeType::IS_ABSOLUTE == MagnitudeType::IS_ABSOLUTE || !OtherUnitT::MagnitudeType::IS_ABSOLUTE))
-		: Quantity(Quantity::reinterpret(q * static_cast<float>(OtherUnitT::MagnitudeType::VALUE / MagnitudeType::VALUE))) {}
+		: Quantity(Quantity::reinterpret(q * static_cast<Scalar>(OtherUnitT::MagnitudeType::VALUE / MagnitudeType::VALUE))) {}
 
 	template <typename Rep, typename Period>
 	GREM_ALWAYS_INLINE constexpr Quantity(const DurationBase<Rep, Period>& duration) requires(DIMENSION == TIME && MagnitudeType::VALUE == 1.0l && !MagnitudeType::IS_ABSOLUTE)
-		: _private_value(duration_cast<FloatSeconds>(duration).count() / static_cast<float>(MagnitudeType::VALUE)) {}
+		: _private_value(duration_cast<DurationBase<Scalar, Ratio<1, 1>>>(duration).count() / static_cast<Scalar>(MagnitudeType::VALUE)) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity& operator=(Zero) {
-		_private_value = 0.0f;
+		_private_value = Scalar{};
 		return *this;
 	}
 
@@ -1569,12 +1590,12 @@ struct Quantity<1, UnitT> {
 
 	template <arithmetic Arithmetic>
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(Arithmetic other) const noexcept requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
-		return _private_value == static_cast<float>(other);
+		return _private_value == static_cast<Scalar>(other);
 	}
 
 	template <arithmetic Arithmetic>
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto operator<=>(Arithmetic other) const noexcept requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
-		return _private_value <=> static_cast<float>(other);
+		return _private_value <=> static_cast<Scalar>(other);
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(Zero) const noexcept {
@@ -1587,8 +1608,8 @@ struct Quantity<1, UnitT> {
 
 	template <typename Rep, typename Period>
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(const DurationBase<Rep, Period>& other) const noexcept requires(DIMENSION == TIME && !MagnitudeType::IS_ABSOLUTE) {
-		if constexpr (same_as<Rep, float>) {
-			return FloatSeconds{*this} == duration_cast<FloatSeconds>(other);
+		if constexpr (floating_point<Rep>) {
+			return DurationBase<Rep, Ratio<1, 1>>{*this} == duration_cast<DurationBase<Rep, Ratio<1, 1>>>(other);
 		} else {
 			return Duration{*this} == duration_cast<Duration>(other);
 		}
@@ -1596,23 +1617,31 @@ struct Quantity<1, UnitT> {
 
 	template <typename Rep, typename Period>
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto operator<=>(const DurationBase<Rep, Period>& other) const noexcept requires(DIMENSION == TIME && !MagnitudeType::IS_ABSOLUTE) {
-		if constexpr (same_as<Rep, float>) {
-			return FloatSeconds{*this} <=> duration_cast<FloatSeconds>(other);
+		if constexpr (floating_point<Rep>) {
+			return DurationBase<Rep, Ratio<1, 1>>{*this} <=> duration_cast<DurationBase<Rep, Ratio<1, 1>>>(other);
 		} else {
 			return Duration{*this} <=> duration_cast<Duration>(other);
 		}
 	}
 
 	GREM_ALWAYS_INLINE constexpr operator float() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
-		return _private_value;
+		return static_cast<float>(_private_value);
 	}
 
-	GREM_ALWAYS_INLINE constexpr operator FloatSeconds() const requires(DIMENSION == TIME && !MagnitudeType::IS_ABSOLUTE) {
-		return FloatSeconds{_private_value * static_cast<float>(MagnitudeType::VALUE)};
+	GREM_ALWAYS_INLINE constexpr operator double() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
+		return static_cast<double>(_private_value);
+	}
+
+	GREM_ALWAYS_INLINE constexpr operator DurationBase<float, Ratio<1, 1>>() const requires(DIMENSION == TIME && !MagnitudeType::IS_ABSOLUTE) {
+		return DurationBase<float, Ratio<1, 1>>{_private_value * static_cast<Scalar>(MagnitudeType::VALUE)};
+	}
+
+	GREM_ALWAYS_INLINE constexpr operator DurationBase<double, Ratio<1, 1>>() const requires(DIMENSION == TIME && !MagnitudeType::IS_ABSOLUTE) {
+		return DurationBase<double, Ratio<1, 1>>{_private_value * static_cast<Scalar>(MagnitudeType::VALUE)};
 	}
 
 	GREM_ALWAYS_INLINE constexpr operator Duration() const requires(DIMENSION == TIME && !MagnitudeType::IS_ABSOLUTE) {
-		return duration_cast<Duration>(FloatSeconds{_private_value * static_cast<float>(MagnitudeType::VALUE)});
+		return duration_cast<Duration>(DurationBase<Scalar, Ratio<1, 1>>{_private_value * static_cast<Scalar>(MagnitudeType::VALUE)});
 	}
 
 	template <unit OtherUnitT>
@@ -1620,7 +1649,7 @@ struct Quantity<1, UnitT> {
 		if constexpr (OtherUnitT::MagnitudeType::VALUE == MagnitudeType::VALUE) {
 			return Quantity<1, Unitless>{_private_value};
 		} else {
-			constexpr float factor = static_cast<float>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
+			constexpr Scalar factor = static_cast<Scalar>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
 			return _private_getUnderlyingValue() * factor;
 		}
 	}
@@ -1647,30 +1676,33 @@ private:
 	template <size_t OtherN, typename OtherUnitT>
 	friend struct Quantity;
 
-	GREM_ALWAYS_INLINE constexpr explicit Quantity(float value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
-		: _private_value(value) {}
+	GREM_ALWAYS_INLINE constexpr explicit Quantity(int value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+		: _private_value(static_cast<Scalar>(value)) {}
+
+	GREM_ALWAYS_INLINE constexpr explicit Quantity(floating_point auto value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+		: _private_value(static_cast<Scalar>(value)) {}
 };
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::MIN{Limits<float>::MIN};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::MIN{Limits<Scalar>::MIN};
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::MAX{Limits<float>::MAX};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::MAX{Limits<Scalar>::MAX};
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::SMALLEST_NORMAL{Limits<float>::SMALLEST_NORMAL};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::SMALLEST_NORMAL{Limits<Scalar>::SMALLEST_NORMAL};
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::SMALLEST_SUBNORMAL{Limits<float>::SMALLEST_SUBNORMAL};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::SMALLEST_SUBNORMAL{Limits<Scalar>::SMALLEST_SUBNORMAL};
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::MACHINE_EPSILON{Limits<float>::MACHINE_EPSILON};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::MACHINE_EPSILON{Limits<Scalar>::MACHINE_EPSILON};
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::INF{Limits<float>::INF};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::INF{Limits<Scalar>::INF};
 
 template <typename UnitT>
-inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::QUIET_NAN{Limits<float>::QUIET_NAN};
+inline constexpr Quantity<1, UnitT> Quantity<1, UnitT>::QUIET_NAN{Limits<Scalar>::QUIET_NAN};
 
 /**
  * Read-only view of a specific component of a physical vector quantity.
@@ -1702,10 +1734,18 @@ public:
 	}
 
 	GREM_ALWAYS_INLINE constexpr operator float() const requires(UnitT::DIMENSION == DIMENSIONLESS && UnitT::MagnitudeType::VALUE == 1.0l) {
+		return static_cast<float>(getValue());
+	}
+
+	GREM_ALWAYS_INLINE constexpr operator double() const requires(UnitT::DIMENSION == DIMENSIONLESS && UnitT::MagnitudeType::VALUE == 1.0l) {
+		return static_cast<double>(getValue());
+	}
+
+	GREM_ALWAYS_INLINE constexpr operator DurationBase<float, Ratio<1, 1>>() const requires(UnitT{} == SECONDS) {
 		return getValue();
 	}
 
-	GREM_ALWAYS_INLINE constexpr operator FloatSeconds() const requires(UnitT{} == SECONDS) {
+	GREM_ALWAYS_INLINE constexpr operator DurationBase<double, Ratio<1, 1>>() const requires(UnitT{} == SECONDS) {
 		return getValue();
 	}
 
@@ -1791,7 +1831,7 @@ protected:
 	const Quantity<N, UnitT>* quantity;
 
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr Quantity<1, UnitT> getValue() const noexcept {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			if constexpr (Index == 0) {
 				return Quantity<1, UnitT>::reinterpret(_mm_cvtss_f32(quantity->_private_value));
@@ -1824,7 +1864,7 @@ public:
 	GREM_ALWAYS_INLINE ComponentProxy operator=( // NOLINT(misc-unconventional-assign-operator, cppcoreguidelines-c-copy-assignment-signature)
 		Quantity<1, UnitT> value) const noexcept {
 		Quantity<N, UnitT>* const quantity = const_cast<Quantity<N, UnitT>*>(this->quantity);
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			alignas(16) float components[4];
 			_mm_store_ps(components, quantity->_private_value);
@@ -1845,7 +1885,7 @@ public:
 	GREM_ALWAYS_INLINE ComponentProxy operator=( // NOLINT(misc-unconventional-assign-operator, cppcoreguidelines-c-copy-assignment-signature)
 		Zero) const noexcept {
 		Quantity<N, UnitT>* const quantity = const_cast<Quantity<N, UnitT>*>(this->quantity);
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			alignas(16) float components[4];
 			_mm_store_ps(components, quantity->_private_value);
@@ -1858,7 +1898,7 @@ public:
 			quantity->_private_value[Index] = 0.0f;
 		}
 #else
-		quantity->_private_value[Index] = 0.0f;
+		quantity->_private_value[Index] = Scalar{};
 #endif
 		return *this;
 	}
@@ -1868,7 +1908,7 @@ public:
 		static_assert(OtherUnitT::DIMENSION == UnitT::DIMENSION && OtherUnitT::MagnitudeType::VALUE == UnitT::MagnitudeType::VALUE && !OtherUnitT::MagnitudeType::IS_ABSOLUTE,
 			"Quantity of this unit cannot be added.");
 		Quantity<N, UnitT>* const quantity = const_cast<Quantity<N, UnitT>*>(this->quantity);
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			alignas(16) float components[4];
 			_mm_store_ps(components, quantity->_private_value);
@@ -1891,7 +1931,7 @@ public:
 		static_assert(OtherUnitT::DIMENSION == UnitT::DIMENSION && OtherUnitT::MagnitudeType::VALUE == UnitT::MagnitudeType::VALUE && !OtherUnitT::MagnitudeType::IS_ABSOLUTE,
 			"Quantity of this unit cannot be subtracted.");
 		Quantity<N, UnitT>* const quantity = const_cast<Quantity<N, UnitT>*>(this->quantity);
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			alignas(16) float components[4];
 			_mm_store_ps(components, quantity->_private_value);
@@ -1909,9 +1949,9 @@ public:
 		return *this;
 	}
 
-	GREM_ALWAYS_INLINE ComponentProxy operator*=(float value) const noexcept {
+	GREM_ALWAYS_INLINE ComponentProxy operator*=(Scalar value) const noexcept {
 		Quantity<N, UnitT>* const quantity = const_cast<Quantity<N, UnitT>*>(this->quantity);
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			alignas(16) float components[4];
 			_mm_store_ps(components, quantity->_private_value);
@@ -1929,9 +1969,9 @@ public:
 		return *this;
 	}
 
-	GREM_ALWAYS_INLINE ComponentProxy operator/=(float value) const noexcept {
+	GREM_ALWAYS_INLINE ComponentProxy operator/=(Scalar value) const noexcept {
 		Quantity<N, UnitT>* const quantity = const_cast<Quantity<N, UnitT>*>(this->quantity);
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			alignas(16) float components[4];
 			_mm_store_ps(components, quantity->_private_value);
@@ -1977,9 +2017,13 @@ struct Quantity<2, UnitT> {
 		return Quantity{value};
 	}
 
-	vec<2, float> _private_value{};
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Quantity reinterpret(vec<2, double> value) {
+		return Quantity{value};
+	}
 
-	[[nodiscard]] constexpr vec<2, float> _private_getUnderlyingValue() const {
+	vec<2, Scalar> _private_value{};
+
+	[[nodiscard]] constexpr vec<2, Scalar> _private_getUnderlyingValue() const {
 		return _private_value;
 	}
 
@@ -1998,22 +2042,25 @@ struct Quantity<2, UnitT> {
 	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Component y)
 		: _private_value{x._private_value, y._private_value} {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Component y) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Component y)
 		: Quantity(Component{}, y) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Zero)
 		: Quantity(x, Component{}) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l) {}
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Zero) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity(vec<2, float> v) requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
+		: Quantity(v.x, v.y) {}
+
+	GREM_ALWAYS_INLINE constexpr Quantity(vec<2, double> v) requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
 		: Quantity(v.x, v.y) {}
 
 	template <unit OtherUnitT>
 	GREM_ALWAYS_INLINE constexpr Quantity(const Quantity<2, OtherUnitT>& q)
 		requires(!same_as<OtherUnitT, UnitT> && OtherUnitT::DIMENSION == DIMENSION &&
 				 (OtherUnitT::MagnitudeType::IS_ABSOLUTE == MagnitudeType::IS_ABSOLUTE || !OtherUnitT::MagnitudeType::IS_ABSOLUTE))
-		: Quantity(Quantity::reinterpret(q * static_cast<float>(OtherUnitT::MagnitudeType::VALUE / MagnitudeType::VALUE))) {}
+		: Quantity(Quantity::reinterpret(q * static_cast<Scalar>(OtherUnitT::MagnitudeType::VALUE / MagnitudeType::VALUE))) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity& operator=(Zero) {
 		_private_value = {};
@@ -2163,12 +2210,16 @@ struct Quantity<2, UnitT> {
 		return vec<2, float>{static_cast<float>(getX()), static_cast<float>(getY())};
 	}
 
+	GREM_ALWAYS_INLINE constexpr operator vec<2, double>() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
+		return vec<2, double>{static_cast<double>(getX()), static_cast<double>(getY())};
+	}
+
 	template <unit OtherUnitT>
 	[[nodiscard]] GREM_ALWAYS_INLINE Quantity<2, Unitless> in(OtherUnitT) const requires(OtherUnitT::DIMENSION == DIMENSION) {
 		if constexpr (OtherUnitT::MagnitudeType::VALUE == MagnitudeType::VALUE) {
 			return Quantity<2, Unitless>{_private_value};
 		} else {
-			constexpr float factor = static_cast<float>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
+			constexpr Scalar factor = static_cast<Scalar>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
 			return _private_getUnderlyingValue() * factor;
 		}
 	}
@@ -2207,31 +2258,38 @@ private:
 
 	GREM_ALWAYS_INLINE constexpr explicit Quantity(vec<2, float> value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
 		: _private_value(value) {}
+
+	GREM_ALWAYS_INLINE constexpr explicit Quantity(vec<2, double> value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+		: _private_value(value) {}
 };
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::MIN{vec<2, float>{Limits<float>::MIN}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::MIN{vec<2, Scalar>{Limits<Scalar>::MIN}};
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::MAX{vec<2, float>{Limits<float>::MAX}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::MAX{vec<2, Scalar>{Limits<Scalar>::MAX}};
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::SMALLEST_NORMAL{vec<2, float>{Limits<float>::SMALLEST_NORMAL}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::SMALLEST_NORMAL{vec<2, Scalar>{Limits<Scalar>::SMALLEST_NORMAL}};
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::SMALLEST_SUBNORMAL{vec<2, float>{Limits<float>::SMALLEST_SUBNORMAL}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::SMALLEST_SUBNORMAL{vec<2, Scalar>{Limits<Scalar>::SMALLEST_SUBNORMAL}};
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::MACHINE_EPSILON{vec<2, float>{Limits<float>::MACHINE_EPSILON}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::MACHINE_EPSILON{vec<2, Scalar>{Limits<Scalar>::MACHINE_EPSILON}};
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::INF{vec<2, float>{Limits<float>::INF}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::INF{vec<2, Scalar>{Limits<Scalar>::INF}};
 
 template <typename UnitT>
-inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::QUIET_NAN{vec<2, float>{Limits<float>::QUIET_NAN}};
+inline constexpr Quantity<2, UnitT> Quantity<2, UnitT>::QUIET_NAN{vec<2, Scalar>{Limits<Scalar>::QUIET_NAN}};
 
 template <typename UnitT>
-struct alignas(16) Quantity<3, UnitT> {
+struct
+#ifndef GREM_PHYSICS_USE_DOUBLE_PRECISION
+	alignas(16)
+#endif
+		Quantity<3, UnitT> {
 	using Component = Quantity<1, UnitT>;
 	using Unit = UnitT;
 	using DimensionType = typename Unit::DimensionType;
@@ -2258,18 +2316,22 @@ struct alignas(16) Quantity<3, UnitT> {
 		return Quantity{value};
 	}
 
-#ifdef GREM_USE_SSE_INTRINSICS
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Quantity reinterpret(vec<3, double> value) {
+		return Quantity{value};
+	}
+
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr Quantity reinterpret(__m128 value) {
 		return Quantity{value};
 	}
 
 	__m128 _private_value{};
 #else
-	vec<3, float> _private_value{};
+	vec<3, Scalar> _private_value{};
 #endif
 
-	[[nodiscard]] constexpr vec<3, float> _private_getUnderlyingValue() const {
-#ifdef GREM_USE_SSE_INTRINSICS
+	[[nodiscard]] constexpr vec<3, Scalar> _private_getUnderlyingValue() const {
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		alignas(16) float components[4]{};
 		_mm_store_ps(components, _private_value);
 		return {components[0], components[1], components[2]};
@@ -2291,7 +2353,7 @@ struct alignas(16) Quantity<3, UnitT> {
 		: Quantity(value, value, value) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Component y, Component z)
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		: _private_value{x._private_value, y._private_value, z._private_value, z._private_value}
 #else
 		: _private_value{x._private_value, y._private_value, z._private_value}
@@ -2299,50 +2361,53 @@ struct alignas(16) Quantity<3, UnitT> {
 	{
 	}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Component y, Component z) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Component y, Component z)
 		: Quantity(Component{}, y, z) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Zero, Component z) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Zero, Component z)
 		: Quantity(x, Component{}, z) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Zero, Component z) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Zero, Component z)
 		: Quantity(Component{}, Component{}, z) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Component y, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Component y, Zero)
 		: Quantity(x, y, Component{}) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Component y, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Component y, Zero)
 		: Quantity(Component{}, y, Component{}) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Zero, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Zero, Zero)
 		: Quantity(x, Component{}, Component{}) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Zero, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Zero, Zero)
 		: Quantity(Component{}, Component{}, Component{}) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity(vec<3, float> v) requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
+		: Quantity(v.x, v.y, v.z) {}
+
+	GREM_ALWAYS_INLINE constexpr Quantity(vec<3, double> v) requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
 		: Quantity(v.x, v.y, v.z) {}
 
 	template <unit OtherUnitT>
 	GREM_ALWAYS_INLINE constexpr Quantity(const Quantity<3, OtherUnitT>& q)
 		requires(!same_as<OtherUnitT, UnitT> && OtherUnitT::DIMENSION == DIMENSION &&
 				 (OtherUnitT::MagnitudeType::IS_ABSOLUTE == MagnitudeType::IS_ABSOLUTE || !OtherUnitT::MagnitudeType::IS_ABSOLUTE))
-		: Quantity(Quantity::reinterpret(q * static_cast<float>(OtherUnitT::MagnitudeType::VALUE / MagnitudeType::VALUE))) {}
+		: Quantity(Quantity::reinterpret(q * static_cast<Scalar>(OtherUnitT::MagnitudeType::VALUE / MagnitudeType::VALUE))) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity(Quantity<2, UnitT> xy, Component z)
 		: Quantity(xy.getX(), xy.getY(), z) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Quantity<2, UnitT> xy, Zero) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Quantity<2, UnitT> xy, Zero)
 		: Quantity(xy.getX(), xy.getY(), Component{}) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity(Component x, Quantity<2, UnitT> yz)
 		: Quantity(x, yz.getX(), yz.getY()) {}
 
-	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Quantity<2, UnitT> yz) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+	GREM_ALWAYS_INLINE constexpr Quantity(Zero, Quantity<2, UnitT> yz)
 		: Quantity(Component{}, yz.getX(), yz.getY()) {}
 
 	GREM_ALWAYS_INLINE constexpr Quantity& operator=(Zero) {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		_private_value = __m128{};
 #else
 		_private_value = {};
@@ -2351,7 +2416,7 @@ struct alignas(16) Quantity<3, UnitT> {
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(const Quantity& other) const noexcept {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		return (_mm_movemask_ps(_mm_cmpeq_ps(_private_value, other._private_value)) & 0b111) == 0b111;
 #else
 		return _private_value == other._private_value;
@@ -2360,7 +2425,7 @@ struct alignas(16) Quantity<3, UnitT> {
 
 	template <typename OtherUnitT>
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(const Quantity<3, OtherUnitT>& other) const noexcept requires(UnitT{} == OtherUnitT{}) {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		return (_mm_movemask_ps(_mm_cmpeq_ps(_private_value, other._private_value)) & 0b111) == 0b111;
 #else
 		return _private_value == other._private_value;
@@ -2436,7 +2501,7 @@ struct alignas(16) Quantity<3, UnitT> {
 	template <size_t IndexX, size_t IndexY, size_t IndexZ>
 	[[nodiscard]] GREM_ALWAYS_INLINE Quantity<3, UnitT> get([[maybe_unused]] ComponentSwizzle<IndexX> SwizzleX, [[maybe_unused]] ComponentSwizzle<IndexY> SwizzleY,
 		[[maybe_unused]] ComponentSwizzle<IndexZ> SwizzleZ) const noexcept {
-#if GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		return Quantity<3, UnitT>::reinterpret(_mm_shuffle_ps(_private_value, _private_value, _MM_SHUFFLE(IndexZ, IndexZ, IndexY, IndexX)));
 #else
 		return {get(SwizzleX), get(SwizzleY), get(SwizzleZ)};
@@ -2517,12 +2582,16 @@ struct alignas(16) Quantity<3, UnitT> {
 		return vec<3, float>{static_cast<float>(getX()), static_cast<float>(getY()), static_cast<float>(getZ())};
 	}
 
+	GREM_ALWAYS_INLINE constexpr operator vec<3, double>() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
+		return vec<3, double>{static_cast<double>(getX()), static_cast<double>(getY()), static_cast<double>(getZ())};
+	}
+
 	template <unit OtherUnitT>
 	[[nodiscard]] GREM_ALWAYS_INLINE Quantity<3, Unitless> in(OtherUnitT) const requires(OtherUnitT::DIMENSION == DIMENSION) {
 		if constexpr (OtherUnitT::MagnitudeType::VALUE == MagnitudeType::VALUE) {
 			return Quantity<3, Unitless>{_private_value};
 		} else {
-			constexpr float factor = static_cast<float>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
+			constexpr Scalar factor = static_cast<Scalar>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
 			return _private_getUnderlyingValue() * factor;
 		}
 	}
@@ -2577,38 +2646,44 @@ private:
 	template <size_t OtherN, typename OtherUnitT, size_t Index>
 	friend class ComponentProxy;
 
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	GREM_ALWAYS_INLINE constexpr explicit Quantity(__m128 value)
 		: _private_value(value) {}
 
 	GREM_ALWAYS_INLINE constexpr explicit Quantity(vec<3, float> value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
-		: _private_value{value.x, value.y, value.z, value.z} {}
+		: _private_value{static_cast<Scalar>(value.x), static_cast<Scalar>(value.y), static_cast<Scalar>(value.z), static_cast<Scalar>(value.z)} {}
+
+	GREM_ALWAYS_INLINE constexpr explicit Quantity(vec<3, double> value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+		: _private_value{static_cast<Scalar>(value.x), static_cast<Scalar>(value.y), static_cast<Scalar>(value.z), static_cast<Scalar>(value.z)} {}
 #else
 	GREM_ALWAYS_INLINE constexpr explicit Quantity(vec<3, float> value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+		: _private_value(value) {}
+
+	GREM_ALWAYS_INLINE constexpr explicit Quantity(vec<3, double> value) requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
 		: _private_value(value) {}
 #endif
 };
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::MIN{vec<3, float>{Limits<float>::MIN}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::MIN{vec<3, Scalar>{Limits<Scalar>::MIN}};
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::MAX{vec<3, float>{Limits<float>::MAX}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::MAX{vec<3, Scalar>{Limits<Scalar>::MAX}};
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::SMALLEST_NORMAL{vec<3, float>{Limits<float>::SMALLEST_NORMAL}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::SMALLEST_NORMAL{vec<3, Scalar>{Limits<Scalar>::SMALLEST_NORMAL}};
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::SMALLEST_SUBNORMAL{vec<3, float>{Limits<float>::SMALLEST_SUBNORMAL}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::SMALLEST_SUBNORMAL{vec<3, Scalar>{Limits<Scalar>::SMALLEST_SUBNORMAL}};
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::MACHINE_EPSILON{vec<3, float>{Limits<float>::MACHINE_EPSILON}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::MACHINE_EPSILON{vec<3, Scalar>{Limits<Scalar>::MACHINE_EPSILON}};
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::INF{vec<3, float>{Limits<float>::INF}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::INF{vec<3, Scalar>{Limits<Scalar>::INF}};
 
 template <typename UnitT>
-inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::QUIET_NAN{vec<3, float>{Limits<float>::QUIET_NAN}};
+inline constexpr Quantity<3, UnitT> Quantity<3, UnitT>::QUIET_NAN{vec<3, Scalar>{Limits<Scalar>::QUIET_NAN}};
 
 namespace detail {
 
@@ -2633,7 +2708,7 @@ template <size_t N, typename UnitT, size_t Index>
 	return value;
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr Quantity<1, Unitless> GREM_VECTORCALL toQuantity(float value) noexcept {
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Quantity<1, Unitless> GREM_VECTORCALL toQuantity(floating_point auto value) noexcept {
 	return value;
 }
 
@@ -2641,7 +2716,15 @@ template <size_t N, typename UnitT, size_t Index>
 	return value;
 }
 
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Quantity<2, Unitless> GREM_VECTORCALL toQuantity(vec<2, double> value) noexcept {
+	return value;
+}
+
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr Quantity<3, Unitless> GREM_VECTORCALL toQuantity(vec<3, float> value) noexcept {
+	return value;
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Quantity<3, Unitless> GREM_VECTORCALL toQuantity(vec<3, double> value) noexcept {
 	return value;
 }
 
@@ -2654,15 +2737,8 @@ template <typename Rep, typename Period>
 	return value;
 }
 
-GREM_ALWAYS_INLINE constexpr void GREM_VECTORCALL toQuantity(int) noexcept {}
-
 template <typename T>
-concept not_void = !std::is_void_v<T>;
-
-template <typename T>
-concept quantity_convertible = requires(const T t) {
-	{ toQuantity(t) } -> not_void;
-};
+concept quantity_convertible = requires(const T t) { toQuantity(t); };
 
 template <typename T>
 inline constexpr size_t quantity_rank_v = decltype(toQuantity(std::declval<T>()))::RANK;
@@ -2764,7 +2840,7 @@ template <unit OtherUnitT>
 
 template <unit OtherUnitT, size_t N, typename UnitT>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL operator/(OtherUnitT, Quantity<N, UnitT> value) {
-	return Quantity<N, Quotient<OtherUnitT, UnitT>>::reinterpret(1.0f / value);
+	return Quantity<N, Quotient<OtherUnitT, UnitT>>::reinterpret(Scalar{1} / value);
 }
 
 template <unit OtherUnitT>
@@ -2774,9 +2850,9 @@ template <unit OtherUnitT>
 
 template <detail::quantity_unary_operand A>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL operator+(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
-	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot be unary-added because it represents an absolute position.");
-	return a;
+	return Quantity<N, Relative<UnitT>>::reinterpret(detail::toQuantity(a)._private_value);
 }
 
 template <detail::quantity_unary_operand A>
@@ -2784,7 +2860,7 @@ template <detail::quantity_unary_operand A>
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot be negated because it represents an absolute position.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N == 3) {
 		return Quantity<N, UnitT>::reinterpret(_mm_sub_ps(_mm_setzero_ps(), detail::toQuantity(a)._private_value));
 	} else {
@@ -2802,7 +2878,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	using UnitT1 = detail::unit_type_t<A>;
 	using UnitT2 = detail::unit_type_t<B>;
 	static_assert(detail::can_add<UnitT1, UnitT2>, "Quantities of these units cannot be added.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N1 == 3 && N2 == 3) {
 		return Quantity<3, Sum<UnitT1, UnitT2>>::reinterpret(_mm_add_ps(detail::toQuantity(a)._private_value, detail::toQuantity(b)._private_value));
 	} else {
@@ -2826,7 +2902,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	using UnitT1 = detail::unit_type_t<A>;
 	using UnitT2 = detail::unit_type_t<B>;
 	static_assert(detail::can_subtract<UnitT1, UnitT2>, "Quantities of these units cannot be subtracted.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N1 == 3 && N2 == 3) {
 		return Quantity<3, Difference<UnitT1, UnitT2>>::reinterpret(_mm_sub_ps(detail::toQuantity(a)._private_value, detail::toQuantity(b)._private_value));
 	} else {
@@ -2836,18 +2912,6 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 #else
 	return Quantity<grem::max(N1, N2), Difference<UnitT1, UnitT2>>::reinterpret(detail::toQuantity(a)._private_value - detail::toQuantity(b)._private_value);
 #endif
-}
-
-template <detail::quantity_unary_operand A>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL operator-(A a, Zero) requires(!convertible_to<A, float>) {
-	constexpr size_t N = detail::quantity_rank_v<A>;
-	using UnitT = detail::unit_type_t<A>;
-	return Quantity<N, Relative<UnitT>>::reinterpret(detail::toQuantity(a)._private_value);
-}
-
-template <detail::quantity_unary_operand B>
-[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL operator-(Zero, B b) requires(!convertible_to<B, float>) {
-	return -b;
 }
 
 template <size_t N, typename UnitT>
@@ -2862,7 +2926,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	using UnitT1 = detail::unit_type_t<A>;
 	using UnitT2 = detail::unit_type_t<B>;
 	static_assert(detail::can_multiply<UnitT1, UnitT2>, "Quantities of these units cannot be multiplied.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N1 == 3 && N2 == 3) {
 		return Quantity<3, Product<UnitT1, UnitT2>>::reinterpret(_mm_mul_ps(detail::toQuantity(a)._private_value, detail::toQuantity(b)._private_value));
 	} else if constexpr (N1 == 1 && N2 == 3) {
@@ -2890,7 +2954,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	using UnitT1 = detail::unit_type_t<A>;
 	using UnitT2 = detail::unit_type_t<B>;
 	static_assert(detail::can_divide<UnitT1, UnitT2>, "Quantities of these units cannot be divided.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N1 == 3 && N2 == 3) {
 		return Quantity<3, Quotient<UnitT1, UnitT2>>::reinterpret(_mm_div_ps(detail::toQuantity(a)._private_value, detail::toQuantity(b)._private_value));
 	} else if constexpr (N1 == 1 && N2 == 3) {
@@ -2914,7 +2978,7 @@ GREM_ALWAYS_INLINE constexpr Quantity<N, UnitT>& GREM_VECTORCALL operator/=(Quan
 template <size_t N1, typename UnitT1, size_t N2, typename UnitT2>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL min(Quantity<N1, UnitT1> a, Quantity<N2, UnitT2> b) {
 	static_assert(UnitT1{} == UnitT2{}, "Quantities of different units cannot be selected between.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N1 == 3 && N2 == 3) {
 		return Quantity<3, UnitT1>::reinterpret(_mm_min_ps(detail::toQuantity(a)._private_value, detail::toQuantity(b)._private_value));
 	} else if constexpr (N1 == 1 && N2 == 3) {
@@ -2933,7 +2997,7 @@ template <size_t N1, typename UnitT1, size_t N2, typename UnitT2>
 template <size_t N1, typename UnitT1, size_t N2, typename UnitT2>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL max(Quantity<N1, UnitT1> a, Quantity<N2, UnitT2> b) {
 	static_assert(UnitT1{} == UnitT2{}, "Quantities of different units cannot be selected between.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N1 == 3 && N2 == 3) {
 		return Quantity<3, UnitT1>::reinterpret(_mm_max_ps(detail::toQuantity(a)._private_value, detail::toQuantity(b)._private_value));
 	} else if constexpr (N1 == 1 && N2 == 3) {
@@ -2962,7 +3026,7 @@ template <detail::quantity_unary_operand A>
 	if constexpr (N == 1) {
 		return detail::toQuantity(a);
 	} else {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			constexpr float32_t ZEROS = bit_cast<float32_t>(uint32_t{0});
 			constexpr float32_t ONES = bit_cast<float32_t>(uint32_t{0xFFFFFFFF});
@@ -2993,7 +3057,7 @@ template <detail::quantity_unary_operand A>
 	} else if constexpr (N == 2) {
 		return Quantity<1, Square<UnitT>>::reinterpret(grem::product(detail::toQuantity(a)._private_getUnderlyingValue()));
 	} else if constexpr (N == 3) {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			const auto q = detail::toQuantity(a);
 			const __m128 y_x_z_z = _mm_shuffle_ps(q._private_value, q._private_value, _MM_SHUFFLE(2, 2, 0, 1));
@@ -3018,7 +3082,7 @@ template <detail::quantity_unary_operand A>
 	if constexpr (N == 1) {
 		return detail::toQuantity(a);
 	} else {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			const auto q = detail::toQuantity(a);
 			const auto minOfXY = min(q, q.get(Y, Z, Z));
@@ -3039,7 +3103,7 @@ template <detail::quantity_unary_operand A>
 	if constexpr (N == 1) {
 		return detail::toQuantity(a);
 	} else {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			const auto q = detail::toQuantity(a);
 			const auto maxOfXY = max(q, q.get(Y, Z, Z));
@@ -3065,7 +3129,7 @@ template <detail::quantity_unary_operand A>
 
 template <detail::quantity_unary_operand A>
 [[nodiscard]] GREM_ALWAYS_INLINE auto GREM_VECTORCALL isnan(A a) {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	if constexpr (N == 3) {
 		const auto q = detail::toQuantity(a);
@@ -3081,7 +3145,7 @@ template <detail::quantity_unary_operand A>
 
 template <detail::quantity_unary_operand A>
 [[nodiscard]] GREM_ALWAYS_INLINE auto GREM_VECTORCALL signbit(A a) {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	if constexpr (N == 3) {
 		const int mask = _mm_movemask_ps(detail::toQuantity(a)._private_value);
@@ -3097,7 +3161,7 @@ template <detail::quantity_unary_operand A>
 template <detail::quantity_unary_operand A>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL sign(A a) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N == 3) {
 		return Quantity<3, Unitless>::reinterpret(_mm_or_ps(_mm_and_ps(detail::toQuantity(a)._private_value, _mm_set1_ps(-1.0f)), _mm_set1_ps(1.0f)));
 	} else {
@@ -3106,6 +3170,14 @@ template <detail::quantity_unary_operand A>
 #else
 	return Quantity<N, Unitless>{grem::sign(detail::toQuantity(a)._private_value)};
 #endif
+}
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE auto GREM_VECTORCALL exp(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	using UnitT = detail::unit_type_t<A>;
+	static_assert(UnitT{} == UNITLESS, "Quantities that are not unitless cannot be used as an exponent.");
+	return Quantity<N, UnitT>::reinterpret(grem::exp(detail::toQuantity(a)._private_getUnderlyingValue()));
 }
 
 template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B>
@@ -3129,7 +3201,7 @@ template <detail::quantity_unary_operand A>
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot have its absolute value taken because it represents an absolute position.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N == 3) {
 		const auto q = detail::toQuantity(a);
 		return max(-q, q);
@@ -3156,16 +3228,16 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	if constexpr (N1 == 1 && N2 == 1) {
 		return Quantity<1, Product<UnitT1, UnitT2>>{};
 	} else if constexpr (N1 == 2 && N2 == 1) {
-		const vec<2, float> v = detail::toQuantity(a)._private_getUnderlyingValue();
-		return Quantity<2, Product<UnitT1, UnitT2>>::reinterpret(vec<2, float>{v.y, -v.x} * detail::toQuantity(b)._private_getUnderlyingValue());
+		const vec<2, Scalar> v = detail::toQuantity(a)._private_getUnderlyingValue();
+		return Quantity<2, Product<UnitT1, UnitT2>>::reinterpret(vec<2, Scalar>{v.y, -v.x} * detail::toQuantity(b)._private_getUnderlyingValue());
 	} else if constexpr (N1 == 1 && N2 == 2) {
-		const vec<2, float> v = detail::toQuantity(b)._private_getUnderlyingValue();
-		return Quantity<2, Product<UnitT1, UnitT2>>::reinterpret(detail::toQuantity(a)._private_getUnderlyingValue() * vec<2, float>{-v.y, v.x});
+		const vec<2, Scalar> v = detail::toQuantity(b)._private_getUnderlyingValue();
+		return Quantity<2, Product<UnitT1, UnitT2>>::reinterpret(detail::toQuantity(a)._private_getUnderlyingValue() * vec<2, Scalar>{-v.y, v.x});
 	} else if constexpr (N1 == 2 && N2 == 2) {
 		return Quantity<1, Product<UnitT1, UnitT2>>::reinterpret(
 			grem::cross(detail::toQuantity(a)._private_getUnderlyingValue(), detail::toQuantity(b)._private_getUnderlyingValue()));
 	} else if constexpr (N1 == 3 && N2 == 3) {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		const auto qA = detail::toQuantity(a);
 		const auto qB = detail::toQuantity(b);
 		return (qB.get(Y, Z, X) * qA - qA.get(Y, Z, X) * qB).get(Y, Z, X);
@@ -3183,7 +3255,7 @@ template <detail::quantity_unary_operand A>
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(!UnitT::MagnitudeType::IS_ABSOLUTE, "Quantity of this unit cannot have its square root taken because it represents an absolute position.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N == 3) {
 		return Quantity<3, Sqrt<UnitT>>::reinterpret(_mm_sqrt_ps(detail::toQuantity(a)._private_value));
 	} else {
@@ -3318,7 +3390,7 @@ template <detail::quantity_ternary_operand_a A, detail::quantity_ternary_operand
 	static_assert(detail::quantity_rank_v<B> == N, "Quantities of different ranks cannot be interpolated.");
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be interpolated.");
 	static_assert(detail::unit_type_t<C>{} == UNITLESS, "Alpha quantity must be unitless.");
-	return Quantity<N, UnitT>::reinterpret((a - 0) * (C{1.0f} - alpha) + (b - 0) * alpha);
+	return Quantity<N, UnitT>::reinterpret((+a) * (C{Scalar{1}} - alpha) + (+b) * alpha);
 }
 
 template <detail::quantity_ternary_operand_a A, detail::quantity_ternary_operand_b<A> B, detail::quantity_ternary_operand_c<A, B> C>
@@ -3352,9 +3424,9 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be selected between.");
 	if constexpr (N == 1) {
 		return Quantity<1, UnitT>::reinterpret(
-			grem::select(vec<1, bool>{condition}, vec<1, float>{detail::toQuantity(ifTrue)._private_value}, vec<1, float>{detail::toQuantity(ifFalse)._private_value}).x);
+			grem::select(vec<1, bool>{condition}, vec<1, Scalar>{detail::toQuantity(ifTrue)._private_value}, vec<1, Scalar>{detail::toQuantity(ifFalse)._private_value}).x);
 	} else {
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 		if constexpr (N == 3) {
 			const bvec3 conditions{condition};
 			const __m128 mask = _mm_castsi128_ps(_mm_sub_epi32(
@@ -3390,15 +3462,18 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::quantity_rank_v<B> == N, "Cannot decay towards a quantity of a different rank.");
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Cannot decay towards a quantity of a different unit.");
-	return Quantity<N, UnitT>::reinterpret(
-		grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), detail::toQuantity(targetValue)._private_getUnderlyingValue(), decayRate, deltaTime));
+	static_assert(Product<detail::unit_type_t<Frequency>, detail::unit_type_t<Duration>>{} == UNITLESS, "Cannot decay by a non-unitless exponent.");
+	return Quantity<N, UnitT>::reinterpret(grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), detail::toQuantity(targetValue)._private_getUnderlyingValue(),
+		detail::toQuantity(decayRate)._private_getUnderlyingValue(), detail::toQuantity(deltaTime)._private_getUnderlyingValue()));
 }
 
 template <detail::quantity_unary_operand A, typename Frequency, typename Duration>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL expDecay(A value, Frequency decayRate, Duration deltaTime) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
-	return Quantity<N, UnitT>::reinterpret(grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), decayRate, deltaTime));
+	static_assert(Product<detail::unit_type_t<Frequency>, detail::unit_type_t<Duration>>{} == UNITLESS, "Cannot decay by a non-unitless exponent.");
+	return Quantity<N, UnitT>::reinterpret(grem::expDecay(detail::toQuantity(value)._private_getUnderlyingValue(), detail::toQuantity(decayRate)._private_getUnderlyingValue(),
+		detail::toQuantity(deltaTime)._private_getUnderlyingValue()));
 }
 
 template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B>
@@ -3407,7 +3482,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::quantity_rank_v<B> == N, "Cannot take the midpoint of two quantities of different ranks.");
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Cannot take the midpoint of two quantities of different units.");
-	return Quantity<N, UnitT>::reinterpret(((a - 0) + (b - 0)) * 0.5f);
+	return Quantity<N, UnitT>::reinterpret(((+a) + (+b)) * Scalar{0.5});
 }
 
 template <detail::quantity_unary_operand A>
@@ -3435,7 +3510,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL equal(A a, B b) {
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be compared for equality.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	constexpr size_t N2 = detail::quantity_rank_v<B>;
 	if constexpr (N1 == 3 && N2 == 3) {
@@ -3469,7 +3544,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL notEqual(A a, B b) {
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be compared for inequality.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	constexpr size_t N2 = detail::quantity_rank_v<B>;
 	if constexpr (N1 == 3 && N2 == 3) {
@@ -3503,7 +3578,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL lessThan(A a, B b) {
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be compared.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	constexpr size_t N2 = detail::quantity_rank_v<B>;
 	if constexpr (N1 == 3 && N2 == 3) {
@@ -3537,7 +3612,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL lessThanEqual(A a, B b) {
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be compared.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	constexpr size_t N2 = detail::quantity_rank_v<B>;
 	if constexpr (N1 == 3 && N2 == 3) {
@@ -3571,7 +3646,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL greaterThan(A a, B b) {
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be compared.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	constexpr size_t N2 = detail::quantity_rank_v<B>;
 	if constexpr (N1 == 3 && N2 == 3) {
@@ -3605,7 +3680,7 @@ template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL greaterThanEqual(A a, B b) {
 	using UnitT = detail::unit_type_t<A>;
 	static_assert(detail::unit_type_t<B>{} == UnitT{}, "Quantities of different units cannot be compared.");
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	constexpr size_t N1 = detail::quantity_rank_v<A>;
 	constexpr size_t N2 = detail::quantity_rank_v<B>;
 	if constexpr (N1 == 3 && N2 == 3) {
@@ -3664,11 +3739,18 @@ struct TensorQuantity {
 		return TensorQuantity{value};
 	}
 
-	mat<N, N, float> _private_value{1.0f};
+	[[nodiscard]] GREM_ALWAYS_INLINE static constexpr TensorQuantity reinterpret(const mat<N, N, double>& value) {
+		return TensorQuantity{value};
+	}
+
+	mat<N, N, Scalar> _private_value{Scalar{1}};
 
 	constexpr TensorQuantity() noexcept = default;
 
 	constexpr TensorQuantity(const mat<N, N, float>& value) noexcept requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
+		: _private_value(value) {}
+
+	constexpr TensorQuantity(const mat<N, N, double>& value) noexcept requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l)
 		: _private_value(value) {}
 
 	constexpr TensorQuantity(Quantity<1, UnitT> value) noexcept
@@ -3680,8 +3762,12 @@ struct TensorQuantity {
 	constexpr TensorQuantity(Component x, Component y, Component z) noexcept requires(N == 3)
 		: _private_value{x._private_getUnderlyingValue(), y._private_getUnderlyingValue(), z._private_getUnderlyingValue()} {}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator const mat<N, N, float>&() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
-		return _private_value;
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<N, N, float>() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
+		return mat<N, N, float>{_private_value};
+	}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<N, N, double>() const requires(DIMENSION == DIMENSIONLESS && MagnitudeType::VALUE == 1.0l) {
+		return mat<N, N, double>{_private_value};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE Quantity<N, Relative<UnitT>> getScale() const noexcept {
@@ -3710,7 +3796,7 @@ struct TensorQuantity {
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(Zero) const noexcept {
-		return *this == TensorQuantity{mat<N, N, float>{0.0f}};
+		return *this == TensorQuantity{mat<N, N, Scalar>{Scalar{0}}};
 	}
 
 	template <size_t Index>
@@ -3744,6 +3830,9 @@ struct TensorQuantity {
 private:
 	constexpr explicit TensorQuantity(const mat<N, N, float>& value) noexcept requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
 		: _private_value(value) {}
+
+	constexpr explicit TensorQuantity(const mat<N, N, double>& value) noexcept requires(DIMENSION != DIMENSIONLESS || MagnitudeType::VALUE != 1.0l)
+		: _private_value(value) {}
 };
 
 template <size_t N, typename UnitT>
@@ -3752,7 +3841,7 @@ using AngularTensorQuantity = std::conditional_t<N == 3, TensorQuantity<3, UnitT
 
 template <size_t N, typename UnitT>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto inverse(Quantity<N, UnitT> a) {
-	return Quantity<N, Reciprocal<UnitT>>::reinterpret(1.0f / a._private_getUnderlyingValue());
+	return Quantity<N, Reciprocal<UnitT>>::reinterpret(Scalar{1} / a._private_getUnderlyingValue());
 }
 
 template <size_t N, typename UnitT>
@@ -3915,7 +4004,7 @@ using Angle = Quantity<1, Radians>;
 /**
  * Pi constant.
  */
-inline constexpr Angle PI{numbers::PI};
+inline constexpr Angle PI{numbers::pi_v<Scalar>};
 
 /**
  * %Absolute angle in world space.
@@ -4015,9 +4104,9 @@ struct Direction : Scale<N> {
 	GREM_ALWAYS_INLINE constexpr Direction() noexcept
 		: Scale<N>([]() -> Scale<N> {
 			if constexpr (N == 3) {
-				return {0.0f, 0.0f, -1.0f};
+				return {Scalar{0}, Scalar{0}, Scalar{-1}};
 			} else {
-				return {1.0f, 0.0f};
+				return {Scalar{1}, Scalar{0}};
 			}
 		}()) {}
 
@@ -4049,7 +4138,7 @@ template <detail::quantity_unary_operand A>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr auto GREM_VECTORCALL flipSignIf(A a, bool b) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
 	using UnitT = detail::unit_type_t<A>;
-#ifdef GREM_USE_SSE_INTRINSICS
+#if defined(GREM_USE_SSE_INTRINSICS) && !defined(GREM_PHYSICS_USE_DOUBLE_PRECISION)
 	if constexpr (N == 3) {
 		return Quantity<N, UnitT>::reinterpret(_mm_xor_ps(_mm_set1_ps(bit_cast<float32_t>(static_cast<uint32_t>(b) << 31)), detail::toQuantity(a)._private_value));
 	} else {
@@ -4294,23 +4383,31 @@ struct Orientation<2> {
 	static constexpr DimensionType DIMENSION{};
 	static constexpr MagnitudeType MAGNITUDE{};
 
-	float _private_value = 0.0f;
+	Scalar _private_value{};
 
 	GREM_ALWAYS_INLINE constexpr Orientation() noexcept = default;
 
 	GREM_ALWAYS_INLINE constexpr Orientation(float angle) noexcept
-		: _private_value(angle) {}
+		: _private_value(static_cast<Scalar>(angle)) {}
+
+	GREM_ALWAYS_INLINE constexpr Orientation(double angle) noexcept
+		: _private_value(static_cast<Scalar>(angle)) {}
 
 	template <typename OtherUnitT>
 	GREM_ALWAYS_INLINE constexpr Orientation(Quantity<1, OtherUnitT> angle) noexcept requires(OtherUnitT::DIMENSION == DIMENSION)
 		: _private_value(angle.in(UNIT)) {}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator float() const {
-		return _private_value;
+		return static_cast<float>(_private_value);
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator Quantity<1, Unit>() const {
-		return Quantity<1, Unit>{_private_value};
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator double() const {
+		return static_cast<double>(_private_value);
+	}
+
+	template <typename OtherUnitT>
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator Quantity<1, OtherUnitT>() const requires(OtherUnitT::DIMENSION == DIMENSION) {
+		return Quantity<1, OtherUnitT>{_private_value * RADIANS};
 	}
 
 	template <unit OtherUnitT>
@@ -4318,7 +4415,7 @@ struct Orientation<2> {
 		if constexpr (OtherUnitT::MagnitudeType::VALUE == MagnitudeType::VALUE) {
 			return Quantity<1, Unitless>{_private_value};
 		} else {
-			constexpr float factor = static_cast<float>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
+			constexpr Scalar factor = static_cast<Scalar>(MagnitudeType::VALUE / OtherUnitT::MagnitudeType::VALUE);
 			return _private_value * factor;
 		}
 	}
@@ -4327,11 +4424,11 @@ struct Orientation<2> {
 
 	template <typename UnitT>
 	[[nodiscard]] GREM_ALWAYS_INLINE Quantity<2, UnitT> GREM_VECTORCALL operator()(Quantity<2, UnitT> b) const {
-		return (mat2{grem::rotate(_private_value)} * b._private_getUnderlyingValue()) * UnitT{};
+		return (mat<2, 2, Scalar>{grem::rotate(_private_value)} * b._private_getUnderlyingValue()) * UnitT{};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE Direction2D GREM_VECTORCALL operator()(Direction2D b) const {
-		return Direction2D::reinterpret(mat2{grem::rotate(_private_value)} * b._private_value);
+		return Direction2D::reinterpret(mat<2, 2, Scalar>{grem::rotate(_private_value)} * b._private_value);
 	}
 
 	template <typename UnitT>
@@ -4361,50 +4458,57 @@ struct Orientation<3> {
 	static constexpr MagnitudeType MAGNITUDE{};
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation rotation(Scale3D from, Scale3D to) {
-		return Orientation{grem::rotation(vec3{from}, vec3{to})};
+		return Orientation{grem::rotation(vec<3, Scalar>{from}, vec<3, Scalar>{to})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation lookAt(Scale3D direction, Scale3D up) {
-		return Orientation{grem::quatLookAt(vec3{direction}, vec3{up})};
+		return Orientation{grem::quatLookAt(vec<3, Scalar>{direction}, vec<3, Scalar>{up})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation angleAxis(AbsoluteAngle angle, Scale3D axis) {
-		return Orientation{grem::angleAxis(float{angle.in(RADIANS)}, vec3{axis})};
+		return Orientation{grem::angleAxis(Scalar{angle.in(RADIANS)}, vec<3, Scalar>{axis})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation pitch(AbsoluteAngle angle) {
-		return Orientation{grem::pitch(float{angle})};
+		return Orientation{grem::pitch(Scalar{angle})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation yaw(AbsoluteAngle angle) {
-		return Orientation{grem::yaw(float{angle})};
+		return Orientation{grem::yaw(Scalar{angle})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation roll(AbsoluteAngle angle) {
-		return Orientation{grem::roll(float{angle})};
+		return Orientation{grem::roll(Scalar{angle})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation fromAngles(AbsoluteAngle pitchAngle, AbsoluteAngle yawAngle, AbsoluteAngle rollAngle) {
-		return Orientation{grem::convertAnglesToQuaternion(float{pitchAngle}, float{yawAngle}, float{rollAngle})};
+		return Orientation{grem::convertAnglesToQuaternion(Scalar{pitchAngle}, Scalar{yawAngle}, Scalar{rollAngle})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation fromAngles(PitchYawRoll angles) {
-		return Orientation{grem::convertAnglesToQuaternion(vec3{angles})};
+		return Orientation{grem::convertAnglesToQuaternion(vec<3, Scalar>{angles})};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE static Orientation fromBasis(const Basis3D& basis) {
-		return Orientation{grem::convert3x3MatrixToQuaternion(mat3{basis})};
+		return Orientation{grem::convert3x3MatrixToQuaternion(mat<3, 3, Scalar>{basis})};
 	}
 
-	quat _private_value{0.0f, 0.0f, 0.0f, 1.0f};
+	qua<Scalar> _private_value{Scalar{0}, Scalar{0}, Scalar{0}, Scalar{1}};
 
 	GREM_ALWAYS_INLINE constexpr Orientation() noexcept = default;
 
-	GREM_ALWAYS_INLINE constexpr Orientation(quat quaternion) noexcept
+	GREM_ALWAYS_INLINE constexpr Orientation(qua<float> quaternion) noexcept
 		: _private_value(quaternion) {}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator quat() const {
-		return _private_value;
+	GREM_ALWAYS_INLINE constexpr Orientation(qua<double> quaternion) noexcept
+		: _private_value(quaternion) {}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator qua<float>() const {
+		return qua<float>{_private_value};
+	}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator qua<double>() const {
+		return qua<double>{_private_value};
 	}
 
 	[[nodiscard]] GREM_ALWAYS_INLINE constexpr bool operator==(const Orientation&) const noexcept = default;
@@ -4431,7 +4535,7 @@ using Orientation3D = Orientation<3>; ///< %Absolute orientation in 3-dimensiona
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE bvec4 GREM_VECTORCALL isfinite(Orientation3D a) {
-	return grem::isfinite(vec4{a._private_value.x, a._private_value.y, a._private_value.z, a._private_value.w});
+	return grem::isfinite(vec<4, Scalar>{a._private_value.x, a._private_value.y, a._private_value.z, a._private_value.w});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE bool GREM_VECTORCALL isinf(Orientation2D a) {
@@ -4439,7 +4543,7 @@ using Orientation3D = Orientation<3>; ///< %Absolute orientation in 3-dimensiona
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE bvec4 GREM_VECTORCALL isinf(Orientation3D a) {
-	return grem::isinf(vec4{a._private_value.x, a._private_value.y, a._private_value.z, a._private_value.w});
+	return grem::isinf(vec<4, Scalar>{a._private_value.x, a._private_value.y, a._private_value.z, a._private_value.w});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE bool GREM_VECTORCALL isnan(Orientation2D a) {
@@ -4447,7 +4551,7 @@ using Orientation3D = Orientation<3>; ///< %Absolute orientation in 3-dimensiona
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE bvec4 GREM_VECTORCALL isnan(Orientation3D a) {
-	return grem::isnan(vec4{a._private_value.x, a._private_value.y, a._private_value.z, a._private_value.w});
+	return grem::isnan(vec<4, Scalar>{a._private_value.x, a._private_value.y, a._private_value.z, a._private_value.w});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL inverse(Orientation2D a) {
@@ -4455,23 +4559,23 @@ using Orientation3D = Orientation<3>; ///< %Absolute orientation in 3-dimensiona
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL inverse(Orientation3D a) {
-	return Orientation3D{grem::conjugate(quat{a})};
+	return Orientation3D{grem::conjugate(qua<Scalar>{a})};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL operator+(Orientation2D a, Rotation2D b) {
-	return Orientation2D{float{a} + b.in(RADIANS)};
+	return Orientation2D{Scalar{a} + b.in(RADIANS)};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL operator+(Orientation2D a, Scale1D b) {
-	return Orientation2D{float{a} + b};
+	return Orientation2D{Scalar{a} + b};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL operator+(Orientation3D a, Rotation3D b) {
-	return Orientation3D{grem::normalize(quat{a} + 0.5f * (quat{vec3{b.in(RADIANS)}, 0.0f} * quat{a}))};
+	return Orientation3D{grem::normalize(qua<Scalar>{a} + Scalar{0.5} * (qua<Scalar>{vec<3, Scalar>{b.in(RADIANS)}, Scalar{0}} * qua<Scalar>{a}))};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL operator+(Orientation3D a, Scale3D b) {
-	return Orientation3D{grem::normalize(quat{a} + 0.5f * (quat{vec3{b}, 0.0f} * quat{a}))};
+	return Orientation3D{grem::normalize(qua<Scalar>{a} + Scalar{0.5} * (qua<Scalar>{vec<3, Scalar>{b}, Scalar{0}} * qua<Scalar>{a}))};
 }
 
 template <size_t N>
@@ -4480,21 +4584,21 @@ GREM_ALWAYS_INLINE Orientation<N>& operator+=(Orientation<N>& a, Rotation<N> b) 
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Rotation2D GREM_VECTORCALL operator-(Orientation2D a, Orientation2D b) {
-	const float x = Angle{a}.in(RADIANS);
-	const float y = Angle{b}.in(RADIANS);
-	constexpr float HALF_TURN = numbers::PI;
-	constexpr float FULL_TURN = 2.0f * HALF_TURN;
+	const Scalar x = Angle{a}.in(RADIANS);
+	const Scalar y = Angle{b}.in(RADIANS);
+	constexpr Scalar HALF_TURN = numbers::pi_v<Scalar>;
+	constexpr Scalar FULL_TURN = Scalar{2} * HALF_TURN;
 	return (grem::wrap(x - y + HALF_TURN, FULL_TURN) - HALF_TURN) * RADIANS;
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Rotation3D GREM_VECTORCALL operator-(Orientation3D a, Orientation3D b) {
-	const quat delta = quat{a} * quat{inverse(b)};
-	const vec3 difference = 2.0f * vec3{delta.x, delta.y, delta.z};
+	const qua<Scalar> delta = qua<Scalar>{a} * qua<Scalar>{inverse(b)};
+	const vec<3, Scalar> difference = Scalar{2} * vec<3, Scalar>{delta.x, delta.y, delta.z};
 	return grem::flipSignIf(difference, grem::signbit(delta.w)) * RADIANS;
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL operator-(Orientation2D a, Rotation2D b) {
-	return Orientation2D{float{a} - b.in(RADIANS)};
+	return Orientation2D{Scalar{a} - b.in(RADIANS)};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL operator-(Orientation3D a, Rotation3D b) {
@@ -4507,101 +4611,101 @@ GREM_ALWAYS_INLINE Orientation<N>& operator-=(Orientation<N>& a, Rotation<N> b) 
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL operator*(Orientation2D a, Orientation2D b) {
-	return Orientation2D{float{a} + float{b}};
+	return Orientation2D{Scalar{a} + Scalar{b}};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL operator*(Orientation3D a, Orientation3D b) {
-	return Orientation3D{grem::normalize(quat{a} * quat{b})};
+	return Orientation3D{grem::normalize(qua<Scalar>{a} * qua<Scalar>{b})};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL slerp(Orientation3D a, Orientation3D b, Coefficient alpha) {
-	return Orientation3D{grem::slerp(quat{a}, quat{b}, float{alpha})};
+	return Orientation3D{grem::slerp(qua<Scalar>{a}, qua<Scalar>{b}, Scalar{alpha})};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL slerp(Orientation3D a, Orientation3D b, float alpha) {
-	return Orientation3D{grem::slerp(quat{a}, quat{b}, alpha)};
+[[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL slerp(Orientation3D a, Orientation3D b, Scalar alpha) {
+	return Orientation3D{grem::slerp(qua<Scalar>{a}, qua<Scalar>{b}, alpha)};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL mix(Orientation2D a, Orientation2D b, Coefficient alpha) {
-	return Orientation2D{grem::mix(float{a}, float{b}, float{alpha}) * Orientation2D::UNIT};
+	return Orientation2D{grem::mix(Scalar{a}, Scalar{b}, Scalar{alpha}) * Orientation2D::UNIT};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL mix(Orientation2D a, Orientation2D b, float alpha) {
-	return Orientation2D{grem::mix(float{a}, float{b}, alpha) * Orientation2D::UNIT};
+[[nodiscard]] GREM_ALWAYS_INLINE Orientation2D GREM_VECTORCALL mix(Orientation2D a, Orientation2D b, Scalar alpha) {
+	return Orientation2D{grem::mix(Scalar{a}, Scalar{b}, alpha) * Orientation2D::UNIT};
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL mix(Orientation3D a, Orientation3D b, Coefficient alpha) {
 	return slerp(a, b, alpha);
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL mix(Orientation3D a, Orientation3D b, float alpha) {
+[[nodiscard]] GREM_ALWAYS_INLINE Orientation3D GREM_VECTORCALL mix(Orientation3D a, Orientation3D b, Scalar alpha) {
 	return slerp(a, b, alpha);
 }
 
 template <size_t N, typename UnitT>
 [[nodiscard]] GREM_ALWAYS_INLINE Basis<N> scale(Quantity<N, UnitT> s) {
 	if constexpr (N == 2) {
-		return TensorQuantity<N, UnitT>::reinterpret(mat<2, 2, float>{
-			vec<2, float>{s.getX()._private_value, 0.0f},
-			vec<2, float>{0.0f, s.getY()._private_value},
+		return TensorQuantity<N, UnitT>::reinterpret(mat<2, 2, Scalar>{
+			vec<2, Scalar>{s.getX()._private_value, Scalar{0}},
+			vec<2, Scalar>{Scalar{0}, s.getY()._private_value},
 		});
 	} else if constexpr (N == 3) {
-		return TensorQuantity<N, UnitT>::reinterpret(mat<3, 3, float>{
-			vec<3, float>{s.getX()._private_value, 0.0f, 0.0f},
-			vec<3, float>{0.0f, s.getY()._private_value, 0.0f},
-			vec<3, float>{0.0f, 0.0f, s.getZ()._private_value},
+		return TensorQuantity<N, UnitT>::reinterpret(mat<3, 3, Scalar>{
+			vec<3, Scalar>{s.getX()._private_value, Scalar{0}, Scalar{0}},
+			vec<3, Scalar>{Scalar{0}, s.getY()._private_value, Scalar{0}},
+			vec<3, Scalar>{Scalar{0}, Scalar{0}, s.getZ()._private_value},
 		});
 	}
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis2D rotate(RollRotation r) {
-	return OrthonormalBasis2D::reinterpret(mat2{grem::rotate(float{r})});
+	return OrthonormalBasis2D::reinterpret(mat<2, 2, Scalar>{grem::rotate(Scalar{r})});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYawRotations r) {
-	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(quat{Orientation3D{} + PitchYawRollRotations{r, 0}})});
+	return OrthonormalBasis3D::reinterpret(mat<3, 3, Scalar>{grem::rotate(qua<Scalar>{Orientation3D{} + PitchYawRollRotations{r, 0}})});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYawRollRotations r) {
-	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(quat{Orientation3D{} + r})});
+	return OrthonormalBasis3D::reinterpret(mat<3, 3, Scalar>{grem::rotate(qua<Scalar>{Orientation3D{} + r})});
 }
 
 template <size_t N>
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis<N> rotate(Orientation<N> r) {
 	if constexpr (N == 2) {
-		return OrthonormalBasis2D::reinterpret(mat2{grem::rotate(float{r})});
+		return OrthonormalBasis2D::reinterpret(mat<2, 2, Scalar>{grem::rotate(Scalar{r})});
 	} else if constexpr (N == 3) {
-		return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(quat{r})});
+		return OrthonormalBasis3D::reinterpret(mat<3, 3, Scalar>{grem::rotate(qua<Scalar>{r})});
 	}
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis2D rotate(Roll angle) {
-	return OrthonormalBasis2D::reinterpret(mat2{grem::rotate(float{angle})});
+	return OrthonormalBasis2D::reinterpret(mat<2, 2, Scalar>{grem::rotate(Scalar{angle})});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYaw angles) {
-	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(vec3{vec2{angles}, 0.0f})});
+	return OrthonormalBasis3D::reinterpret(mat<3, 3, Scalar>{grem::rotate(vec<3, Scalar>{vec<2, Scalar>{angles}, Scalar{0}})});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE OrthonormalBasis3D rotate(PitchYawRoll angles) {
-	return OrthonormalBasis3D::reinterpret(mat3{grem::rotate(vec3{angles})});
+	return OrthonormalBasis3D::reinterpret(mat<3, 3, Scalar>{grem::rotate(vec<3, Scalar>{angles})});
 }
 
 template <size_t N, typename UnitT>
 [[nodiscard]] GREM_ALWAYS_INLINE TensorQuantity<N, UnitT> rotateScale(Orientation<N> r, Quantity<N, UnitT> s) {
 	if constexpr (N == 3) {
-		const quat rotation{r};
-		const vec3 scale{s._private_getUnderlyingValue()};
-		return TensorQuantity<3, UnitT>::reinterpret(mat3{
-			(1.0f - 2.0f * (rotation.y * rotation.y + rotation.z * rotation.z)) * scale.x,
-			(rotation.x * rotation.y + rotation.z * rotation.w) * scale.x * 2.0f,
-			(rotation.x * rotation.z - rotation.y * rotation.w) * scale.x * 2.0f,
-			(rotation.x * rotation.y - rotation.z * rotation.w) * scale.y * 2.0f,
-			(1.0f - 2.0f * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
-			(rotation.y * rotation.z + rotation.x * rotation.w) * scale.y * 2.0f,
-			(rotation.x * rotation.z + rotation.y * rotation.w) * scale.z * 2.0f,
-			(rotation.y * rotation.z - rotation.x * rotation.w) * scale.z * 2.0f,
-			(1.0f - 2.0f * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
+		const qua<Scalar> rotation{r};
+		const vec<3, Scalar> scale{s._private_getUnderlyingValue()};
+		return TensorQuantity<3, UnitT>::reinterpret(mat<3, 3, Scalar>{
+			(Scalar{1} - Scalar{2} * (rotation.y * rotation.y + rotation.z * rotation.z)) * scale.x,
+			(rotation.x * rotation.y + rotation.z * rotation.w) * scale.x * Scalar{2},
+			(rotation.x * rotation.z - rotation.y * rotation.w) * scale.x * Scalar{2},
+			(rotation.x * rotation.y - rotation.z * rotation.w) * scale.y * Scalar{2},
+			(Scalar{1} - Scalar{2} * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
+			(rotation.y * rotation.z + rotation.x * rotation.w) * scale.y * Scalar{2},
+			(rotation.x * rotation.z + rotation.y * rotation.w) * scale.z * Scalar{2},
+			(rotation.y * rotation.z - rotation.x * rotation.w) * scale.z * Scalar{2},
+			(Scalar{1} - Scalar{2} * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
 		});
 	} else {
 		return rotate(r) * scale(s);
@@ -4613,19 +4717,19 @@ template <size_t N, typename UnitT>
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getAngle(Orientation3D orientation) {
-	return grem::getAngle(quat{orientation});
+	return grem::getAngle(qua<Scalar>{orientation});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Direction3D getAxis(Orientation3D orientation) {
-	return Direction3D::reinterpret(grem::getAxis(quat{orientation}));
+	return Direction3D::reinterpret(grem::getAxis(qua<Scalar>{orientation}));
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getPitch(Orientation3D orientation) {
-	return grem::getPitch(quat{orientation});
+	return grem::getPitch(qua<Scalar>{orientation});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getYaw(Orientation3D orientation) {
-	return grem::getYaw(quat{orientation});
+	return grem::getYaw(qua<Scalar>{orientation});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getRoll(Orientation2D orientation) {
@@ -4633,7 +4737,7 @@ template <size_t N, typename UnitT>
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE AbsoluteAngle getRoll(Orientation3D orientation) {
-	return grem::getRoll(quat{orientation});
+	return grem::getRoll(qua<Scalar>{orientation});
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE PitchYawRoll getPitchYawRoll(Orientation3D orientation) {
@@ -4641,23 +4745,23 @@ template <size_t N, typename UnitT>
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Direction2D convertAnglesToForwardDirection(Roll angles) {
-	return Direction2D::reinterpret(grem::convertAnglesToForwardDirection(float{angles}));
+	return Direction2D::reinterpret(grem::convertAnglesToForwardDirection(Scalar{angles}));
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Direction3D convertAnglesToForwardDirection(PitchYaw angles) {
-	return Direction3D::reinterpret(grem::convertAnglesToForwardDirection(vec2{angles}));
+	return Direction3D::reinterpret(grem::convertAnglesToForwardDirection(vec<2, Scalar>{angles}));
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Direction3D convertAnglesToForwardDirection(PitchYawRoll angles) {
-	return Direction3D::reinterpret(grem::convertAnglesToForwardDirection(vec3{angles}));
+	return Direction3D::reinterpret(grem::convertAnglesToForwardDirection(vec<3, Scalar>{angles}));
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE Roll convertForwardDirectionToAngles(Direction2D forward) {
-	return Roll::reinterpret(grem::convertForwardDirectionToAngles(vec2{forward}));
+	return Roll::reinterpret(grem::convertForwardDirectionToAngles(vec<2, Scalar>{forward}));
 }
 
 [[nodiscard]] GREM_ALWAYS_INLINE PitchYaw convertForwardDirectionToAngles(Direction3D forward) {
-	return PitchYaw::reinterpret(grem::convertForwardDirectionToAngles(vec3{forward}));
+	return PitchYaw::reinterpret(grem::convertForwardDirectionToAngles(vec<3, Scalar>{forward}));
 }
 
 /**
@@ -4669,7 +4773,7 @@ template <size_t N, typename UnitT>
  * \return the smallest signed angle from angle a to b, in the range [-pi, pi].
  */
 [[nodiscard]] inline Angle getAngleDifference(AbsoluteAngle a, AbsoluteAngle b) {
-	return wrap((b - a) + PI, 2.0f * PI) - PI;
+	return wrap((b - a) + PI, Scalar{2} * PI) - PI;
 }
 
 /**
@@ -4695,9 +4799,16 @@ template <typename UnitT>
 template <size_t N>
 inline constexpr OrthonormalBasis<N> BASIS;
 template <>
-inline constexpr OrthonormalBasis<2> BASIS<2> = OrthonormalBasis<2>::reinterpret(mat2{vec2{1.0f, 0.0f}, vec2{0.0f, 1.0f}});
+inline constexpr OrthonormalBasis<2> BASIS<2> = OrthonormalBasis<2>::reinterpret(mat<2, 2, Scalar>{
+	vec<2, Scalar>{Scalar{1}, Scalar{0}},
+	vec<2, Scalar>{Scalar{0}, Scalar{1}},
+});
 template <>
-inline constexpr OrthonormalBasis<3> BASIS<3> = OrthonormalBasis<3>::reinterpret(mat3{vec3{1.0f, 0.0f, 0.0f}, vec3{0.0f, 1.0f, 0.0f}, vec3{0.0f, 0.0f, 1.0f}});
+inline constexpr OrthonormalBasis<3> BASIS<3> = OrthonormalBasis<3>::reinterpret(mat<3, 3, Scalar>{
+	vec<3, Scalar>{Scalar{1}, Scalar{0}, Scalar{0}},
+	vec<3, Scalar>{Scalar{0}, Scalar{1}, Scalar{0}},
+	vec<3, Scalar>{Scalar{0}, Scalar{0}, Scalar{1}},
+});
 inline constexpr OrthonormalBasis2D BASIS_2D = BASIS<2>; ///< Identity basis in 2-dimensional space.
 inline constexpr OrthonormalBasis3D BASIS_3D = BASIS<3>; ///< Identity basis in 3-dimensional space.
 
@@ -4709,9 +4820,9 @@ inline constexpr OrthonormalBasis3D BASIS_3D = BASIS<3>; ///< Identity basis in 
 template <size_t N>
 inline constexpr Direction<N> X_AXIS;
 template <>
-inline constexpr Direction<2> X_AXIS<2> = Direction<2>::reinterpret(vec2{1.0f, 0.0f});
+inline constexpr Direction<2> X_AXIS<2> = Direction<2>::reinterpret(vec<2, Scalar>{Scalar{1}, Scalar{0}});
 template <>
-inline constexpr Direction<3> X_AXIS<3> = Direction<3>::reinterpret(vec3{1.0f, 0.0f, 0.0f});
+inline constexpr Direction<3> X_AXIS<3> = Direction<3>::reinterpret(vec<3, Scalar>{Scalar{1}, Scalar{0}, Scalar{0}});
 inline constexpr Direction2D X_AXIS_2D = X_AXIS<2>; ///< The X axis in 2-dimensional space.
 inline constexpr Direction3D X_AXIS_3D = X_AXIS<3>; ///< The X axis in 3-dimensional space.
 
@@ -4723,9 +4834,9 @@ inline constexpr Direction3D X_AXIS_3D = X_AXIS<3>; ///< The X axis in 3-dimensi
 template <size_t N>
 inline constexpr Direction<N> Y_AXIS;
 template <>
-inline constexpr Direction<2> Y_AXIS<2> = Direction<2>::reinterpret(vec2{0.0f, 1.0f});
+inline constexpr Direction<2> Y_AXIS<2> = Direction<2>::reinterpret(vec<2, Scalar>{Scalar{0}, Scalar{1}});
 template <>
-inline constexpr Direction<3> Y_AXIS<3> = Direction<3>::reinterpret(vec3{0.0f, 1.0f, 0.0f});
+inline constexpr Direction<3> Y_AXIS<3> = Direction<3>::reinterpret(vec<3, Scalar>{Scalar{0}, Scalar{1}, Scalar{0}});
 inline constexpr Direction2D Y_AXIS_2D = Y_AXIS<2>; ///< The Y axis in 2-dimensional space.
 inline constexpr Direction3D Y_AXIS_3D = Y_AXIS<3>; ///< The Y axis in 3-dimensional space.
 
@@ -4737,7 +4848,7 @@ inline constexpr Direction3D Y_AXIS_3D = Y_AXIS<3>; ///< The Y axis in 3-dimensi
 template <size_t N>
 inline constexpr Direction<N> Z_AXIS;
 template <>
-inline constexpr Direction<3> Z_AXIS<3> = Direction<3>::reinterpret(vec3{0.0f, 0.0f, 1.0f});
+inline constexpr Direction<3> Z_AXIS<3> = Direction<3>::reinterpret(vec<3, Scalar>{Scalar{0}, Scalar{0}, Scalar{1}});
 inline constexpr Direction3D Z_AXIS_3D = Z_AXIS<3>; ///< The Z axis in 3-dimensional space.
 
 /**
@@ -4779,7 +4890,7 @@ using Position2D = Position<2>; ///< %Absolute position in 2-dimensional space. 
 using Position3D = Position<3>; ///< %Absolute position in 3-dimensional space. Unit: Meters.
 
 /**
- * Scalar length quantity.
+ * %Scalar length quantity.
  *
  * Alias of Length1D, but semantically implies that the value is expected to be
  * non-negative.
@@ -4789,14 +4900,14 @@ using Position3D = Position<3>; ///< %Absolute position in 3-dimensional space. 
 using Distance = Length1D;
 
 /**
- * Scalar squared length quantity.
+ * %Scalar squared length quantity.
  *
  * Unit: Square meters.
  */
 using SquaredLength = Quantity<1, SquareMeters>;
 
 /**
- * Scalar squared length quantity.
+ * %Scalar squared length quantity.
  *
  * Unit: Square meters.
  */
@@ -4824,15 +4935,27 @@ public:
 		: offset(0)
 		, basis(basis) {}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat3() const requires(N == 2) {
-		mat3 result{basis._private_value};
-		result[2] = vec3{offset._private_getUnderlyingValue(), 1.0f};
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<3, 3, float>() const requires(N == 2) {
+		mat<3, 3, float> result{mat<2, 2, float>{basis._private_value}};
+		result[2] = vec<3, float>{vec<2, float>{offset._private_getUnderlyingValue()}, 1.0f};
 		return result;
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat4() const requires(N == 3) {
-		mat4 result{basis._private_value};
-		result[3] = vec4{offset._private_getUnderlyingValue(), 1.0f};
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<3, 3, double>() const requires(N == 2) {
+		mat<3, 3, double> result{mat<2, 2, double>{basis._private_value}};
+		result[2] = vec<3, double>{vec<2, double>{offset._private_getUnderlyingValue()}, 1.0};
+		return result;
+	}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<4, 4, float>() const requires(N == 3) {
+		mat<4, 4, float> result{mat<3, 3, float>{basis._private_value}};
+		result[3] = vec<4, float>{vec<3, float>{offset._private_getUnderlyingValue()}, 1.0f};
+		return result;
+	}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<4, 4, double>() const requires(N == 3) {
+		mat<4, 4, double> result{mat<3, 3, double>{basis._private_value}};
+		result[3] = vec<4, double>{vec<3, double>{offset._private_getUnderlyingValue()}, 1.0};
 		return result;
 	}
 
@@ -4879,7 +5002,11 @@ template <size_t N>
 	return LocalTransformation<N>{localOffset, rotateScale(localOrientation, localScale)};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE LocalTransformation3D GREM_VECTORCALL translateRotateScale(Length3D localOffset, quat localOrientation, Scale3D localScale) {
+[[nodiscard]] GREM_ALWAYS_INLINE LocalTransformation3D GREM_VECTORCALL translateRotateScale(Length3D localOffset, qua<float> localOrientation, Scale3D localScale) {
+	return LocalTransformation3D{localOffset, rotateScale(Orientation3D{localOrientation}, localScale)};
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE LocalTransformation3D GREM_VECTORCALL translateRotateScale(Length3D localOffset, qua<double> localOrientation, Scale3D localScale) {
 	return LocalTransformation3D{localOffset, rotateScale(Orientation3D{localOrientation}, localScale)};
 }
 
@@ -4888,7 +5015,11 @@ template <size_t N>
 	return LocalTransformation<N>{localOffset, rotate(localOrientation)};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE LocalTransformation3D GREM_VECTORCALL translateRotate(Length3D localOffset, quat localOrientation) {
+[[nodiscard]] GREM_ALWAYS_INLINE LocalTransformation3D GREM_VECTORCALL translateRotate(Length3D localOffset, qua<float> localOrientation) {
+	return LocalTransformation3D{localOffset, rotate(Orientation3D{localOrientation})};
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE LocalTransformation3D GREM_VECTORCALL translateRotate(Length3D localOffset, qua<double> localOrientation) {
 	return LocalTransformation3D{localOffset, rotate(Orientation3D{localOrientation})};
 }
 
@@ -4928,15 +5059,27 @@ public:
 		: origin(localTransformation.getOffset())
 		, basis(localTransformation.getBasis()) {}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat3() const requires(N == 2) {
-		mat3 result{basis._private_value};
-		result[2] = vec3{origin._private_getUnderlyingValue(), 1.0f};
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<3, 3, float>() const requires(N == 2) {
+		mat<3, 3, float> result{mat<2, 2, float>{basis._private_value}};
+		result[2] = vec<3, float>{vec<2, float>{origin._private_getUnderlyingValue()}, 1.0f};
 		return result;
 	}
 
-	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat4() const requires(N == 3) {
-		mat4 result{basis._private_value};
-		result[3] = vec4{origin._private_getUnderlyingValue(), 1.0f};
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<3, 3, double>() const requires(N == 2) {
+		mat<3, 3, double> result{mat<2, 2, double>{basis._private_value}};
+		result[2] = vec<3, double>{vec<2, double>{origin._private_getUnderlyingValue()}, 1.0};
+		return result;
+	}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<4, 4, float>() const requires(N == 3) {
+		mat<4, 4, float> result{mat<3, 3, float>{basis._private_value}};
+		result[3] = vec<4, float>{vec<3, float>{origin._private_getUnderlyingValue()}, 1.0f};
+		return result;
+	}
+
+	[[nodiscard]] GREM_ALWAYS_INLINE constexpr operator mat<4, 4, double>() const requires(N == 3) {
+		mat<4, 4, double> result{mat<3, 3, double>{basis._private_value}};
+		result[3] = vec<4, double>{vec<3, double>{origin._private_getUnderlyingValue()}, 1.0};
 		return result;
 	}
 
@@ -4983,7 +5126,11 @@ template <size_t N>
 	return Transformation<N>{position, rotateScale(orientation, scale)};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE Transformation3D GREM_VECTORCALL translateRotateScale(Position3D position, quat orientation, Scale3D scale) {
+[[nodiscard]] GREM_ALWAYS_INLINE Transformation3D GREM_VECTORCALL translateRotateScale(Position3D position, qua<float> orientation, Scale3D scale) {
+	return translateRotateScale(position, Orientation3D{orientation}, scale);
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE Transformation3D GREM_VECTORCALL translateRotateScale(Position3D position, qua<double> orientation, Scale3D scale) {
 	return translateRotateScale(position, Orientation3D{orientation}, scale);
 }
 
@@ -4992,7 +5139,11 @@ template <size_t N>
 	return Transformation<N>{position, rotate(orientation)};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE Transformation3D GREM_VECTORCALL translateRotate(Position3D position, quat orientation) {
+[[nodiscard]] GREM_ALWAYS_INLINE Transformation3D GREM_VECTORCALL translateRotate(Position3D position, qua<float> orientation) {
+	return Transformation3D{position, rotate(Orientation3D{orientation})};
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE Transformation3D GREM_VECTORCALL translateRotate(Position3D position, qua<double> orientation) {
 	return Transformation3D{position, rotate(Orientation3D{orientation})};
 }
 
@@ -5058,12 +5209,14 @@ public:
 	GREM_ALWAYS_INLINE friend InverseLocalTransformation<OtherN> GREM_VECTORCALL inverseTranslateRotateScale(Length<OtherN> localOffset, Orientation<OtherN> localOrientation,
 		Scale<OtherN> localScale);
 
-	GREM_ALWAYS_INLINE friend InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Length3D localOffset, quat localOrientation, Scale3D localScale);
+	GREM_ALWAYS_INLINE friend InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Length3D localOffset, qua<float> localOrientation, Scale3D localScale);
+	GREM_ALWAYS_INLINE friend InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Length3D localOffset, qua<double> localOrientation, Scale3D localScale);
 
 	template <size_t OtherN>
 	GREM_ALWAYS_INLINE friend InverseLocalTransformation<OtherN> GREM_VECTORCALL inverseTranslateRotate(Length<OtherN> localOffset, Orientation<OtherN> localOrientation);
 
-	GREM_ALWAYS_INLINE friend InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Length3D localOffset, quat localOrientation);
+	GREM_ALWAYS_INLINE friend InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Length3D localOffset, qua<float> localOrientation);
+	GREM_ALWAYS_INLINE friend InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Length3D localOffset, qua<double> localOrientation);
 
 	template <size_t OtherN>
 	GREM_ALWAYS_INLINE friend InverseLocalTransformation<OtherN> GREM_VECTORCALL inverseTranslateScale(Length<OtherN> localOffset, Scale<OtherN> localScale);
@@ -5091,10 +5244,14 @@ using InverseLocalTransformation3D = InverseLocalTransformation<3>; ///< Inverse
 template <size_t N>
 [[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation<N> GREM_VECTORCALL inverseTranslateRotateScale(Length<N> localOffset, Orientation<N> localOrientation,
 	Scale<N> localScale) {
-	return InverseLocalTransformation<N>{localOffset, scale(1.0f / localScale) * rotate(inverse(localOrientation))};
+	return InverseLocalTransformation<N>{localOffset, scale(Scalar{1} / localScale) * rotate(inverse(localOrientation))};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Length3D localOffset, quat localOrientation, Scale3D localScale) {
+[[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Length3D localOffset, qua<float> localOrientation, Scale3D localScale) {
+	return inverseTranslateRotateScale(localOffset, Orientation3D{localOrientation}, localScale);
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Length3D localOffset, qua<double> localOrientation, Scale3D localScale) {
 	return inverseTranslateRotateScale(localOffset, Orientation3D{localOrientation}, localScale);
 }
 
@@ -5103,13 +5260,17 @@ template <size_t N>
 	return InverseLocalTransformation<N>{localOffset, rotate(inverse(localOrientation))};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation3D GREM_VECTORCALL inverseTranslateRotate(Length3D localOffset, quat localOrientation) {
+[[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation3D GREM_VECTORCALL inverseTranslateRotate(Length3D localOffset, qua<float> localOrientation) {
+	return inverseTranslateRotate(localOffset, Orientation3D{localOrientation});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation3D GREM_VECTORCALL inverseTranslateRotate(Length3D localOffset, qua<double> localOrientation) {
 	return inverseTranslateRotate(localOffset, Orientation3D{localOrientation});
 }
 
 template <size_t N>
 [[nodiscard]] GREM_ALWAYS_INLINE InverseLocalTransformation<N> GREM_VECTORCALL inverseTranslateScale(Length<N> localOffset, Scale<N> localScale) {
-	return InverseLocalTransformation<N>{localOffset, scale(1.0f / localScale)};
+	return InverseLocalTransformation<N>{localOffset, scale(Scalar{1} / localScale)};
 }
 
 template <size_t N>
@@ -5176,12 +5337,14 @@ public:
 	GREM_ALWAYS_INLINE friend InverseTransformation<OtherN> GREM_VECTORCALL inverseTranslateRotateScale(Position<OtherN> position, Orientation<OtherN> orientation,
 		Scale<OtherN> scale);
 
-	GREM_ALWAYS_INLINE friend InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Position3D position, quat orientation, Scale3D scale);
+	GREM_ALWAYS_INLINE friend InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Position3D position, qua<float> orientation, Scale3D scale);
+	GREM_ALWAYS_INLINE friend InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Position3D position, qua<double> orientation, Scale3D scale);
 
 	template <size_t OtherN>
 	GREM_ALWAYS_INLINE friend InverseTransformation<OtherN> GREM_VECTORCALL inverseTranslateRotate(Position<OtherN> position, Orientation<OtherN> orientation);
 
-	GREM_ALWAYS_INLINE friend InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Position3D position, quat orientation);
+	GREM_ALWAYS_INLINE friend InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Position3D position, qua<float> orientation);
+	GREM_ALWAYS_INLINE friend InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Position3D position, qua<double> orientation);
 
 	template <size_t OtherN>
 	GREM_ALWAYS_INLINE friend InverseTransformation<OtherN> GREM_VECTORCALL inverseTranslateScale(Position<OtherN> position, Scale<OtherN> scale);
@@ -5211,10 +5374,14 @@ using InverseTransformation3D = InverseTransformation<3>; ///< Inverse of an aff
 
 template <size_t N>
 [[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<N> GREM_VECTORCALL inverseTranslateRotateScale(Position<N> position, Orientation<N> orientation, Scale<N> scale) {
-	return InverseTransformation<N>{position, physics::scale(1.0f / scale) * physics::rotate(inverse(orientation))};
+	return InverseTransformation<N>{position, physics::scale(Scalar{1} / scale) * physics::rotate(inverse(orientation))};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Position3D position, quat orientation, Scale3D scale) {
+[[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Position3D position, qua<float> orientation, Scale3D scale) {
+	return inverseTranslateRotateScale(position, Orientation3D{orientation}, scale);
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotateScale(Position3D position, qua<double> orientation, Scale3D scale) {
 	return inverseTranslateRotateScale(position, Orientation3D{orientation}, scale);
 }
 
@@ -5223,13 +5390,17 @@ template <size_t N>
 	return InverseTransformation<N>{position, physics::rotate(inverse(orientation))};
 }
 
-[[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Position3D position, quat orientation) {
+[[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Position3D position, qua<float> orientation) {
+	return inverseTranslateRotate(position, Orientation3D{orientation});
+}
+
+[[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<3> GREM_VECTORCALL inverseTranslateRotate(Position3D position, qua<double> orientation) {
 	return inverseTranslateRotate(position, Orientation3D{orientation});
 }
 
 template <size_t N>
 [[nodiscard]] GREM_ALWAYS_INLINE InverseTransformation<N> GREM_VECTORCALL inverseTranslateScale(Position<N> position, Scale<N> scale) {
-	return InverseTransformation<N>{position, physics::scale(1.0f / scale)};
+	return InverseTransformation<N>{position, physics::scale(Scalar{1} / scale)};
 }
 
 template <size_t N>
@@ -5264,56 +5435,56 @@ template <size_t N>
 }
 
 /**
- * Scalar mass quantity.
+ * %Scalar mass quantity.
  *
  * Unit: Kilograms.
  */
 using Mass = Quantity<1, Kilograms>;
 
 /**
- * Scalar inverse mass quantity.
+ * %Scalar inverse mass quantity.
  *
  * Unit: Per kilogram.
  */
 using InverseMass = Quantity<1, PerKilogram>;
 
 /**
- * Scalar relative time duration quantity.
+ * %Scalar relative time duration quantity.
  *
  * Unit: Seconds.
  */
 using Time = Quantity<1, Seconds>;
 
 /**
- * Scalar area quantity.
+ * %Scalar area quantity.
  *
  * Unit: Square meters.
  */
 using Area = Quantity<1, SquareMeters>;
 
 /**
- * Scalar squared area quantity.
+ * %Scalar squared area quantity.
  *
  * Unit: Square meters squared.
  */
 using SquaredArea = Quantity<1, Square<SquareMeters>>;
 
 /**
- * Scalar volume quantity.
+ * %Scalar volume quantity.
  *
  * Unit: Cubic meters.
  */
 using Volume = Quantity<1, CubicMeters>;
 
 /**
- * Scalar squared volume quantity.
+ * %Scalar squared volume quantity.
  *
  * Unit: Cubic meters squared.
  */
 using SquaredVolume = Quantity<1, Square<CubicMeters>>;
 
 /**
- * Scalar density quantity.
+ * %Scalar density quantity.
  *
  * Unit: Kilograms per cubic meter.
  */
@@ -5333,7 +5504,7 @@ using Rate2D = Rate<2>; ///< Frequency in 2-dimensional space. Unit: Hertz (AKA 
 using Rate3D = Rate<3>; ///< Frequency in 3-dimensional space. Unit: Hertz (AKA per second).
 
 /**
- * Scalar frequency quantity.
+ * %Scalar frequency quantity.
  *
  * Alias of Rate1D, but semantically implies that the value is expected to be
  * non-negative.
@@ -5368,7 +5539,7 @@ using LinearAbsement2D = LinearAbsement<2>; ///< Linear absement in 2-dimensiona
 using LinearAbsement3D = LinearAbsement<3>; ///< Linear absement in 3-dimensional space. Unit: Meter seconds.
 
 /**
- * Scalar wavenumber quantity.
+ * %Scalar wavenumber quantity.
  *
  * Unit: Per meter.
  */
@@ -5388,7 +5559,7 @@ using LinearVelocity2D = LinearVelocity<2>; ///< Linear velocity in 2-dimensiona
 using LinearVelocity3D = LinearVelocity<3>; ///< Linear velocity in 3-dimensional space. Unit: Meters per second.
 
 /**
- * Scalar linear velocity quantity.
+ * %Scalar linear velocity quantity.
  *
  * Alias of LinearVelocity1D, but semantically implies that the value is
  * expected to be non-negative.
@@ -5410,7 +5581,7 @@ using LinearVelocityTensor2D = LinearVelocityTensor<2>; ///< Tensor of linear ve
 using LinearVelocityTensor3D = LinearVelocityTensor<3>; ///< Tensor of linear velocity quantities in 3-dimensional space. Unit: Meters per second.
 
 /**
- * Scalar squared speed quantity.
+ * %Scalar squared speed quantity.
  *
  * Unit: Square meters per second squared.
  */
@@ -5431,7 +5602,7 @@ using LinearAcceleration3D = LinearAcceleration<3>; ///< Linear acceleration in 
 using Acceleration = LinearAcceleration1D;          ///< Linear acceleration quantity. Unit: Meters per second squared.
 
 /**
- * Scalar squared acceleration quantity.
+ * %Scalar squared acceleration quantity.
  *
  * Unit: Square meters per second^4.
  */
@@ -5512,7 +5683,7 @@ using LinearImpulse2D = LinearImpulse<2>; ///< Linear impulse in 2-dimensional s
 using LinearImpulse3D = LinearImpulse<3>; ///< Linear impulse in 3-dimensional space. Unit: Newton seconds (AKA kilogram meters per second).
 
 /**
- * Scalar linear impulse quantity.
+ * %Scalar linear impulse quantity.
  *
  * Alias of LinearImpulse1D, but semantically implies that the value is expected
  * to be non-negative.
@@ -5547,7 +5718,7 @@ using LinearMomentum2D = LinearMomentum<2>; ///< Linear momentum in 2-dimensiona
 using LinearMomentum3D = LinearMomentum<3>; ///< Linear momentum in 3-dimensional space. Unit: Kilogram meters per second.
 
 /**
- * Scalar linear momentum quantity.
+ * %Scalar linear momentum quantity.
  *
  * Alias of LinearMomentum1D, but semantically implies that the value is
  * expected to be non-negative.
@@ -5671,7 +5842,7 @@ using InversePrincipalMomentsOfInertia3D =
  *
  * Unit: Meters.
  *
- * \tparam N numbers of dimensions of the world space (must be 2 or 3).
+ * \tparam N number of dimensions of the world space (must be 2 or 3).
  */
 template <size_t N>
 using MomentArm = AngularQuantity<N, Meters>;
@@ -5683,7 +5854,7 @@ using MomentArm3D = MomentArm<3>; ///< Moment arm in 3-dimensional space. Unit: 
  *
  * Unit: Meters.
  *
- * \tparam N numbers of dimensions of the world space (must be 2 or 3).
+ * \tparam N number of dimensions of the world space (must be 2 or 3).
  */
 template <size_t N>
 using MomentArmTensor = TensorQuantity<N, Meters>;
@@ -5715,7 +5886,7 @@ using AngularVelocity2D = AngularVelocity<2>; ///< Angular velocity in 2-dimensi
 using AngularVelocity3D = AngularVelocity<3>; ///< Angular velocity in 3-dimensional space. Unit: Radians per second.
 
 /**
- * Scalar angular speed quantity.
+ * %Scalar angular speed quantity.
  *
  * Unit: Radians per second.
  */
@@ -5734,7 +5905,7 @@ using AngularVelocityTensor2D = AngularVelocityTensor<2>; ///< Tensor of angular
 using AngularVelocityTensor3D = AngularVelocityTensor<3>; ///< Tensor of angular velocity quantities in 3-dimensional space. Unit: Radians per second.
 
 /**
- * Scalar squared angular speed quantity.
+ * %Scalar squared angular speed quantity.
  *
  * Unit: Square radians per second squared.
  */
@@ -5836,35 +6007,35 @@ using AngularMomentumTensor2D = AngularMomentumTensor<2>; ///< Tensor of angular
 using AngularMomentumTensor3D = AngularMomentumTensor<3>; ///< Tensor of angular momentum quantities in 3-dimensional space. Unit: Kilogram square meters per second.
 
 /**
- * Scalar mass flow rate quantity.
+ * %Scalar mass flow rate quantity.
  *
  * Unit: Kilograms per second.
  */
 using MassFlowRate = Quantity<1, KilogramsPerSecond>;
 
 /**
- * Scalar volumetric flow rate quantity.
+ * %Scalar volumetric flow rate quantity.
  *
  * Unit: Cubic meters per second.
  */
 using VolumetricFlowRate = Quantity<1, CubicMetersPerSecond>;
 
 /**
- * Scalar mechanical work quantity.
+ * %Scalar mechanical work quantity.
  *
  * Unit: Joules (AKA kilogram square meters per second squared).
  */
 using Work = Quantity<1, Joules>;
 
 /**
- * Scalar mechanical power quantity.
+ * %Scalar mechanical power quantity.
  *
  * Unit: Watts (AKA kilogram square meters per second cubed).
  */
 using Power = Quantity<1, Watts>;
 
 /**
- * Scalar energy quantity.
+ * %Scalar energy quantity.
  *
  * Unit: Joules (AKA kilogram square meters per second squared).
  */
@@ -5889,27 +6060,27 @@ namespace literals {
 using namespace time_literals;
 
 [[nodiscard]] consteval Coefficient operator""_x(long double value) {
-	return Coefficient{static_cast<float>(value)};
+	return Coefficient{static_cast<Scalar>(value)};
 }
 
 [[nodiscard]] consteval Coefficient operator""_x(unsigned long long value) {
-	return Coefficient{static_cast<float>(value)};
+	return Coefficient{static_cast<Scalar>(value)};
 }
 
 [[nodiscard]] consteval Coefficient operator""_percent(long double value) {
-	return Coefficient{static_cast<float>(value * 0.01l)};
+	return Coefficient{static_cast<Scalar>(value * 0.01l)};
 }
 
 [[nodiscard]] consteval Coefficient operator""_percent(unsigned long long value) {
-	return Coefficient{static_cast<float>(value) * 0.01f};
+	return Coefficient{static_cast<Scalar>(static_cast<long double>(value) * 0.01l)};
 }
 
 [[nodiscard]] consteval Angle operator""_radians(long double value) {
-	return static_cast<float>(value) * RADIANS;
+	return static_cast<Scalar>(value) * RADIANS;
 }
 
 [[nodiscard]] consteval Angle operator""_radians(unsigned long long value) {
-	return static_cast<float>(value) * RADIANS;
+	return static_cast<Scalar>(value) * RADIANS;
 }
 
 [[nodiscard]] consteval Angle operator""_radian(long double value) {
@@ -5927,11 +6098,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Angle operator""_degrees(long double value) {
-	return static_cast<float>(value * 0.01745329251994329576923690768489l) * RADIANS;
+	return static_cast<Scalar>(value * 0.01745329251994329576923690768489l) * RADIANS;
 }
 
 [[nodiscard]] consteval Angle operator""_degrees(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.01745329251994329576923690768489l) * RADIANS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.01745329251994329576923690768489l) * RADIANS;
 }
 
 [[nodiscard]] consteval Angle operator""_degree(long double value) {
@@ -5949,11 +6120,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Angle operator""_turns(long double value) {
-	return static_cast<float>(value * 6.28318530718l) * RADIANS;
+	return static_cast<Scalar>(value * 6.28318530718l) * RADIANS;
 }
 
 [[nodiscard]] consteval Angle operator""_turns(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 6.28318530718l) * RADIANS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 6.28318530718l) * RADIANS;
 }
 
 [[nodiscard]] consteval Angle operator""_turn(long double value) {
@@ -5971,11 +6142,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Mass operator""_kilograms(long double value) {
-	return static_cast<float>(value) * KILOGRAMS;
+	return static_cast<Scalar>(value) * KILOGRAMS;
 }
 
 [[nodiscard]] consteval Mass operator""_kilograms(unsigned long long value) {
-	return static_cast<float>(value) * KILOGRAMS;
+	return static_cast<Scalar>(value) * KILOGRAMS;
 }
 
 [[nodiscard]] consteval Mass operator""_kilogram(long double value) {
@@ -5993,11 +6164,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Mass operator""_grams(long double value) {
-	return static_cast<float>(value * 0.001l) * KILOGRAMS;
+	return static_cast<Scalar>(value * 0.001l) * KILOGRAMS;
 }
 
 [[nodiscard]] consteval Mass operator""_grams(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.001l) * KILOGRAMS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.001l) * KILOGRAMS;
 }
 
 [[nodiscard]] consteval Mass operator""_gram(long double value) {
@@ -6015,11 +6186,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Distance operator""_meters(long double value) {
-	return static_cast<float>(value) * METERS;
+	return static_cast<Scalar>(value) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_meters(unsigned long long value) {
-	return static_cast<float>(value) * METERS;
+	return static_cast<Scalar>(value) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_meter(long double value) {
@@ -6037,11 +6208,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Distance operator""_kilometers(long double value) {
-	return static_cast<float>(value * 1000.0l) * METERS;
+	return static_cast<Scalar>(value * 1000.0l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_kilometers(unsigned long long value) {
-	return static_cast<float>(value * 1000ull) * METERS;
+	return static_cast<Scalar>(value * 1000ull) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_kilometer(long double value) {
@@ -6059,11 +6230,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Distance operator""_decimeters(long double value) {
-	return static_cast<float>(value * 0.1l) * METERS;
+	return static_cast<Scalar>(value * 0.1l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_decimeters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.1l) * METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.1l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_decimeter(long double value) {
@@ -6081,11 +6252,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Distance operator""_centimeters(long double value) {
-	return static_cast<float>(value * 0.01l) * METERS;
+	return static_cast<Scalar>(value * 0.01l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_centimeters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.01l) * METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.01l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_centimeter(long double value) {
@@ -6103,11 +6274,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Distance operator""_millimeters(long double value) {
-	return static_cast<float>(value * 0.001l) * METERS;
+	return static_cast<Scalar>(value * 0.001l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_millimeters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.001l) * METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.001l) * METERS;
 }
 
 [[nodiscard]] consteval Distance operator""_millimeter(long double value) {
@@ -6125,11 +6296,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Area operator""_square_meters(long double value) {
-	return static_cast<float>(value) * SQUARE_METERS;
+	return static_cast<Scalar>(value) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_meters(unsigned long long value) {
-	return static_cast<float>(value) * SQUARE_METERS;
+	return static_cast<Scalar>(value) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_meter(long double value) {
@@ -6147,11 +6318,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Area operator""_square_kilometers(long double value) {
-	return static_cast<float>(value * 1000000.0l) * SQUARE_METERS;
+	return static_cast<Scalar>(value * 1000000.0l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_kilometers(unsigned long long value) {
-	return static_cast<float>(value * 1000000ull) * SQUARE_METERS;
+	return static_cast<Scalar>(value * 1000000ull) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_kilometer(long double value) {
@@ -6169,11 +6340,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Area operator""_square_decimeters(long double value) {
-	return static_cast<float>(value * 0.01l) * SQUARE_METERS;
+	return static_cast<Scalar>(value * 0.01l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_decimeters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.01l) * SQUARE_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.01l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_decimeter(long double value) {
@@ -6191,11 +6362,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Area operator""_square_centimeters(long double value) {
-	return static_cast<float>(value * 0.0001l) * SQUARE_METERS;
+	return static_cast<Scalar>(value * 0.0001l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_centimeters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.0001l) * SQUARE_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.0001l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_centimeter(long double value) {
@@ -6213,11 +6384,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Area operator""_square_millimeters(long double value) {
-	return static_cast<float>(value * 0.000001l) * SQUARE_METERS;
+	return static_cast<Scalar>(value * 0.000001l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_millimeters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.000001l) * SQUARE_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.000001l) * SQUARE_METERS;
 }
 
 [[nodiscard]] consteval Area operator""_square_millimeter(long double value) {
@@ -6235,11 +6406,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Volume operator""_cubic_meters(long double value) {
-	return static_cast<float>(value) * CUBIC_METERS;
+	return static_cast<Scalar>(value) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_cubic_meters(unsigned long long value) {
-	return static_cast<float>(value) * CUBIC_METERS;
+	return static_cast<Scalar>(value) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_cubic_meter(long double value) {
@@ -6257,11 +6428,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Volume operator""_liters(long double value) {
-	return static_cast<float>(value * 0.001l) * CUBIC_METERS;
+	return static_cast<Scalar>(value * 0.001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_liters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.001l) * CUBIC_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_liter(long double value) {
@@ -6279,11 +6450,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Volume operator""_deciliters(long double value) {
-	return static_cast<float>(value * 0.0001l) * CUBIC_METERS;
+	return static_cast<Scalar>(value * 0.0001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_deciliters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.0001l) * CUBIC_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.0001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_deciliter(long double value) {
@@ -6301,11 +6472,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Volume operator""_centiliters(long double value) {
-	return static_cast<float>(value * 0.00001l) * CUBIC_METERS;
+	return static_cast<Scalar>(value * 0.00001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_centiliters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.00001l) * CUBIC_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.00001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_centiliter(long double value) {
@@ -6323,11 +6494,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Volume operator""_milliliters(long double value) {
-	return static_cast<float>(value * 0.000001l) * CUBIC_METERS;
+	return static_cast<Scalar>(value * 0.000001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_milliliters(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.000001l) * CUBIC_METERS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.000001l) * CUBIC_METERS;
 }
 
 [[nodiscard]] consteval Volume operator""_milliliter(long double value) {
@@ -6345,11 +6516,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Density operator""_kilograms_per_cubic_meter(long double value) {
-	return static_cast<float>(value) * KILOGRAMS_PER_CUBIC_METER;
+	return static_cast<Scalar>(value) * KILOGRAMS_PER_CUBIC_METER;
 }
 
 [[nodiscard]] consteval Density operator""_kilograms_per_cubic_meter(unsigned long long value) {
-	return static_cast<float>(value) * KILOGRAMS_PER_CUBIC_METER;
+	return static_cast<Scalar>(value) * KILOGRAMS_PER_CUBIC_METER;
 }
 
 [[nodiscard]] consteval Density operator""_kilogram_per_cubic_meter(long double value) {
@@ -6367,11 +6538,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Density operator""_grams_per_cubic_centimeter(long double value) {
-	return static_cast<float>(value * 1000.0l) * KILOGRAMS_PER_CUBIC_METER;
+	return static_cast<Scalar>(value * 1000.0l) * KILOGRAMS_PER_CUBIC_METER;
 }
 
 [[nodiscard]] consteval Density operator""_grams_per_cubic_centimeter(unsigned long long value) {
-	return static_cast<float>(value * 1000ull) * KILOGRAMS_PER_CUBIC_METER;
+	return static_cast<Scalar>(value * 1000ull) * KILOGRAMS_PER_CUBIC_METER;
 }
 
 [[nodiscard]] consteval Density operator""_gram_per_cubic_centimeter(long double value) {
@@ -6389,51 +6560,51 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Frequency operator""_Hertz(long double value) {
-	return static_cast<float>(value) * HERTZ;
+	return static_cast<Scalar>(value) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_Hertz(unsigned long long value) {
-	return static_cast<float>(value) * HERTZ;
+	return static_cast<Scalar>(value) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_second(long double value) {
-	return static_cast<float>(value) * HERTZ;
+	return static_cast<Scalar>(value) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_second(unsigned long long value) {
-	return static_cast<float>(value) * HERTZ;
+	return static_cast<Scalar>(value) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_millisecond(long double value) {
-	return static_cast<float>(value * 1000.0l) * HERTZ;
+	return static_cast<Scalar>(value * 1000.0l) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_millisecond(unsigned long long value) {
-	return static_cast<float>(value * 1000ull) * HERTZ;
+	return static_cast<Scalar>(value * 1000ull) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_minute(long double value) {
-	return static_cast<float>(value * 0.0166666666667l) * HERTZ;
+	return static_cast<Scalar>(value * 0.0166666666667l) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_minute(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.0166666666667l) * HERTZ;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.0166666666667l) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_hour(long double value) {
-	return static_cast<float>(value * 0.000277777777778l) * HERTZ;
+	return static_cast<Scalar>(value * 0.000277777777778l) * HERTZ;
 }
 
 [[nodiscard]] consteval Frequency operator""_per_hour(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.000277777777778l) * HERTZ;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.000277777777778l) * HERTZ;
 }
 
 [[nodiscard]] consteval LinearAbsement1D operator""_meter_seconds(long double value) {
-	return static_cast<float>(value) * METER_SECONDS;
+	return static_cast<Scalar>(value) * METER_SECONDS;
 }
 
 [[nodiscard]] consteval LinearAbsement1D operator""_meter_seconds(unsigned long long value) {
-	return static_cast<float>(value) * METER_SECONDS;
+	return static_cast<Scalar>(value) * METER_SECONDS;
 }
 
 [[nodiscard]] consteval LinearAbsement1D operator""_meter_second(long double value) {
@@ -6451,19 +6622,19 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Wavenumber operator""_per_meter(long double value) {
-	return static_cast<float>(value) * PER_METER;
+	return static_cast<Scalar>(value) * PER_METER;
 }
 
 [[nodiscard]] consteval Wavenumber operator""_per_meter(unsigned long long value) {
-	return static_cast<float>(value) * PER_METER;
+	return static_cast<Scalar>(value) * PER_METER;
 }
 
 [[nodiscard]] consteval Speed operator""_meters_per_second(long double value) {
-	return static_cast<float>(value) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_meters_per_second(unsigned long long value) {
-	return static_cast<float>(value) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_meter_per_second(long double value) {
@@ -6481,11 +6652,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Speed operator""_kilometers_per_second(long double value) {
-	return static_cast<float>(value * 1000.0l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value * 1000.0l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_kilometers_per_second(unsigned long long value) {
-	return static_cast<float>(value * 1000ull) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value * 1000ull) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_kilometer_per_second(long double value) {
@@ -6503,11 +6674,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Speed operator""_decimeters_per_second(long double value) {
-	return static_cast<float>(value * 0.1l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value * 0.1l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_decimeters_per_second(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.1l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.1l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_decimeter_per_second(long double value) {
@@ -6525,11 +6696,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Speed operator""_centimeters_per_second(long double value) {
-	return static_cast<float>(value * 0.01l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value * 0.01l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_centimeters_per_second(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.01l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.01l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_centimeter_per_second(long double value) {
@@ -6547,11 +6718,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Speed operator""_millimeters_per_second(long double value) {
-	return static_cast<float>(value * 0.001l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value * 0.001l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_millimeters_per_second(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.001l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.001l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_millimeter_per_second(long double value) {
@@ -6569,11 +6740,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Speed operator""_kilometers_per_hour(long double value) {
-	return static_cast<float>(value * 0.277777778l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(value * 0.277777778l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_kilometers_per_hour(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.277777778l) * METERS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.277777778l) * METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Speed operator""_kilometer_per_hour(long double value) {
@@ -6591,11 +6762,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Acceleration operator""_meters_per_second_squared(long double value) {
-	return static_cast<float>(value) * METERS_PER_SECOND_SQUARED;
+	return static_cast<Scalar>(value) * METERS_PER_SECOND_SQUARED;
 }
 
 [[nodiscard]] consteval Acceleration operator""_meters_per_second_squared(unsigned long long value) {
-	return static_cast<float>(value) * METERS_PER_SECOND_SQUARED;
+	return static_cast<Scalar>(value) * METERS_PER_SECOND_SQUARED;
 }
 
 [[nodiscard]] consteval Acceleration operator""_meter_per_second_squared(long double value) {
@@ -6613,19 +6784,19 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Force1D operator""_Newton(long double value) {
-	return static_cast<float>(value) * NEWTON;
+	return static_cast<Scalar>(value) * NEWTON;
 }
 
 [[nodiscard]] consteval Force1D operator""_Newton(unsigned long long value) {
-	return static_cast<float>(value) * NEWTON;
+	return static_cast<Scalar>(value) * NEWTON;
 }
 
 [[nodiscard]] consteval Force1D operator""_kilogram_meters_per_second_squared(long double value) {
-	return static_cast<float>(value) * NEWTON;
+	return static_cast<Scalar>(value) * NEWTON;
 }
 
 [[nodiscard]] consteval Force1D operator""_kilogram_meters_per_second_squared(unsigned long long value) {
-	return static_cast<float>(value) * NEWTON;
+	return static_cast<Scalar>(value) * NEWTON;
 }
 
 [[nodiscard]] consteval Force1D operator""_kilogram_meter_per_second_squared(long double value) {
@@ -6645,11 +6816,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Torque2D operator""_Newton_meters(long double value) {
-	return static_cast<float>(value) * NEWTON_METERS;
+	return static_cast<Scalar>(value) * NEWTON_METERS;
 }
 
 [[nodiscard]] consteval Torque2D operator""_Newton_meters(unsigned long long value) {
-	return static_cast<float>(value) * NEWTON_METERS;
+	return static_cast<Scalar>(value) * NEWTON_METERS;
 }
 
 [[nodiscard]] consteval Torque2D operator""_Newton_meter(long double value) {
@@ -6667,11 +6838,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Torque2D operator""_kilogram_square_meters_per_second_squared(long double value) {
-	return static_cast<float>(value) * NEWTON_METERS;
+	return static_cast<Scalar>(value) * NEWTON_METERS;
 }
 
 [[nodiscard]] consteval Torque2D operator""_kilogram_square_meters_per_second_squared(unsigned long long value) {
-	return static_cast<float>(value) * NEWTON_METERS;
+	return static_cast<Scalar>(value) * NEWTON_METERS;
 }
 
 [[nodiscard]] consteval Torque2D operator""_kilogram_square_meter_per_second_squared(long double value) {
@@ -6693,11 +6864,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Impulse operator""_Newton_seconds(long double value) {
-	return static_cast<float>(value) * NEWTON_SECONDS;
+	return static_cast<Scalar>(value) * NEWTON_SECONDS;
 }
 
 [[nodiscard]] consteval Impulse operator""_Newton_seconds(unsigned long long value) {
-	return static_cast<float>(value) * NEWTON_SECONDS;
+	return static_cast<Scalar>(value) * NEWTON_SECONDS;
 }
 
 [[nodiscard]] consteval Impulse operator""_Newton_second(long double value) {
@@ -6715,11 +6886,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Momentum operator""_kilogram_meters_per_second(long double value) {
-	return static_cast<float>(value) * KILOGRAM_METERS_PER_SECOND;
+	return static_cast<Scalar>(value) * KILOGRAM_METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Momentum operator""_kilogram_meters_per_second(unsigned long long value) {
-	return static_cast<float>(value) * KILOGRAM_METERS_PER_SECOND;
+	return static_cast<Scalar>(value) * KILOGRAM_METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval Momentum operator""_kilogram_meter_per_second(long double value) {
@@ -6737,11 +6908,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval MomentOfInertia2D operator""_kilogram_square_meters(long double value) {
-	return static_cast<float>(value) * KILOGRAM_SQUARE_METERS;
+	return static_cast<Scalar>(value) * KILOGRAM_SQUARE_METERS;
 }
 
 [[nodiscard]] consteval MomentOfInertia2D operator""_kilogram_square_meters(unsigned long long value) {
-	return static_cast<float>(value) * KILOGRAM_SQUARE_METERS;
+	return static_cast<Scalar>(value) * KILOGRAM_SQUARE_METERS;
 }
 
 [[nodiscard]] consteval MomentOfInertia2D operator""_kilogram_square_meter(long double value) {
@@ -6759,11 +6930,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_radian_seconds(long double value) {
-	return static_cast<float>(value) * RADIAN_SECONDS;
+	return static_cast<Scalar>(value) * RADIAN_SECONDS;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_radian_seconds(unsigned long long value) {
-	return static_cast<float>(value) * RADIAN_SECONDS;
+	return static_cast<Scalar>(value) * RADIAN_SECONDS;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_radian_second(long double value) {
@@ -6781,11 +6952,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_degree_seconds(long double value) {
-	return static_cast<float>(value * 0.01745329251994329576923690768489l) * RADIAN_SECONDS;
+	return static_cast<Scalar>(value * 0.01745329251994329576923690768489l) * RADIAN_SECONDS;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_degree_seconds(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.01745329251994329576923690768489l) * RADIAN_SECONDS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.01745329251994329576923690768489l) * RADIAN_SECONDS;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_degree_second(long double value) {
@@ -6803,11 +6974,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_turn_seconds(long double value) {
-	return static_cast<float>(value * 6.28318530718l) * RADIAN_SECONDS;
+	return static_cast<Scalar>(value * 6.28318530718l) * RADIAN_SECONDS;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_turn_seconds(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 6.28318530718l) * RADIAN_SECONDS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 6.28318530718l) * RADIAN_SECONDS;
 }
 
 [[nodiscard]] consteval AngularAbsement2D operator""_turn_second(long double value) {
@@ -6825,11 +6996,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_radians_per_second(long double value) {
-	return static_cast<float>(value) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(value) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_radians_per_second(unsigned long long value) {
-	return static_cast<float>(value) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(value) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_radian_per_second(long double value) {
@@ -6847,11 +7018,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_degrees_per_second(long double value) {
-	return static_cast<float>(value * 0.01745329251994329576923690768489l) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(value * 0.01745329251994329576923690768489l) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_degrees_per_second(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.01745329251994329576923690768489l) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.01745329251994329576923690768489l) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_degree_per_second(long double value) {
@@ -6869,11 +7040,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_turns_per_second(long double value) {
-	return static_cast<float>(value * 6.28318530718l) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(value * 6.28318530718l) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_turns_per_second(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 6.28318530718l) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 6.28318530718l) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_turn_per_second(long double value) {
@@ -6891,11 +7062,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_revolutions_per_minute(long double value) {
-	return static_cast<float>(value * 0.10471975511965977462l) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(value * 0.10471975511965977462l) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_revolutions_per_minute(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 0.10471975511965977462l) * RADIANS_PER_SECOND;
+	return static_cast<Scalar>(static_cast<long double>(value) * 0.10471975511965977462l) * RADIANS_PER_SECOND;
 }
 
 [[nodiscard]] consteval AngularVelocity2D operator""_revolution_per_minute(long double value) {
@@ -6913,11 +7084,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval AngularAcceleration2D operator""_radians_per_second_squared(long double value) {
-	return static_cast<float>(value) * RADIANS_PER_SECOND_SQUARED;
+	return static_cast<Scalar>(value) * RADIANS_PER_SECOND_SQUARED;
 }
 
 [[nodiscard]] consteval AngularAcceleration2D operator""_radians_per_second_squared(unsigned long long value) {
-	return static_cast<float>(value) * RADIANS_PER_SECOND_SQUARED;
+	return static_cast<Scalar>(value) * RADIANS_PER_SECOND_SQUARED;
 }
 
 [[nodiscard]] consteval AngularAcceleration2D operator""_radian_per_second_squared(long double value) {
@@ -6935,11 +7106,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval MassFlowRate operator""_kilograms_per_second(long double value) {
-	return static_cast<float>(value) * KILOGRAMS_PER_SECOND;
+	return static_cast<Scalar>(value) * KILOGRAMS_PER_SECOND;
 }
 
 [[nodiscard]] consteval MassFlowRate operator""_kilograms_per_second(unsigned long long value) {
-	return static_cast<float>(value) * KILOGRAMS_PER_SECOND;
+	return static_cast<Scalar>(value) * KILOGRAMS_PER_SECOND;
 }
 
 [[nodiscard]] consteval MassFlowRate operator""_kilogram_per_second(long double value) {
@@ -6957,11 +7128,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval VolumetricFlowRate operator""_cubic_meters_per_second(long double value) {
-	return static_cast<float>(value) * CUBIC_METERS_PER_SECOND;
+	return static_cast<Scalar>(value) * CUBIC_METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval VolumetricFlowRate operator""_cubic_meters_per_second(unsigned long long value) {
-	return static_cast<float>(value) * CUBIC_METERS_PER_SECOND;
+	return static_cast<Scalar>(value) * CUBIC_METERS_PER_SECOND;
 }
 
 [[nodiscard]] consteval VolumetricFlowRate operator""_cubic_meter_per_second(long double value) {
@@ -6979,11 +7150,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Power operator""_Watts(long double value) {
-	return static_cast<float>(value) * WATTS;
+	return static_cast<Scalar>(value) * WATTS;
 }
 
 [[nodiscard]] consteval Power operator""_Watts(unsigned long long value) {
-	return static_cast<float>(value) * WATTS;
+	return static_cast<Scalar>(value) * WATTS;
 }
 
 [[nodiscard]] consteval Power operator""_Watt(long double value) {
@@ -6995,11 +7166,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Power operator""_kilowatts(long double value) {
-	return static_cast<float>(value * 1000.0l) * WATTS;
+	return static_cast<Scalar>(value * 1000.0l) * WATTS;
 }
 
 [[nodiscard]] consteval Power operator""_kilowatts(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 1000.0l) * WATTS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 1000.0l) * WATTS;
 }
 
 [[nodiscard]] consteval Power operator""_kilowatt(long double value) {
@@ -7011,11 +7182,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Power operator""_megawatts(long double value) {
-	return static_cast<float>(value * 1000000.0l) * WATTS;
+	return static_cast<Scalar>(value * 1000000.0l) * WATTS;
 }
 
 [[nodiscard]] consteval Power operator""_megawatts(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 1000000.0l) * WATTS;
+	return static_cast<Scalar>(static_cast<long double>(value) * 1000000.0l) * WATTS;
 }
 
 [[nodiscard]] consteval Power operator""_megawatt(long double value) {
@@ -7027,11 +7198,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Energy operator""_Joules(long double value) {
-	return static_cast<float>(value) * JOULES;
+	return static_cast<Scalar>(value) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_Joules(unsigned long long value) {
-	return static_cast<float>(value) * JOULES;
+	return static_cast<Scalar>(value) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_Joule(long double value) {
@@ -7043,11 +7214,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Energy operator""_kilojoules(long double value) {
-	return static_cast<float>(value * 1000.0l) * JOULES;
+	return static_cast<Scalar>(value * 1000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_kilojoules(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 1000.0l) * JOULES;
+	return static_cast<Scalar>(static_cast<long double>(value) * 1000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_kilojoule(long double value) {
@@ -7059,11 +7230,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Energy operator""_megajoules(long double value) {
-	return static_cast<float>(value * 1000000.0l) * JOULES;
+	return static_cast<Scalar>(value * 1000000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_megajoules(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 1000000.0l) * JOULES;
+	return static_cast<Scalar>(static_cast<long double>(value) * 1000000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_megajoule(long double value) {
@@ -7075,11 +7246,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Energy operator""_kilowatt_hours(long double value) {
-	return static_cast<float>(value * 3600000.0l) * JOULES;
+	return static_cast<Scalar>(value * 3600000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_kilowatt_hours(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 3600000.0l) * JOULES;
+	return static_cast<Scalar>(static_cast<long double>(value) * 3600000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_kilowatt_hour(long double value) {
@@ -7097,11 +7268,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Energy operator""_megawatt_hours(long double value) {
-	return static_cast<float>(value * 3600000000.0l) * JOULES;
+	return static_cast<Scalar>(value * 3600000000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_megawatt_hours(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 3600000000.0l) * JOULES;
+	return static_cast<Scalar>(static_cast<long double>(value) * 3600000000.0l) * JOULES;
 }
 
 [[nodiscard]] consteval Energy operator""_megawatt_hour(long double value) {
@@ -7119,27 +7290,27 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Stiffness operator""_Newton_per_meter(long double value) {
-	return static_cast<float>(value) * NEWTON_PER_METER;
+	return static_cast<Scalar>(value) * NEWTON_PER_METER;
 }
 
 [[nodiscard]] consteval Stiffness operator""_Newton_per_meter(unsigned long long value) {
-	return static_cast<float>(value) * NEWTON_PER_METER;
+	return static_cast<Scalar>(value) * NEWTON_PER_METER;
 }
 
 [[nodiscard]] consteval Stiffness operator""_Newton_per_millimeter(long double value) {
-	return static_cast<float>(value * 1000.0l) * NEWTON_PER_METER;
+	return static_cast<Scalar>(value * 1000.0l) * NEWTON_PER_METER;
 }
 
 [[nodiscard]] consteval Stiffness operator""_Newton_per_millimeter(unsigned long long value) {
-	return static_cast<float>(static_cast<long double>(value) * 1000.0l) * NEWTON_PER_METER;
+	return static_cast<Scalar>(static_cast<long double>(value) * 1000.0l) * NEWTON_PER_METER;
 }
 
 [[nodiscard]] consteval Compliance operator""_meters_per_Newton(long double value) {
-	return static_cast<float>(value) * METERS_PER_NEWTON;
+	return static_cast<Scalar>(value) * METERS_PER_NEWTON;
 }
 
 [[nodiscard]] consteval Compliance operator""_meters_per_Newton(unsigned long long value) {
-	return static_cast<float>(value) * METERS_PER_NEWTON;
+	return static_cast<Scalar>(value) * METERS_PER_NEWTON;
 }
 
 [[nodiscard]] consteval Compliance operator""_meter_per_Newton(long double value) {
@@ -7157,11 +7328,11 @@ using namespace time_literals;
 }
 
 [[nodiscard]] consteval Compliance operator""_millimeters_per_Newton(long double value) {
-	return static_cast<float>(value * 0.001l) * METERS_PER_NEWTON;
+	return static_cast<Scalar>(value * 0.001l) * METERS_PER_NEWTON;
 }
 
 [[nodiscard]] consteval Compliance operator""_millimeters_per_Newton(unsigned long long value) {
-	return static_cast<float>(value * 0.001l) * METERS_PER_NEWTON;
+	return static_cast<Scalar>(value * 0.001l) * METERS_PER_NEWTON;
 }
 
 [[nodiscard]] consteval Compliance operator""_millimeter_per_Newton(long double value) {
@@ -7187,11 +7358,11 @@ namespace physics_literals = grem::physics::literals; // NOLINT(misc-unused-alia
 } // namespace grem
 
 template <typename UnitT>
-struct grem::Formatter<grem::physics::Quantity<1, UnitT>> : Formatter<float> {
+struct grem::Formatter<grem::physics::Quantity<1, UnitT>> : Formatter<physics::Scalar> {
 	StringView symbolSeparator = " ";
 
 	[[nodiscard]] constexpr const char* parseFormatSpecification(const char* p) {
-		p = Formatter<float>::parseFormatSpecification(p);
+		p = Formatter<physics::Scalar>::parseFormatSpecification(p);
 		if (*p == 'z') {
 			symbolSeparator = {};
 			++p;
@@ -7200,7 +7371,7 @@ struct grem::Formatter<grem::physics::Quantity<1, UnitT>> : Formatter<float> {
 	}
 
 	void formatTo(FormatOutput& output, physics::Quantity<1, UnitT> value) const {
-		Formatter<float>::formatTo(output, value._private_getUnderlyingValue());
+		Formatter<physics::Scalar>::formatTo(output, value._private_getUnderlyingValue());
 		const auto symbolString = UnitT::getSymbolString();
 		if (!symbolString.empty()) {
 			output.append(symbolSeparator);
@@ -7210,11 +7381,11 @@ struct grem::Formatter<grem::physics::Quantity<1, UnitT>> : Formatter<float> {
 };
 
 template <typename UnitT>
-struct grem::Formatter<grem::physics::Quantity<2, UnitT>> : Formatter<vec2> {
+struct grem::Formatter<grem::physics::Quantity<2, UnitT>> : Formatter<vec<2, physics::Scalar>> {
 	StringView symbolSeparator = " ";
 
 	[[nodiscard]] constexpr const char* parseFormatSpecification(const char* p) {
-		p = Formatter<vec2>::parseFormatSpecification(p);
+		p = Formatter<vec<2, physics::Scalar>>::parseFormatSpecification(p);
 		if (*p == 'z') {
 			symbolSeparator = {};
 			++p;
@@ -7223,7 +7394,7 @@ struct grem::Formatter<grem::physics::Quantity<2, UnitT>> : Formatter<vec2> {
 	}
 
 	void formatTo(FormatOutput& output, physics::Quantity<2, UnitT> value) const {
-		Formatter<vec2>::formatTo(output, value._private_getUnderlyingValue());
+		Formatter<vec<2, physics::Scalar>>::formatTo(output, value._private_getUnderlyingValue());
 		const auto symbolString = UnitT::getSymbolString();
 		if (!symbolString.empty()) {
 			output.append(symbolSeparator);
@@ -7233,11 +7404,11 @@ struct grem::Formatter<grem::physics::Quantity<2, UnitT>> : Formatter<vec2> {
 };
 
 template <typename UnitT>
-struct grem::Formatter<grem::physics::Quantity<3, UnitT>> : Formatter<vec3> {
+struct grem::Formatter<grem::physics::Quantity<3, UnitT>> : Formatter<vec<3, physics::Scalar>> {
 	StringView symbolSeparator = " ";
 
 	[[nodiscard]] constexpr const char* parseFormatSpecification(const char* p) {
-		p = Formatter<vec3>::parseFormatSpecification(p);
+		p = Formatter<vec<3, physics::Scalar>>::parseFormatSpecification(p);
 		if (*p == 'z') {
 			symbolSeparator = {};
 			++p;
@@ -7246,7 +7417,7 @@ struct grem::Formatter<grem::physics::Quantity<3, UnitT>> : Formatter<vec3> {
 	}
 
 	void formatTo(FormatOutput& output, physics::Quantity<3, UnitT> value) const {
-		Formatter<vec3>::formatTo(output, value._private_getUnderlyingValue());
+		Formatter<vec<3, physics::Scalar>>::formatTo(output, value._private_getUnderlyingValue());
 		const auto symbolString = UnitT::getSymbolString();
 		if (!symbolString.empty()) {
 			output.append(symbolSeparator);
@@ -7256,11 +7427,11 @@ struct grem::Formatter<grem::physics::Quantity<3, UnitT>> : Formatter<vec3> {
 };
 
 template <typename UnitT>
-struct grem::Formatter<grem::physics::TensorQuantity<2, UnitT>> : Formatter<mat2> {
+struct grem::Formatter<grem::physics::TensorQuantity<2, UnitT>> : Formatter<mat<2, 2, physics::Scalar>> {
 	StringView symbolSeparator = " ";
 
 	[[nodiscard]] constexpr const char* parseFormatSpecification(const char* p) {
-		p = Formatter<mat2>::parseFormatSpecification(p);
+		p = Formatter<mat<2, 2, physics::Scalar>>::parseFormatSpecification(p);
 		if (*p == 'z') {
 			symbolSeparator = {};
 			++p;
@@ -7269,7 +7440,7 @@ struct grem::Formatter<grem::physics::TensorQuantity<2, UnitT>> : Formatter<mat2
 	}
 
 	void formatTo(FormatOutput& output, physics::TensorQuantity<2, UnitT> value) const {
-		Formatter<mat2>::formatTo(output, value._private_value);
+		Formatter<mat<2, 2, physics::Scalar>>::formatTo(output, value._private_value);
 		const auto symbolString = UnitT::getSymbolString();
 		if (!symbolString.empty()) {
 			output.append(symbolSeparator);
@@ -7279,11 +7450,11 @@ struct grem::Formatter<grem::physics::TensorQuantity<2, UnitT>> : Formatter<mat2
 };
 
 template <typename UnitT>
-struct grem::Formatter<grem::physics::TensorQuantity<3, UnitT>> : Formatter<mat3> {
+struct grem::Formatter<grem::physics::TensorQuantity<3, UnitT>> : Formatter<mat<3, 3, physics::Scalar>> {
 	StringView symbolSeparator = " ";
 
 	[[nodiscard]] constexpr const char* parseFormatSpecification(const char* p) {
-		p = Formatter<mat3>::parseFormatSpecification(p);
+		p = Formatter<mat<3, 3, physics::Scalar>>::parseFormatSpecification(p);
 		if (*p == 'z') {
 			symbolSeparator = {};
 			++p;
@@ -7292,7 +7463,7 @@ struct grem::Formatter<grem::physics::TensorQuantity<3, UnitT>> : Formatter<mat3
 	}
 
 	void formatTo(FormatOutput& output, physics::TensorQuantity<3, UnitT> value) const {
-		Formatter<mat3>::formatTo(output, value._private_value);
+		Formatter<mat<3, 3, physics::Scalar>>::formatTo(output, value._private_value);
 		const auto symbolString = UnitT::getSymbolString();
 		if (!symbolString.empty()) {
 			output.append(symbolSeparator);
@@ -7308,11 +7479,11 @@ template <size_t N>
 struct grem::Formatter<grem::physics::OrthonormalBasis<N>> : Formatter<grem::physics::Basis<N>> {};
 
 template <>
-struct grem::Formatter<grem::physics::Orientation<2>> : Formatter<float> {
+struct grem::Formatter<grem::physics::Orientation<2>> : Formatter<physics::Scalar> {
 	StringView symbolSeparator = " ";
 
 	[[nodiscard]] constexpr const char* parseFormatSpecification(const char* p) {
-		p = Formatter<float>::parseFormatSpecification(p);
+		p = Formatter<physics::Scalar>::parseFormatSpecification(p);
 		if (*p == 'z') {
 			symbolSeparator = {};
 			++p;
@@ -7321,16 +7492,16 @@ struct grem::Formatter<grem::physics::Orientation<2>> : Formatter<float> {
 	}
 
 	void formatTo(FormatOutput& output, physics::Orientation<2> value) const {
-		Formatter<float>::formatTo(output, value._private_value);
+		Formatter<physics::Scalar>::formatTo(output, value._private_value);
 		output.append(symbolSeparator);
 		output.append("rad");
 	}
 };
 
 template <>
-struct grem::Formatter<grem::physics::Orientation<3>> : Formatter<quat> {
+struct grem::Formatter<grem::physics::Orientation<3>> : Formatter<qua<physics::Scalar>> {
 	void formatTo(FormatOutput& output, physics::Orientation<3> value) const {
-		Formatter<quat>::formatTo(output, value._private_value);
+		Formatter<qua<physics::Scalar>>::formatTo(output, value._private_value);
 	}
 };
 

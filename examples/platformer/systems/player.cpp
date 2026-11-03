@@ -547,7 +547,7 @@ void controlPlayers(exec::Entities<PlayerInput, PlayerMovement, PlayerCamera, ph
 				PlayerAction::MOVE_LEFT, PlayerAction::MOVE_RIGHT,                           //
 				PlayerAction::MOVE_BACKWARD, PlayerAction::MOVE_FORWARD,                     //
 				PlayerAction::GROUND_POUND, PlayerAction::JUMP);
-			const phys::Scale2D desiredHorizontalDirectionScale = phys::Orientation2D{0 - camera.angles.getY()}(phys::Scale2D{movementInput.value.x, -movementInput.value.y});
+			const phys::Scale2D desiredHorizontalDirectionScale = phys::Orientation2D{-(+camera.angles.getY())}(phys::Scale2D{movementInput.value.x, -movementInput.value.y});
 			movement.desiredDirectionScale = {desiredHorizontalDirectionScale.getX(), movementInput.value.z, desiredHorizontalDirectionScale.getY()};
 			movement.desiredSpeed = (input.isPressed(PlayerAction::SPRINT)) ? ((movement.flying) ? settings.flying.sprintSpeed : settings.grounded.sprintSpeed)
 			                                                                : ((movement.flying) ? settings.flying.baseSpeed : settings.grounded.baseSpeed);

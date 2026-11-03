@@ -18,22 +18,22 @@ namespace grem::physics {
 /**
  * Default stiffness value for linear joint limits.
  */
-inline constexpr Frequency DEFAULT_JOINT_LINEAR_LIMIT_STIFFNESS = 60.0f * HERTZ;
+inline constexpr Frequency DEFAULT_JOINT_LINEAR_LIMIT_STIFFNESS = Scalar{60} * HERTZ;
 
 /**
  * Default damping value for linear joint limits.
  */
-inline constexpr Coefficient DEFAULT_JOINT_LINEAR_LIMIT_DAMPING_RATIO = 2.0f;
+inline constexpr Coefficient DEFAULT_JOINT_LINEAR_LIMIT_DAMPING_RATIO = Scalar{2};
 
 /**
  * Default stiffness value for angular joint limits.
  */
-inline constexpr Frequency DEFAULT_JOINT_ANGULAR_LIMIT_STIFFNESS = 60.0f * HERTZ;
+inline constexpr Frequency DEFAULT_JOINT_ANGULAR_LIMIT_STIFFNESS = Scalar{60} * HERTZ;
 
 /**
  * Default damping value for angular joint limits.
  */
-inline constexpr Coefficient DEFAULT_JOINT_ANGULAR_LIMIT_DAMPING_RATIO = 2.0f;
+inline constexpr Coefficient DEFAULT_JOINT_ANGULAR_LIMIT_DAMPING_RATIO = Scalar{2};
 
 /**
  * Ordered pair of handles to the objects connected by a joint.

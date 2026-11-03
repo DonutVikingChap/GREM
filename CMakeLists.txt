@@ -70,6 +70,7 @@ cmake_dependent_option(GREM_IMGUI_ENABLE_DEMO_WINDOWS "Support ImGui::ShowDemoWi
 cmake_dependent_option(GREM_IMGUI_ENABLE_DEBUG_TOOLS "Support ImGui::ShowMetricsWindow(), ImGui::ShowDebugLogWindow() and ImGui::ShowIDStackToolWindow()" ON "GREM_FETCH_DEPENDENCIES;GREM_BUILD_LIBS;GREM_ENABLE_IMGUI_MODULE" OFF)
 
 # Physics
+cmake_dependent_option(GREM_PHYSICS_USE_DOUBLE_PRECISION "Use doubles instead of floats for physics quantity scalars" OFF "GREM_BUILD_LIBS;GREM_ENABLE_PHYSICS_MODULE" OFF)
 cmake_dependent_option(GREM_PHYSICS_USE_DEBUG_VISUALIZATION "Enable physics debug visualization" ON "GREM_BUILD_LIBS;GREM_ENABLE_PHYSICS_MODULE;GREM_ENABLE_GRAPHICS_MODULE;GREM_ENABLE_GRAPHICS_2D_MODULE;GREM_ENABLE_GRAPHICS_3D_MODULE" OFF)
 
 # Networking
@@ -796,6 +797,9 @@ if(GREM_BUILD_LIBS)
 				"src/physics/Shape.cpp"
 				"src/physics/simulation_tasks.cpp"
 				"src/physics/Simulation.cpp")
+		if(GREM_PHYSICS_USE_DOUBLE_PRECISION)
+			target_compile_definitions(GREM-physics PUBLIC GREM_PHYSICS_USE_DOUBLE_PRECISION)
+		endif()
 		if(GREM_PHYSICS_USE_DEBUG_VISUALIZATION)
 			target_compile_definitions(GREM-physics PUBLIC GREM_PHYSICS_USE_DEBUG_VISUALIZATION)
 			target_link_libraries(GREM-physics PUBLIC GREM-graphics GREM-graphics_2d GREM-graphics_3d)
@@ -1135,6 +1139,7 @@ skip file ${CMAKE_CURRENT_SOURCE_DIR}/include/GREM/physics/quantities.hpp\n\
 	endif()
 	if(GREM_ENABLE_PHYSICS_MODULE)
 		message(STATUS "  GREM-physics")
+		message(STATUS "    Double-precision: ${GREM_PHYSICS_USE_DOUBLE_PRECISION}")
 		message(STATUS "    Debug visualization: ${GREM_PHYSICS_USE_DEBUG_VISUALIZATION}")
 	endif()
 

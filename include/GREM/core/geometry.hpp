@@ -154,6 +154,16 @@ struct Box {
 	Point<N, T> max; ///< Position with the maximum coordinates of the box extents on each coordinate axis.
 
 	/**
+	 * Convert this box to an equivalent box of another scalar type.
+	 *
+	 * \return the converted box.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Box<N, U>() const noexcept {
+		return Box<N, U>{.min{min}, .max{max}};
+	}
+
+	/**
 	 * Compare this box to another for equality.
 	 *
 	 * \param other the box to compare this box to.
@@ -292,6 +302,16 @@ struct Rectangle {
 	Length<2, T> size;    ///< Width and height of the rectangle.
 
 	/**
+	 * Convert this rectangle to an equivalent rectangle of another scalar type.
+	 *
+	 * \return the converted rectangle.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Rectangle<U>() const noexcept {
+		return Rectangle<U>{.position{position}, .size{size}};
+	}
+
+	/**
 	 * Convert this rectangle to an equivalent 2D axis-aligned box.
 	 *
 	 * \return the rectangle as an axis-aligned box.
@@ -373,6 +393,16 @@ struct Square {
 
 	Point<2, T> position; ///< Position of the bottom left corner of the square.
 	T width;              ///< Width and height of the square.
+
+	/**
+	 * Convert this square to an equivalent square of another scalar type.
+	 *
+	 * \return the converted square.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Square<U>() const noexcept {
+		return Square<U>{.position{position}, .width = static_cast<U>(width)};
+	}
 
 	/**
 	 * Convert this square to an equivalent rectangle.
@@ -467,6 +497,16 @@ struct Cube {
 	T width;              ///< Width, height and depth of the cube.
 
 	/**
+	 * Convert this cube to an equivalent cube of another scalar type.
+	 *
+	 * \return the converted cube.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Cube<U>() const noexcept {
+		return Cube<U>{.position{position}, .width = static_cast<U>(width)};
+	}
+
+	/**
 	 * Convert this cube to an equivalent 2D axis-aligned box.
 	 *
 	 * \return the cube as an axis-aligned box.
@@ -550,6 +590,16 @@ struct Triangle {
 	Point<N, T> pointA; ///< First point of the triangle.
 	Point<N, T> pointB; ///< Second point of the triangle.
 	Point<N, T> pointC; ///< Third point of the triangle.
+
+	/**
+	 * Convert this triangle to an equivalent triangle of another scalar type.
+	 *
+	 * \return the converted triangle.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Triangle<N, U>() const noexcept {
+		return Triangle<N, U>{.pointA{pointA}, .pointB{pointB}, .pointC{pointC}};
+	}
 
 	/**
 	 * Compare this triangle to another for equality.
@@ -727,6 +777,17 @@ struct LineSegment {
 	Point<N, T> pointB; ///< Position of the second point of the line segment.
 
 	/**
+	 * Convert this line segment to an equivalent line segment of another scalar
+	 * type.
+	 *
+	 * \return the converted line segment.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator LineSegment<N, U>() const noexcept {
+		return LineSegment<N, U>{.pointA{pointA}, .pointB{pointB}};
+	}
+
+	/**
 	 * Compare this line segment to another for equality.
 	 *
 	 * \param other the line segment to compare this line segment to.
@@ -762,6 +823,16 @@ struct Ellipsoid {
 
 	Point<N, T> center; ///< Position of the center of the ellipsoid.
 	Length<N, T> radii; ///< Radii of the ellipsoid along each axis.
+
+	/**
+	 * Convert this ellipsoid to an equivalent ellipsoid of another scalar type.
+	 *
+	 * \return the converted ellipsoid.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Ellipsoid<N, U>() const noexcept {
+		return Ellipsoid<N, U>{.center{center}, .radii{radii}};
+	}
 
 	/**
 	 * Compare this ellipsoid to another for equality.
@@ -877,6 +948,16 @@ struct Ellipse {
 	Length<2, T> radii; ///< Radii of the ellipse along each axis.
 
 	/**
+	 * Convert this ellipse to an equivalent ellipse of another scalar type.
+	 *
+	 * \return the converted ellipse.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Ellipse<U>() const noexcept {
+		return Ellipse<U>{.center{center}, .radii{radii}};
+	}
+
+	/**
 	 * Convert this ellipse to an equivalent 2D ellipsoid.
 	 *
 	 * \return the ellipse as an ellipsoid.
@@ -940,6 +1021,16 @@ struct Sphere {
 
 	Point<N, T> center; ///< Position of the center of the sphere.
 	T radius;           ///< Radius of the sphere.
+
+	/**
+	 * Convert this sphere to an equivalent sphere of another scalar type.
+	 *
+	 * \return the converted sphere.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Sphere<N, U>() const noexcept {
+		return Sphere<N, U>{.center{center}, .radius = static_cast<U>(radius)};
+	}
 
 	/**
 	 * Convert this sphere to an equivalent ellipsoid.
@@ -1082,6 +1173,16 @@ struct Circle {
 	T radius;           ///< Radius of the circle.
 
 	/**
+	 * Convert this circle to an equivalent circle of another scalar type.
+	 *
+	 * \return the converted circle.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Circle<U>() const noexcept {
+		return Circle<U>{.center{center}, .radius = static_cast<U>(radius)};
+	}
+
+	/**
 	 * Convert this circle to an equivalent 2D ellipsoid.
 	 *
 	 * \return the circle as an ellipsoid.
@@ -1173,6 +1274,16 @@ struct Capsule {
 
 	LineSegment<N, T> centerLine; ///< Center line of the capsule.
 	T radius;                     ///< Radius of the capsule from the center line.
+
+	/**
+	 * Convert this capsule to an equivalent capsule of another scalar type.
+	 *
+	 * \return the converted capsule.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Capsule<N, U>() const noexcept {
+		return Capsule<N, U>{.centerLine = static_cast<LineSegment<N, U>>(centerLine), .radius = static_cast<U>(radius)};
+	}
 
 	/**
 	 * Compare this capsule to another for equality.
@@ -1354,6 +1465,23 @@ struct Frustum {
 	Array<Point<3, T>, 8> corners;
 
 	/**
+	 * Convert this frustum to an equivalent frustum of another scalar type.
+	 *
+	 * \return the converted frustum.
+	 */
+	template <typename U>
+	GREM_ALWAYS_INLINE constexpr explicit operator Frustum<U>() const noexcept {
+		Frustum<U> result{};
+		for (size_t i = 0; i < planes.size(); ++i) {
+			result.planes[i] = static_cast<vec<4, U>>(planes[i]);
+		}
+		for (size_t i = 0; i < corners.size(); ++i) {
+			result.corners[i] = static_cast<Point<3, U>>(corners[i]);
+		}
+		return result;
+	}
+
+	/**
 	 * Check if an axis-aligned bounding box is potentially intersecting with
 	 * the frustum.
 	 *
@@ -1362,7 +1490,7 @@ struct Frustum {
 	 * \return true if the box may potentially be intersecting with the frustum,
 	 *         false if it is definitely not intersecting.
 	 */
-	[[nodiscard]] constexpr bool isPotentiallyIntersecting(const Box<3, float>& aabb) const noexcept {
+	[[nodiscard]] constexpr bool isPotentiallyIntersecting(const Box<3, T>& aabb) const noexcept {
 		const Array aabbCorners{
 			Point<3, T>{aabb.min.x, aabb.min.y, aabb.min.z},
 			Point<3, T>{aabb.max.x, aabb.min.y, aabb.min.z},
@@ -1386,7 +1514,7 @@ struct Frustum {
 	 * \return true if the sphere may potentially be intersecting with the
 	 *         frustum, false if it is definitely not intersecting.
 	 */
-	[[nodiscard]] constexpr bool isPotentiallyIntersecting(const Sphere<3, float>& sphere) const noexcept {
+	[[nodiscard]] constexpr bool isPotentiallyIntersecting(const Sphere<3, T>& sphere) const noexcept {
 		bool culled = false;
 		for (const vec<4, T>& plane : planes) {
 			culled |= dot(sphere.center, vec<3, T>{plane}) + sphere.radius < -plane.w;

@@ -41,8 +41,8 @@ public:
 		const Plane3D plane{.point = transformationB.getOrigin(), .normal = transformationB.getDirection(Y_AXIS_3D)};
 		const Length3D meshLocalPlaneOffset = inverseTransformationA(plane.point);
 		const Direction3D meshLocalPlaneNormal = inverseTransformationA.getDirection(plane.normal);
-		const TriangleMesh3D& mesh = *triangleMeshShapeA.getTriangleMesh();
-		const Span<const TriangleMeshVertex3D> vertices = mesh.getVertices();
+		const TriangleMesh<3, float>& mesh = *triangleMeshShapeA.getTriangleMesh();
+		const Span<const TriangleMeshVertex<3, float>> vertices = mesh.getVertices();
 		const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 		const Length1D maxCollisionDistance = min(-minPenetrationDepth, options.maxCollisionTouchingDistance);
 		if (mesh.getFaceOrthtree().traverseElements(
@@ -65,19 +65,19 @@ public:
 
 					const auto [signedDistance, itPoint, normal] =
 						(nearSignedDistance > farSignedDistance)
-							? Tuple{nearSignedDistance, itNearSignedTrianglePointDistance, -plane.normal}
-							: Tuple{farSignedDistance, itFarSignedTrianglePointDistance, plane.normal};
+					        ? Tuple{nearSignedDistance, itNearSignedTrianglePointDistance, -plane.normal}
+					        : Tuple{farSignedDistance, itFarSignedTrianglePointDistance, plane.normal};
 					return signedDistance <= maxCollisionDistance;
 				},
 				[&](const grem::Box<3, float>& meshLocalBoundingBox) -> bool {
 					const Length3D meshLocalMin = meshLocalBoundingBox.min * Length3D::UNIT;
 					const Length3D meshLocalMax = meshLocalBoundingBox.max * Length3D::UNIT;
 					const Length3D meshLocalCenter = midpoint(meshLocalMin, meshLocalMax);
-					const Length3D halfExtents = (meshLocalMax - meshLocalMin) * 0.5f;
+					const Length3D halfExtents = (meshLocalMax - meshLocalMin) * Scalar{0.5};
 					const Length3D meshLocalNearPoint = meshLocalCenter + copysign(halfExtents, -meshLocalPlaneNormal);
 					const Length3D meshLocalFarPoint = meshLocalCenter + copysign(halfExtents, meshLocalPlaneNormal);
 					return (dot(meshLocalNearPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance) !=
-			               (dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance);
+					       (dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= maxCollisionDistance);
 				})) {
 			return filterTestResult;
 		}
@@ -102,8 +102,8 @@ public:
 		const Plane3D plane{.point = transformationB.getOrigin(), .normal = transformationB.getDirection(Y_AXIS_3D)};
 		const Length3D meshLocalPlaneOffset = inverseTransformationA(plane.point);
 		const Direction3D meshLocalPlaneNormal = inverseTransformationA.getDirection(plane.normal);
-		const TriangleMesh3D& mesh = *triangleMeshShapeA.getTriangleMesh();
-		const Span<const TriangleMeshVertex3D> vertices = mesh.getVertices();
+		const TriangleMesh<3, float>& mesh = *triangleMeshShapeA.getTriangleMesh();
+		const Span<const TriangleMeshVertex<3, float>> vertices = mesh.getVertices();
 		const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 		mesh.getFaceOrthtree().traverseElements(
 			[&](const TriangleMeshFaceIndex& faceIndex) -> void {
@@ -125,8 +125,8 @@ public:
 
 				const auto [signedDistance, itPoint, normal] =
 					(nearSignedDistance > farSignedDistance)
-						? Tuple{nearSignedDistance, itNearSignedTrianglePointDistance, -plane.normal}
-						: Tuple{farSignedDistance, itFarSignedTrianglePointDistance, plane.normal};
+				        ? Tuple{nearSignedDistance, itNearSignedTrianglePointDistance, -plane.normal}
+				        : Tuple{farSignedDistance, itFarSignedTrianglePointDistance, plane.normal};
 				if (signedDistance <= options.maxCollisionTouchingDistance) {
 					const Position3D pointA = transformationA(meshLocalTrianglePoints[static_cast<size_t>(itPoint - signedTrianglePointDistances.begin())]);
 					const Position3D pointB = pointA + normal * signedDistance;
@@ -140,11 +140,11 @@ public:
 				const Length3D meshLocalMin = meshLocalBoundingBox.min * Length3D::UNIT;
 				const Length3D meshLocalMax = meshLocalBoundingBox.max * Length3D::UNIT;
 				const Length3D meshLocalCenter = midpoint(meshLocalMin, meshLocalMax);
-				const Length3D halfExtents = (meshLocalMax - meshLocalMin) * 0.5f;
+				const Length3D halfExtents = (meshLocalMax - meshLocalMin) * Scalar{0.5};
 				const Length3D meshLocalNearPoint = meshLocalCenter + copysign(halfExtents, -meshLocalPlaneNormal);
 				const Length3D meshLocalFarPoint = meshLocalCenter + copysign(halfExtents, meshLocalPlaneNormal);
 				return (dot(meshLocalNearPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance) !=
-			           (dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance);
+				       (dot(meshLocalFarPoint - meshLocalPlaneOffset, meshLocalPlaneNormal) <= options.maxCollisionTouchingDistance);
 			});
 	}
 };

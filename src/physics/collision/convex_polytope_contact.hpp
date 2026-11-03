@@ -233,10 +233,10 @@ template <size_t N>
 		return {};
 	}
 
-	const Coefficient amountA = (originDifferenceDotB * dotProduct - originDifferenceDotA * lengthSquaredB) / denominatorA;
-	const Coefficient amountB = (originDifferenceDotB + dotProduct * amountA) / lengthSquaredB;
-	const Position3D pointA = originA + vectorA * clamp(amountA, Coefficient{}, Coefficient{1});
-	const Position3D pointB = originB + vectorB * clamp(amountB, Coefficient{}, Coefficient{1});
+	const Scale1D amountA = (originDifferenceDotB * dotProduct - originDifferenceDotA * lengthSquaredB) / denominatorA;
+	const Scale1D amountB = (originDifferenceDotB + dotProduct * amountA) / lengthSquaredB;
+	const Position3D pointA = originA + vectorA * clamp(amountA, Scale1D{Scalar{0}}, Scale1D{Scalar{1}});
+	const Position3D pointB = originB + vectorB * clamp(amountB, Scale1D{Scalar{0}}, Scale1D{Scalar{1}});
 	return convertPointsToContactManifold(pointA, inverseTransformationA, ContactFeatureType::CONVEX_POLYTOPE_EDGE, edgeIndexA, pointB, inverseTransformationB,
 		ContactFeatureType::CONVEX_POLYTOPE_EDGE, edgeIndexB, normal, filterTestResult);
 }

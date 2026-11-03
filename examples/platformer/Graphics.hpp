@@ -55,7 +55,7 @@ struct Graphics {
 	Buffer<ArrayList<PlatformerModelShaderItem>> itemChunks{};
 	ArrayList<PlatformerModelShaderItem> items{};
 	ArrayList<PlatformerModelShaderTile> tiles{};
-	LooseQuadtree<uint32_t> blobShadowIndexQuadtree{};
+	LooseQuadtree<phys::Scalar, uint32_t> blobShadowIndexQuadtree{};
 
 	Graphics(Filesystem& filesystem, gfx::Window& window, const gfx::Renderer2DOptions& renderer2DOptions, const gfx::Renderer3DOptions& renderer3DOptions, GraphicsOptions options)
 		: options(std::move(options))
@@ -126,9 +126,9 @@ struct Graphics {
 	void flushModelShaderBuffers(exec::Executor& executor, Extent2D framebufferSize, const WorldView& worldView) {
 		GREM_PROFILE_FUNCTION();
 
-		constexpr vec2 TILE_SIZE{static_cast<float>(PlatformerModelShaderTile::TILE_SIZE)};
-		const vec2 viewportSize{viewport.region.size};
-		const mat4 inverseViewProjectionMatrix = inverse(camera3D.getProjectionMatrix() * camera3D.getViewMatrix());
+		constexpr vec<2, phys::Scalar> TILE_SIZE{static_cast<phys::Scalar>(PlatformerModelShaderTile::TILE_SIZE)};
+		const vec<2, phys::Scalar> viewportSize{viewport.region.size};
+		const mat<4, 4, phys::Scalar> inverseViewProjectionMatrix{inverse(camera3D.getProjectionMatrix() * camera3D.getViewMatrix())};
 		const u32vec2 tileCounts = (u32vec2{viewport.region.size} + u32vec2{PlatformerModelShaderTile::TILE_SIZE - 1}) / PlatformerModelShaderTile::TILE_SIZE;
 
 		{
@@ -153,7 +153,7 @@ struct Graphics {
 
 		{
 			GREM_PROFILE_BLOCK("Build blob shadow quadtree");
-			const Box<2, float> horizontalBounds{
+			const Box<2, phys::Scalar> horizontalBounds{
 				.min{worldView.visibleBounds.min.x, worldView.visibleBounds.min.z},
 				.max{worldView.visibleBounds.max.x, worldView.visibleBounds.max.z},
 			};
@@ -185,32 +185,32 @@ struct Graphics {
 					const size_t tileY = tileIndex / static_cast<size_t>(tileCounts.x);
 					const size_t tileX = tileIndex % static_cast<size_t>(tileCounts.x);
 
-					Frustum<float> tileFrustum{};
+					Frustum<phys::Scalar> tileFrustum{};
 					{
 						GREM_PROFILE_BLOCK("Build frustum");
-						const float x = static_cast<float>(tileX) * TILE_SIZE.x;
-						const float y = static_cast<float>(tileY) * TILE_SIZE.y;
-						const Array<vec3, 8> tileFrustumCornersInViewportRelativeScreenSpace{
-							vec3{vec2{x, y}, 1.0f},
-							vec3{vec2{x, y + TILE_SIZE.y}, 1.0f},
-							vec3{vec2{x + TILE_SIZE.x, y}, 1.0f},
-							vec3{vec2{x + TILE_SIZE.x, y + TILE_SIZE.y}, 1.0f},
-							vec3{vec2{x, y}, 0.0f},
-							vec3{vec2{x, y + TILE_SIZE.y}, 0.0f},
-							vec3{vec2{x + TILE_SIZE.x, y}, 0.0f},
-							vec3{vec2{x + TILE_SIZE.x, y + TILE_SIZE.y}, 0.0f},
+						const phys::Scalar x = static_cast<phys::Scalar>(tileX) * TILE_SIZE.x;
+						const phys::Scalar y = static_cast<phys::Scalar>(tileY) * TILE_SIZE.y;
+						const Array<vec<3, phys::Scalar>, 8> tileFrustumCornersInViewportRelativeScreenSpace{
+							vec<3, phys::Scalar>{x, y, phys::Scalar{1}},
+							vec<3, phys::Scalar>{x, y + TILE_SIZE.y, phys::Scalar{1}},
+							vec<3, phys::Scalar>{x + TILE_SIZE.x, y, phys::Scalar{1}},
+							vec<3, phys::Scalar>{x + TILE_SIZE.x, y + TILE_SIZE.y, phys::Scalar{1}},
+							vec<3, phys::Scalar>{x, y, phys::Scalar{0}},
+							vec<3, phys::Scalar>{x, y + TILE_SIZE.y, phys::Scalar{0}},
+							vec<3, phys::Scalar>{x + TILE_SIZE.x, y, phys::Scalar{0}},
+							vec<3, phys::Scalar>{x + TILE_SIZE.x, y + TILE_SIZE.y, phys::Scalar{0}},
 						};
-						const Array<vec3, 8> tileFrustumCornersInWorldSpace =
-							meta::transform(tileFrustumCornersInViewportRelativeScreenSpace, [&](vec3 cornerInViewportRelativeScreenSpace) -> vec3 {
-								const vec4 cornerInNDCSpace{
-									(vec2{cornerInViewportRelativeScreenSpace} / viewportSize) * 2.0f - vec2{1.0f},
+						const Array<vec<3, phys::Scalar>, 8> tileFrustumCornersInWorldSpace =
+							meta::transform(tileFrustumCornersInViewportRelativeScreenSpace, [&](vec<3, phys::Scalar> cornerInViewportRelativeScreenSpace) -> vec<3, phys::Scalar> {
+								const vec<4, phys::Scalar> cornerInNDCSpace{
+									(vec<2, phys::Scalar>{cornerInViewportRelativeScreenSpace} / viewportSize) * phys::Scalar{2} - phys::Scalar{1},
 									cornerInViewportRelativeScreenSpace.z,
-									1.0f,
+									phys::Scalar{1},
 								};
-								const vec4 cornerInWorldSpace = inverseViewProjectionMatrix * cornerInNDCSpace;
-								return vec3{cornerInWorldSpace} / cornerInWorldSpace.w;
+								const vec<4, phys::Scalar> cornerInWorldSpace = inverseViewProjectionMatrix * cornerInNDCSpace;
+								return vec<3, phys::Scalar>{cornerInWorldSpace} / cornerInWorldSpace.w;
 							});
-						tileFrustum = Frustum<float>::fromCorners(tileFrustumCornersInWorldSpace);
+						tileFrustum = Frustum<phys::Scalar>::fromCorners(tileFrustumCornersInWorldSpace);
 					}
 
 					const uint32_t itemOffset = static_cast<uint32_t>(itemChunk.size());
@@ -221,7 +221,8 @@ struct Graphics {
 						for (uint32_t lightIndex = 0; lightCount < 255 && lightIndex < lights.size(); ++lightIndex) {
 							const PlatformerModelShaderLight& light = lights[lightIndex];
 							if (light.lightTypeAndRangeAndConeCosines.x == PlatformerModelShaderLight::LIGHT_TYPE_DIRECTIONAL ||
-								tileFrustum.isPotentiallyIntersecting(Sphere<3, float>{.center = vec3{light.lightPosition}, .radius = light.lightTypeAndRangeAndConeCosines.y})) {
+								tileFrustum.isPotentiallyIntersecting(
+									Sphere<3, phys::Scalar>{.center{vec3{light.lightPosition}}, .radius = light.lightTypeAndRangeAndConeCosines.y})) {
 								itemChunk.push_back(PlatformerModelShaderItem{.itemIndex = lightIndex});
 								++lightCount;
 							}
@@ -243,8 +244,8 @@ struct Graphics {
 								}
 								return false;
 							},
-							[&](const Box<2, float>& box) -> bool {
-								return tileFrustum.isPotentiallyIntersecting(Box<3, float>{
+							[&](const Box<2, phys::Scalar>& box) -> bool {
+								return tileFrustum.isPotentiallyIntersecting(Box<3, phys::Scalar>{
 									.min{box.min.x, worldView.visibleBounds.min.y, box.min.y},
 									.max{box.max.x, worldView.visibleBounds.max.y, box.max.y},
 								});

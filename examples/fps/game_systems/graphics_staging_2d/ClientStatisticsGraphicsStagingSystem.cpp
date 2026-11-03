@@ -50,7 +50,7 @@ public:
 			const ClientReceivedSnapshotBuffer& receivedSnapshotBuffer = worldView.subtickResources.getResource<ClientReceivedSnapshotBuffer>();
 
 			if (settings.graphics.showFPS) {
-				const phys::Frequency fps = static_cast<float>(performanceStats.lastSecondFrameCount) * phys::HERTZ;
+				const phys::Frequency fps = static_cast<phys::Scalar>(performanceStats.lastSecondFrameCount) * phys::HERTZ;
 				const Offset2D fpsTextPosition{
 					viewRegion.offset.x + 15 + 2,
 					viewRegion.offset.y + static_cast<int32_t>(viewRegion.size.height) - 15 - 20,
@@ -87,7 +87,7 @@ public:
 											   "Direction: {:>8.3f}\n"
 											   "Position:  {:>8.3f}\n"
 											   "Velocity:  {:>8.3f}",
-							(localPlayerPerspective->aimAngles - 0).as(phys::DEGREES), convertAnglesToForwardDirection(localPlayerPerspective->aimAngles),
+							(+localPlayerPerspective->aimAngles).as(phys::DEGREES), convertAnglesToForwardDirection(localPlayerPerspective->aimAngles),
 							localPlayerPerspective->position, localPlayerPerspective->linearVelocity));
 					return true;
 				});
@@ -149,8 +149,8 @@ private:
 			(averageFrameWaitTime > 5_milliseconds)   ? Color::RED
 			: (averageFrameWaitTime > 2_milliseconds) ? Color::YELLOW
 			: (averageFrameWaitTime > 1_milliseconds)
-				? Color::GRAY
-				: Color::LIME;
+		        ? Color::GRAY
+		        : Color::LIME;
 		const Duration frameWaitTime =
 			(performanceStats.frameWaitTimeSampleBuffer.getSamples().empty()) ? Duration{} : performanceStats.frameWaitTimeSampleBuffer.getSamples().back();
 		graphics.put2DText(position, frameWaitTimeColor,

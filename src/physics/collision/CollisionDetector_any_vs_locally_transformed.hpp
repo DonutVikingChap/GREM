@@ -69,7 +69,7 @@ public:
 						CollisionAlgorithmResult<N> collision = localCollision;
 						for (ContactPoint<N>& point : collision.manifold.points) {
 							point.offsets.second = locallyTransformedShapeB.localOffset + point.offsets.second;
-							point.localOffsets.second = localTransformationB(point.localOffsets.second) - 0;
+							point.localOffsets.second = +localTransformationB(point.localOffsets.second);
 						}
 						callback(collision);
 					});

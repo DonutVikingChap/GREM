@@ -35,14 +35,14 @@ struct WorldView {
 	Timestamp subtickTimestamp;
 	Duration tickInterval;
 	PlayerID playerID;
-	StridedSpan<const Frustum<float>> frustums;
+	StridedSpan<const Frustum<phys::Scalar>> frustums;
 
 	[[nodiscard]] bool isPotentiallyVisible(const phys::Sphere3D& sphere) const {
-		return frustums.empty() || anyOf(frustums, [&](const Frustum<float>& frustum) -> bool { return frustum.isPotentiallyIntersecting(sphere.in(phys::METERS)); });
+		return frustums.empty() || anyOf(frustums, [&](const Frustum<phys::Scalar>& frustum) -> bool { return frustum.isPotentiallyIntersecting(sphere.in(phys::METERS)); });
 	}
 
 	[[nodiscard]] bool isPotentiallyVisible(const phys::Box3D& box) const {
-		return frustums.empty() || anyOf(frustums, [&](const Frustum<float>& frustum) -> bool { return frustum.isPotentiallyIntersecting(box.in(phys::METERS)); });
+		return frustums.empty() || anyOf(frustums, [&](const Frustum<phys::Scalar>& frustum) -> bool { return frustum.isPotentiallyIntersecting(box.in(phys::METERS)); });
 	}
 
 	[[nodiscard]] phys::Sphere3D getBindPoseBoundingSphere(const gfx::Model3D& model, phys::Position3D position, phys::Coefficient scale) const {
@@ -50,18 +50,18 @@ struct WorldView {
 	}
 
 	[[nodiscard]] phys::Box3D getBindPoseBoundingBox(const gfx::Model3D& model, phys::Position3D position, phys::Orientation3D orientation, phys::Scale3D scale) const {
-		return getTransformedBoundingBox(translateRotateScale(position, orientation, scale), model.getBindPoseBoundingBox() * phys::METERS);
+		return getTransformedBoundingBox(translateRotateScale(position, orientation, scale), static_cast<Box<3, phys::Scalar>>(model.getBindPoseBoundingBox()) * phys::METERS);
 	}
 
 	[[nodiscard]] phys::Box3D getBindPoseBoundingBox(const gfx::Model3D& model, res::Model::TransformationView transformation) const {
-		return getTransformedBoundingBox(transformation.jointMatrices[0], model.getBindPoseBoundingBox()) * phys::METERS;
+		return static_cast<Box<3, phys::Scalar>>(getTransformedBoundingBox(transformation.jointMatrices[0], model.getBindPoseBoundingBox())) * phys::METERS;
 	}
 
 	[[nodiscard]] phys::Box3D getBoundingBox(const gfx::Model3D& model, res::Model::TransformationView transformation) const {
-		Box<3, float> boundingBox{.min{Limits<float>::MAX}, .max{Limits<float>::MIN}};
+		Box<3, phys::Scalar> boundingBox{.min{Limits<phys::Scalar>::MAX}, .max{Limits<phys::Scalar>::MIN}};
 		for (const gfx::Model3D::Node& node : model.getNodes()) {
 			const mat4 jointMatrix = transformation.jointMatrices[((node.shaderConfiguration.vertexFlags & res::Model::VERTEX_SKINNED) != 0) ? 0 : node.jointIndex];
-			const Box<3, float> nodeBoundingBox = getTransformedBoundingBox(jointMatrix, node.boundingBox);
+			const Box<3, phys::Scalar> nodeBoundingBox = static_cast<Box<3, phys::Scalar>>(getTransformedBoundingBox(jointMatrix, node.boundingBox));
 			boundingBox.min = min(boundingBox.min, nodeBoundingBox.min);
 			boundingBox.max = max(boundingBox.max, nodeBoundingBox.max);
 		}
@@ -497,7 +497,7 @@ struct CurrentPlayer {
 	Timestamp subtickEndTimestamp;
 	Duration tickInterval;
 
-	[[nodiscard]] WorldView getWorldView(const EntityRegistry& registry, const ResourceRegistry& resources, StridedSpan<const Frustum<float>> frustums) const {
+	[[nodiscard]] WorldView getWorldView(const EntityRegistry& registry, const ResourceRegistry& resources, StridedSpan<const Frustum<phys::Scalar>> frustums) const {
 		return {
 			.subtickRegistry = registry,
 			.subtickResources = resources,
@@ -512,7 +512,7 @@ struct CurrentPlayer {
 		};
 	}
 
-	[[nodiscard]] WorldView getWorldViewAtTimestamp(const EntityRegistry& registry, const ResourceRegistry& resources, StridedSpan<const Frustum<float>> frustums,
+	[[nodiscard]] WorldView getWorldViewAtTimestamp(const EntityRegistry& registry, const ResourceRegistry& resources, StridedSpan<const Frustum<phys::Scalar>> frustums,
 		Timestamp timestamp) const {
 		const Duration receivedInterpolationTimeDifference = getTimeBetween(receivedInterpolationTimestamp, subtickBeginTimestamp, tickInterval);
 		const Duration predictionInterpolationTimeDifference = getTimeBetween(predictionInterpolationTimestamp, subtickBeginTimestamp, tickInterval);

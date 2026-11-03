@@ -57,7 +57,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be positive.
 	 */
-	Time stepInterval = 1.0f / (60.0f * HERTZ);
+	Time stepInterval = Scalar{1} / (Scalar{60} * HERTZ);
 
 	/**
 	 * Assumed level of parallelism available when a simulation step is
@@ -97,7 +97,7 @@ struct SimulationOptions {
 	 * \warning Must be non-negative.
 	 * \warning Must be less than 90 degrees.
 	 */
-	Angle maxContactManifoldAngleTolerance = 20.0f * DEGREES;
+	Angle maxContactManifoldAngleTolerance = Scalar{20} * DEGREES;
 
 	/**
 	 * Approximation of the minimum width of the shapes of the objects that will
@@ -107,7 +107,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Distance minObjectSizeApproximation = 0.01f * METERS;
+	Distance minObjectSizeApproximation = Scalar{0.01} * METERS;
 
 	/**
 	 * Linear speed at or below which objects are considered to be at rest.
@@ -119,7 +119,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Speed maxRestingSpeed = 0.1f * METERS_PER_SECOND;
+	Speed maxRestingSpeed = Scalar{0.1} * METERS_PER_SECOND;
 
 	/**
 	 * Angular speed at or below which objects are considered to be at rest.
@@ -131,7 +131,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	AngularSpeed maxRestingAngularSpeed = 4.0f * DEGREES_PER_SECOND;
+	AngularSpeed maxRestingAngularSpeed = Scalar{4} * DEGREES_PER_SECOND;
 
 	/**
 	 * How long an object with resting enabled can spend below resting speed
@@ -142,7 +142,7 @@ struct SimulationOptions {
 	 * \note Values above `65535 * stepInterval` are treated as if they were
 	 *       clamped to that value.
 	 */
-	Time restingTimeThreshold = 1.0f * SECONDS;
+	Time restingTimeThreshold = Scalar{1} * SECONDS;
 
 	/**
 	 * Safety coefficient to multiply the velocities of objects by when
@@ -153,7 +153,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Coefficient potentialCollisionVelocitySafetyCoefficient = 2.0f;
+	Coefficient potentialCollisionVelocitySafetyCoefficient = Scalar{2};
 
 	/**
 	 * How much of the contact constraint momentums from the last simulation
@@ -162,7 +162,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be between 0 and 1 (inclusive).
 	 */
-	Coefficient contactWarmstartCoefficient = 0.99f;
+	Coefficient contactWarmstartCoefficient = Scalar{0.99};
 
 	/**
 	 * How much of the joint constraint momentums from the last simulation step
@@ -171,7 +171,7 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be between 0 and 1 (inclusive).
 	 */
-	Coefficient jointWarmstartCoefficient = 0.99f;
+	Coefficient jointWarmstartCoefficient = Scalar{0.99};
 
 	/**
 	 * Stiffness of contact constraints. Controls how fast overlap is corrected
@@ -179,35 +179,35 @@ struct SimulationOptions {
 	 *
 	 * \warning Must be non-negative.
 	 */
-	Frequency contactStiffness = 60.0f * HERTZ;
+	Frequency contactStiffness = Scalar{60} * HERTZ;
 
 	/**
 	 * Damping ratio used when solving contact constraints.
 	 *
 	 * \warning Must be positive.
 	 */
-	Coefficient contactDampingRatio = 2.0f;
+	Coefficient contactDampingRatio = Scalar{2};
 
 	/**
 	 * Maximum linear momentum limit of joint constraints.
 	 *
 	 * \warning Must be positive.
 	 */
-	Momentum jointMaxMomentum = 50000.0f * KILOGRAM_METERS_PER_SECOND;
+	Momentum jointMaxMomentum = Scalar{50000} * KILOGRAM_METERS_PER_SECOND;
 
 	/**
 	 * Maximum angular momentum limit of joint constraints.
 	 *
 	 * \warning Must be positive.
 	 */
-	AngularMomentum2D jointMaxAngularMomentum = 50000.0f * KILOGRAM_SQUARE_METERS_PER_SECOND;
+	AngularMomentum2D jointMaxAngularMomentum = Scalar{50000} * KILOGRAM_SQUARE_METERS_PER_SECOND;
 
 	/**
 	 * Maximum momentum limit of contact constraints.
 	 *
 	 * \warning Must be positive.
 	 */
-	Momentum contactMaxMomentum = 50000.0f * KILOGRAM_METERS_PER_SECOND;
+	Momentum contactMaxMomentum = Scalar{50000} * KILOGRAM_METERS_PER_SECOND;
 };
 using SimulationOptions2D = SimulationOptions<2>; ///< Configuration options for a 2-dimensional Simulation.
 using SimulationOptions3D = SimulationOptions<3>; ///< Configuration options for a 3-dimensional Simulation.

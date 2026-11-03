@@ -541,7 +541,7 @@ const phys::Shape3D& Schema::loadModelConvexHullShape(AssetCache& assetCache, Mo
 			res::Model::Transformation bindPoseTransformation{};
 			bindPoseTransformation.assign(rootTransformation, model->bindPose.localJoints, model->bindPose.localMorphTargetWeights, model->jointParentIndices);
 
-			Buffer<ConvexPolytopeVertex3D> vertices{};
+			Buffer<ConvexPolytopeVertex<3, float>> vertices{};
 			for (const res::Model::Instance& instance : model->instances) {
 				const res::Model::Mesh& mesh = model->meshes.at(instance.meshIndex);
 				const mat4 jointMatrix = bindPoseTransformation.jointMatrices[((mesh.vertexFlags & res::Model::VERTEX_SKINNED) != 0) ? 0 : instance.jointIndex];
@@ -551,7 +551,7 @@ const phys::Shape3D& Schema::loadModelConvexHullShape(AssetCache& assetCache, Mo
 					static_cast<size_t>(mesh.vertexCount)};
 				vertices.reserve(vertices.size() + meshPositions.size());
 				for (const vec3 position : meshPositions) {
-					vertices.push_back(ConvexPolytopeVertex3D{vec3{jointMatrix * vec4{position, 1.0f}}});
+					vertices.push_back(vec3{jointMatrix * vec4{position, 1.0f}});
 				}
 			}
 
@@ -583,7 +583,7 @@ const phys::Shape3D& Schema::loadModelTriangleMeshShape(AssetCache& assetCache, 
 			res::Model::Transformation bindPoseTransformation{};
 			bindPoseTransformation.assign(rootTransformation, model->bindPose.localJoints, model->bindPose.localMorphTargetWeights, model->jointParentIndices);
 
-			Buffer<TriangleMeshVertex3D> vertices{};
+			Buffer<TriangleMeshVertex<3, float>> vertices{};
 			Buffer<TriangleMeshVertexIndex> indices{};
 			for (const res::Model::Instance& instance : model->instances) {
 				const res::Model::Mesh& mesh = model->meshes.at(instance.meshIndex);
@@ -1116,39 +1116,39 @@ void spawnParticle(EntityRegistry& registry, ResourceRegistry& resources, rng::X
 		particleDescription.launchCountMin,
 		max(particleDescription.launchCountMin, particleDescription.launchCountMax),
 	};
-	rng::UniformRealDistribution<float> launchSpeedDistribution{
+	rng::UniformRealDistribution<phys::Scalar> launchSpeedDistribution{
 		particleDescription.launchSpeedMin.in(phys::Speed::UNIT),
 		max(particleDescription.launchSpeedMin, particleDescription.launchSpeedMax).in(phys::Speed::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchSpreadAngleDistribution{
+	rng::UniformRealDistribution<phys::Scalar> launchSpreadAngleDistribution{
 		particleDescription.launchSpreadAngleMin.in(phys::Angle::UNIT),
 		max(particleDescription.launchSpreadAngleMin, particleDescription.launchSpreadAngleMax).in(phys::Angle::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchRollAngleDistribution{
+	rng::UniformRealDistribution<phys::Scalar> launchRollAngleDistribution{
 		particleDescription.launchRollAngleMin.in(phys::Angle::UNIT),
 		max(particleDescription.launchRollAngleMin, particleDescription.launchRollAngleMax).in(phys::Angle::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchTangentSpaceAngularVelocityXDistrubition{
+	rng::UniformRealDistribution<phys::Scalar> launchTangentSpaceAngularVelocityXDistrubition{
 		particleDescription.launchTangentSpaceAngularVelocityMin.getX().in(phys::AngularVelocity3D::UNIT),
 		max(particleDescription.launchTangentSpaceAngularVelocityMin.getX(), particleDescription.launchTangentSpaceAngularVelocityMax.getX()).in(phys::AngularVelocity3D::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchTangentSpaceAngularVelocityYDistrubition{
+	rng::UniformRealDistribution<phys::Scalar> launchTangentSpaceAngularVelocityYDistrubition{
 		particleDescription.launchTangentSpaceAngularVelocityMin.getY().in(phys::AngularVelocity3D::UNIT),
 		max(particleDescription.launchTangentSpaceAngularVelocityMin.getY(), particleDescription.launchTangentSpaceAngularVelocityMax.getY()).in(phys::AngularVelocity3D::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchTangentSpaceAngularVelocityZDistrubition{
+	rng::UniformRealDistribution<phys::Scalar> launchTangentSpaceAngularVelocityZDistrubition{
 		particleDescription.launchTangentSpaceAngularVelocityMin.getZ().in(phys::AngularVelocity3D::UNIT),
 		max(particleDescription.launchTangentSpaceAngularVelocityMin.getZ(), particleDescription.launchTangentSpaceAngularVelocityMax.getZ()).in(phys::AngularVelocity3D::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchTangentSpaceAccelerationXDistrubition{
+	rng::UniformRealDistribution<phys::Scalar> launchTangentSpaceAccelerationXDistrubition{
 		particleDescription.launchTangentSpaceAccelerationMin.getX().in(phys::LinearAcceleration3D::UNIT),
 		max(particleDescription.launchTangentSpaceAccelerationMin.getX(), particleDescription.launchTangentSpaceAccelerationMax.getX()).in(phys::LinearAcceleration3D::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchTangentSpaceAccelerationYDistrubition{
+	rng::UniformRealDistribution<phys::Scalar> launchTangentSpaceAccelerationYDistrubition{
 		particleDescription.launchTangentSpaceAccelerationMin.getY().in(phys::LinearAcceleration3D::UNIT),
 		max(particleDescription.launchTangentSpaceAccelerationMin.getY(), particleDescription.launchTangentSpaceAccelerationMax.getY()).in(phys::LinearAcceleration3D::UNIT),
 	};
-	rng::UniformRealDistribution<float> launchTangentSpaceAccelerationZDistrubition{
+	rng::UniformRealDistribution<phys::Scalar> launchTangentSpaceAccelerationZDistrubition{
 		particleDescription.launchTangentSpaceAccelerationMin.getZ().in(phys::LinearAcceleration3D::UNIT),
 		max(particleDescription.launchTangentSpaceAccelerationMin.getZ(), particleDescription.launchTangentSpaceAccelerationMax.getZ()).in(phys::LinearAcceleration3D::UNIT),
 	};

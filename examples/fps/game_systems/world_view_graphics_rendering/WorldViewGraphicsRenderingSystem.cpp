@@ -37,7 +37,7 @@ public:
 		const gfx::Camera3D& camera) override {
 		GREM_PROFILE_FUNCTION();
 
-		const Box<3, float> totalShadowCasterBoundingBox = worldView.subtickResources.getResource<MapInfo>().bounds.in(phys::METERS);
+		const Box<3, float> totalShadowCasterBoundingBox = static_cast<Box<3, float>>(worldView.subtickResources.getResource<MapInfo>().bounds.in(phys::METERS));
 
 		{
 			GREM_PROFILE_BLOCK("Render shadow maps");
@@ -62,9 +62,9 @@ public:
 			GREM_PROFILE_BLOCK("Render world view");
 			gfx::RenderPass renderPass =
 				(graphics.resolvedColorTexture)
-					? gfx::RenderPass{graphics.device, graphics.resolvedColorTexture, resolveMode, {graphics.renderColorTexture, graphics.renderDepthStencilTexture}, clearMode,
+			        ? gfx::RenderPass{graphics.device, graphics.resolvedColorTexture, resolveMode, {graphics.renderColorTexture, graphics.renderDepthStencilTexture}, clearMode,
 						  viewport}
-					: gfx::RenderPass{graphics.device, {graphics.renderColorTexture, graphics.renderDepthStencilTexture}, clearMode, viewport};
+			        : gfx::RenderPass{graphics.device, {graphics.renderColorTexture, graphics.renderDepthStencilTexture}, clearMode, viewport};
 
 			{
 				GREM_PROFILE_BLOCK("Record depth prepass");

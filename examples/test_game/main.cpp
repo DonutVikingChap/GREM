@@ -662,7 +662,7 @@ private:
 	Duration timerB{};
 	size_t counterA = 0;
 	size_t counterB = 0;
-	LooseQuadtree<Circle<float>> quadtree{Box<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}}, 32.0f};
+	LooseQuadtree<float, Circle<float>> quadtree{Box<2, float>{.min{15.0f, 15.0f}, .max{15.0f + 380.0f, 15.0f + 450.0f}}, 32.0f};
 	Array<gfx::LightID, LIGHT_COUNT> lightIDs{};
 	bool showGUIDemoWindow = false;
 };

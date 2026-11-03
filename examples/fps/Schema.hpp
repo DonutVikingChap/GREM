@@ -227,7 +227,7 @@ struct WeaponDescription {
 		phys::Wavenumber bobbingRate = 0.5_per_meter;
 		phys::Frequency bobbingDecayRate = 4_radians_per_second;
 		phys::Length3D caseEjectionLocalOffset{0.01_meters, 0.03_meters, -0.1_meters};
-		phys::Orientation3D caseEjectionLocalOrientation = phys::Orientation3D::fromAngles(30_degrees, -90_degrees, 0);
+		phys::Orientation3D caseEjectionLocalOrientation = phys::Orientation3D::fromAngles(30_degrees, -90_degrees, 0_degrees);
 		phys::Length3D muzzleFlashLocalOffset{0, 0.03_meters, -0.85_meters};
 		phys::Orientation3D muzzleFlashLocalOrientation{};
 		phys::Time muzzleFlashLightDuration = 50_milliseconds;
@@ -451,33 +451,34 @@ template <size_t N, typename T>
 	return vec<N, T>{parseNumber<T>(jsonValue)};
 }
 
-[[nodiscard]] inline quat parseQuaternion(const json::Value& jsonValue) {
+template <typename T>
+[[nodiscard]] inline qua<T> parseQuaternion(const json::Value& jsonValue) {
 	if (jsonValue.isArray()) {
 		if (jsonValue.getArraySize() == 3) {
-			return convertAnglesToQuaternion(convertDegreesToRadians(parseVector<3, float>(jsonValue)));
+			return convertAnglesToQuaternion(convertDegreesToRadians(parseVector<3, T>(jsonValue)));
 		}
-		const vec4 components = parseVector<4, float>(jsonValue);
-		return quat{components.x, components.y, components.z, components.w};
+		const vec<4, T> components = parseVector<4, T>(jsonValue);
+		return qua<T>{components.x, components.y, components.z, components.w};
 	}
 
 	if (jsonValue.isObject()) {
 		const json::Value* const directionValue = jsonValue.findProperty("direction");
 		const json::Value* const upValue = jsonValue.findProperty("up");
 		if (directionValue && upValue) {
-			const vec3 direction = parseVector<3, float>(*directionValue);
-			const vec3 up = parseVector<3, float>(*upValue);
+			const vec<3, T> direction = parseVector<3, T>(*directionValue);
+			const vec<3, T> up = parseVector<3, T>(*upValue);
 			return quatLookAt(direction, up);
 		}
 
 		const json::Value* const angleValue = jsonValue.findProperty("angle");
 		const json::Value* const axisValue = jsonValue.findProperty("axis");
 		if (angleValue && axisValue) {
-			const float angle = parseNumber<float>(*angleValue);
-			const vec3 axis = parseVector<3, float>(*axisValue);
+			const T angle = parseNumber<T>(*angleValue);
+			const vec<3, T> axis = parseVector<3, T>(*axisValue);
 			return angleAxis(convertDegreesToRadians(angle), axis);
 		}
 
-		return quat{0.0f, 0.0f, 0.0f, 1.0f};
+		return qua<T>{T{0}, T{0}, T{0}, T{1}};
 	}
 
 	throw json::Error{"Expected an array or an object.", jsonValue.getSource()};
@@ -492,7 +493,7 @@ template <size_t C, size_t R, typename T>
 				result = scale(parseVector<3, float>(*scaleValue)) * result;
 			}
 			if (const json::Value* const orientationValue = jsonValue.findProperty("orientation")) {
-				result = rotate(parseQuaternion(*orientationValue)) * result;
+				result = rotate(parseQuaternion<float>(*orientationValue)) * result;
 			}
 			if (const json::Value* const translationValue = jsonValue.findProperty("translation")) {
 				result = translate(parseVector<3, float>(*translationValue)) * result;
@@ -531,15 +532,15 @@ template <size_t N, typename UnitT>
 [[nodiscard]] inline phys::Quantity<N, UnitT> parseQuantity(const json::Value& jsonValue) {
 	if constexpr (N == 1) {
 		if constexpr (same_as<UnitT, phys::Radians> || same_as<UnitT, phys::Absolute<phys::Radians>>) {
-			return parseNumber<float>(jsonValue) * phys::DEGREES;
+			return parseNumber<phys::Scalar>(jsonValue) * phys::DEGREES;
 		} else {
-			return parseNumber<float>(jsonValue) * UnitT{};
+			return parseNumber<phys::Scalar>(jsonValue) * UnitT{};
 		}
 	} else {
 		if constexpr (same_as<UnitT, phys::Radians> || same_as<UnitT, phys::Absolute<phys::Radians>>) {
-			return parseVector<N, float>(jsonValue) * phys::DEGREES;
+			return parseVector<N, phys::Scalar>(jsonValue) * phys::DEGREES;
 		} else {
-			return parseVector<N, float>(jsonValue) * UnitT{};
+			return parseVector<N, phys::Scalar>(jsonValue) * UnitT{};
 		}
 	}
 }
@@ -547,9 +548,9 @@ template <size_t N, typename UnitT>
 template <size_t N>
 [[nodiscard]] inline phys::Orientation<N> parseOrientation(const json::Value& jsonValue) {
 	if constexpr (N == 2) {
-		return phys::Orientation2D{parseNumber<float>(jsonValue) * phys::DEGREES};
+		return phys::Orientation2D{parseNumber<phys::Scalar>(jsonValue) * phys::DEGREES};
 	} else {
-		return phys::Orientation3D{parseQuaternion(jsonValue)};
+		return phys::Orientation3D{parseQuaternion<phys::Scalar>(jsonValue)};
 	}
 }
 
@@ -637,8 +638,9 @@ inline void parseValue(const json::Value& jsonValue, vec<N, T>& value) {
 	value = parseVector<N, T>(jsonValue);
 }
 
-inline void parseValue(const json::Value& jsonValue, quat& value) {
-	value = parseQuaternion(jsonValue);
+template <typename T>
+inline void parseValue(const json::Value& jsonValue, qua<T>& value) {
+	value = parseQuaternion<T>(jsonValue);
 }
 
 template <size_t C, size_t R, typename T>
@@ -1045,23 +1047,24 @@ inline void parseEntityComponent(ParseEntityComponentContext& context, const jso
 	}
 }
 
-inline void parseEntityComponent(ParseEntityComponentContext& context, const json::Value& jsonValue, quat& value) {
+template <typename T>
+inline void parseEntityComponent(ParseEntityComponentContext& context, const json::Value& jsonValue, qua<T>& value) {
 	if (jsonValue.isArray()) {
 		if (jsonValue.getArraySize() == 3) {
-			vec3 pitchYawRollAngles{};
+			vec<3, T> pitchYawRollAngles{};
 			parseEntityComponent(context, jsonValue, pitchYawRollAngles);
 			value = convertAnglesToQuaternion(convertDegreesToRadians(pitchYawRollAngles));
 		} else {
-			vec4 components{};
+			vec<4, T> components{};
 			parseEntityComponent(context, jsonValue, components);
-			value = quat{components.x, components.y, components.z, components.w};
+			value = qua<T>{components.x, components.y, components.z, components.w};
 		}
 	} else if (jsonValue.isObject()) {
 		const json::Value* const directionValue = jsonValue.findProperty("direction");
 		const json::Value* const upValue = jsonValue.findProperty("up");
 		if (directionValue && upValue) {
-			vec3 direction{};
-			vec3 up{};
+			vec<3, T> direction{};
+			vec<3, T> up{};
 			parseEntityComponent(context, *directionValue, direction);
 			parseEntityComponent(context, *upValue, up);
 			value = quatLookAt(direction, up);
@@ -1069,13 +1072,13 @@ inline void parseEntityComponent(ParseEntityComponentContext& context, const jso
 			const json::Value* const angleValue = jsonValue.findProperty("angle");
 			const json::Value* const axisValue = jsonValue.findProperty("axis");
 			if (angleValue && axisValue) {
-				float angle{};
-				vec3 axis{};
+				T angle{};
+				vec<3, T> axis{};
 				parseEntityComponent(context, *angleValue, angle);
 				parseEntityComponent(context, *axisValue, axis);
 				value = angleAxis(convertDegreesToRadians(angle), axis);
 			} else {
-				value = quat{0.0f, 0.0f, 0.0f, 1.0f};
+				value = qua<T>{T{0}, T{0}, T{0}, T{1}};
 			}
 		}
 	} else {
@@ -1155,7 +1158,7 @@ inline void parseEntityComponent(ParseEntityComponentContext& context, const jso
 template <size_t N, typename UnitT>
 inline void parseEntityComponent(ParseEntityComponentContext& context, const json::Value& jsonValue, phys::Quantity<N, UnitT>& value) {
 	if constexpr (N == 1) {
-		float component{};
+		phys::Scalar component{};
 		parseEntityComponent(context, jsonValue, component);
 		if constexpr (same_as<UnitT, phys::Radians> || same_as<UnitT, phys::Absolute<phys::Radians>>) {
 			value = component * phys::DEGREES;
@@ -1163,7 +1166,7 @@ inline void parseEntityComponent(ParseEntityComponentContext& context, const jso
 			value = component * UnitT{};
 		}
 	} else {
-		vec<N, float> components{};
+		vec<N, phys::Scalar> components{};
 		parseEntityComponent(context, jsonValue, components);
 		if constexpr (same_as<UnitT, phys::Radians> || same_as<UnitT, phys::Absolute<phys::Radians>>) {
 			value = components * phys::DEGREES;
@@ -1176,11 +1179,11 @@ inline void parseEntityComponent(ParseEntityComponentContext& context, const jso
 template <size_t N>
 inline void parseEntityComponent(ParseEntityComponentContext& context, const json::Value& jsonValue, phys::Orientation<N>& value) {
 	if constexpr (N == 2) {
-		float angleInDegrees{};
+		phys::Scalar angleInDegrees{};
 		parseEntityComponent(context, jsonValue, angleInDegrees);
 		value = phys::Orientation2D{angleInDegrees * phys::DEGREES};
 	} else {
-		quat quaternion{};
+		qua<phys::Scalar> quaternion{};
 		parseEntityComponent(context, jsonValue, quaternion);
 		value = phys::Orientation3D{quaternion};
 	}
@@ -1460,7 +1463,7 @@ struct StateComponentDescription {
 							 [[maybe_unused]] phys::Orientation3D orientation) -> void {
 				if constexpr (same_as<T, phys::Position3D>) {
 					phys::Position3D& p = registry.getComponent<phys::Position3D>(entityID);
-					p = position + orientation(p - 0);
+					p = position + orientation(+p);
 				} else if constexpr (same_as<T, phys::Orientation3D>) {
 					phys::Orientation3D& o = registry.getComponent<phys::Orientation3D>(entityID);
 					o = orientation * o;
