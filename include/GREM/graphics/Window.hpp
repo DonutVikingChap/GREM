@@ -198,7 +198,7 @@ public:
 	 * \throws graphics::Error on failure.
 	 * \throws std::bad_alloc on allocation failure.
 	 *
-	 * \sa WindowOptions::parent
+	 * \sa Window(Parent&, const WindowOptions&)
 	 * \sa getParent()
 	 */
 	GREM_API(graphics) void setParent(Window* newParent);
