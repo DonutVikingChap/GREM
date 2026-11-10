@@ -1,14 +1,12 @@
-// SPDX-FileCopyrightText: 2026 Ivar Härnqvist
-// SPDX-License-Identifier: MIT
-
 #include "vehicle.hpp"
 
-#include <GREM/GREM.hpp>
-#include <GREM/aliases.hpp>
+#include <GREM/GREM.hpp>    // GREM_..., grem::...
+#include <GREM/aliases.hpp> // ...
 
 #include "../Audio.hpp"
 #include "../Graphics.hpp"
 #include "../System.hpp"
+#include "../WorldView.hpp"
 #include "../physics.hpp"
 #include "level.hpp"
 #include "object.hpp"
@@ -38,29 +36,40 @@ struct VehicleSettingsJSON {
 
 		struct Body {
 			phys::Mass mass = 1600_kilograms;
-			phys::Material material{.linearDrag = 0.1_x, .angularDrag = 0.1_x};
+			phys::Material material{};
 			phys::Length3D downforceOffset{};
 			phys::Area downforceEffectiveArea = 0.5_square_meters;
 		} body{};
 
 		struct Engine {
-			phys::Coefficient flatness = 15_x; // Typical range: [10, 18]
-			phys::Quantity<1, Horsepower> idealHP = 170.0f * HORSEPOWER;
-			phys::Quantity<1, Horsepower> redlineHP = 140.0f * HORSEPOWER;
+			phys::Coefficient flatness = 12_x;               // Typical range: [10, 18]
+			phys::Coefficient falloffCloseness = 0.05_x;     // Typical range: [0.01, 1]
+			phys::Coefficient falloffSharpness = 13_x;       // Typical range: [10, 50]
+			phys::Coefficient mechanicalEfficiency = 0.82_x; // Typical range: [0.5, 0.99]
+			phys::Quantity<1, Horsepower> horsepower = 170.0f * HORSEPOWER;
 			phys::Quantity<1, phys::RevolutionsPerMinute> stallRPM = 100_revolutions_per_minute;
 			phys::Quantity<1, phys::RevolutionsPerMinute> idleRPM = 750_revolutions_per_minute;
 			phys::Quantity<1, phys::RevolutionsPerMinute> idealRPM = 3500_revolutions_per_minute;
 			phys::Quantity<1, phys::RevolutionsPerMinute> redlineRPM = 6000_revolutions_per_minute;
 			phys::Quantity<1, phys::RevolutionsPerMinute> automaticCruiseShiftUpThresholdRPM = 2000_revolutions_per_minute;
 			phys::Quantity<1, phys::RevolutionsPerMinute> automaticCruiseShiftDownThresholdRPM = min(idleRPM * 1.5_x, automaticCruiseShiftUpThresholdRPM * 0.5_x);
-			phys::Quantity<1, phys::RevolutionsPerMinute> automaticGasShiftUpThresholdRPM = lerp(idealRPM, redlineRPM, 0.8_x);
+			phys::Quantity<1, phys::RevolutionsPerMinute> automaticGasShiftUpThresholdRPM = midpoint(idealRPM, redlineRPM);
 			phys::Quantity<1, phys::RevolutionsPerMinute> automaticGasShiftDownThresholdRPM = min(idealRPM * 0.8_x, automaticGasShiftUpThresholdRPM * 0.8_x);
+			phys::Quantity<1, phys::RevolutionsPerMinute> starterMotorRPM = midpoint(stallRPM, idleRPM);
 			phys::Time automaticShiftUpTime = 0.25_seconds;
 			phys::Time automaticShiftDownTime = 0.5_seconds;
-			phys::MomentOfInertia2D rotationalInertia = 0.2_kilogram_square_meters;
-			phys::Frequency synchronizationFrequency = 30_Hertz;
-			phys::Frequency frictionFrequency = 0.5_Hertz;
+			phys::MomentOfInertia2D momentOfInertia = 0.1_kilogram_square_meters;
+			phys::AngularViscousDamping synchronizationDamping = 3_Newton_meter_seconds_per_radian;
 			phys::Time startupTime = 1_second;
+
+			[[nodiscard]] phys::Torque2D getAvailableTorque(phys::AngularSpeed angularSpeed) const {
+				const phys::Coefficient torqueCurve = exp(-length2((angularSpeed - idealRPM.as(phys::AngularSpeed::UNIT)) / (length2(flatness) * phys::Frequency::UNIT)));
+				const phys::Coefficient falloffCurve =
+					1_x - falloffCloseness * exp(falloffSharpness * (angularSpeed - redlineRPM.as(phys::AngularSpeed::UNIT)) / redlineRPM.as(phys::AngularSpeed::UNIT));
+				const phys::Torque2D torqueRangeBegin = mechanicalEfficiency * horsepower.as(phys::Power::UNIT) / redlineRPM.as(phys::AngularSpeed::UNIT);
+				const phys::Torque2D torqueRangeEnd = horsepower.as(phys::Power::UNIT) / idealRPM.as(phys::AngularSpeed::UNIT);
+				return lerp(torqueRangeBegin, torqueRangeEnd, torqueCurve) * falloffCurve;
+			}
 		} engine{};
 
 		struct Transmission {
@@ -74,8 +83,9 @@ struct VehicleSettingsJSON {
 		} drive{};
 
 		struct Differential {
-			phys::Coefficient locking = 0.4_x;
-			phys::Coefficient ratio = 4.1_x;
+			phys::Coefficient locking = 0.25_x;
+			phys::Coefficient gearRatio = 3.9_x;
+			phys::Quantity<1, phys::RevolutionsPerMinute> maxLockedSpeedDifference = 60_revolutions_per_minute;
 		} differential{};
 
 		struct Turning {
@@ -84,14 +94,14 @@ struct VehicleSettingsJSON {
 		} turning{};
 
 		struct Brakes {
+			phys::Coefficient deadzone = 0.1_x;
 			phys::Coefficient balance = 0.65_x;
-			phys::Torque2D torque = 3500_Newton_meters;
+			phys::Torque2D torque = 3800_Newton_meters;
 		} brakes{};
 
 		struct Wheels {
-			phys::Frequency synchronizationFrequency = 30_Hertz;
-			phys::Frequency frictionFrequency = 0.05_Hertz;
-			phys::MomentOfInertia2D rotationalInertia = 0.7_kilogram_square_meters;
+			phys::MomentOfInertia2D momentOfInertia = 0.6_kilogram_square_meters;
+			phys::AngularViscousDamping damping = 0.05_Newton_meter_seconds_per_radian;
 		} wheels{};
 
 		struct Tires {
@@ -107,23 +117,34 @@ struct VehicleSettingsJSON {
 				}
 			};
 
-			Friction turningLongitudalFriction{.peak = 1.7_x};
-			Friction turningLateralFriction{.shape = 1.6_x, .peak = 1.4_x};
-			Friction nonTurningLongitudalFriction{.peak = 1.7_x};
-			Friction nonTurningLateralFriction{.shape = 1.6_x, .peak = 1.2_x};
+			Friction turningLongitudalFriction{.shape = 1.9_x, .peak = 1.7_x};
+			Friction turningLateralFriction{.shape = 1.6_x, .peak = 1.6_x};
+			phys::Coefficient turningRollingResistance = 0.005_x;
+			Friction nonTurningLongitudalFriction{.shape = 1.9_x, .peak = 1.7_x};
+			Friction nonTurningLateralFriction{.shape = 1.6_x, .peak = 1.6_x};
+			phys::Coefficient nonTurningRollingResistance = 0.005_x;
 		} tires{};
 
 		struct Suspension {
-			phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 100_Newton_per_millimeter;
-			phys::Coefficient dampingRatio = 0.5_x;
-			phys::Distance maxOffset = 0.25_meters;
-			phys::Force1D maxForce = 100000_Newton;
+			struct Springs {
+				phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 75_Newton_per_millimeter;
+				phys::Coefficient dampingRatio = 0.5_x;
+				phys::Distance maxOffset = 0.25_meters;
 
-			struct TurningWheelMultipliers {
-				phys::Coefficient stiffness = 0.8_x;
-				phys::Coefficient dampingRatio = 0.8_x;
-				phys::Coefficient maxOffset = 0.8_x;
-			} turningWheelMultipliers{};
+				struct TurningWheelMultipliers {
+					phys::Coefficient stiffness = 1.4_x;
+					phys::Coefficient dampingRatio = 1.0_x;
+					phys::Coefficient maxOffset = 1.0_x;
+				} turningWheelMultipliers{};
+			} springs{};
+
+			struct AntiRollBar {
+				phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 65_Newton_per_millimeter;
+
+				struct TurningWheelMultipliers {
+					phys::Coefficient stiffness = 1.35_x;
+				} turningWheelMultipliers{};
+			} antiRollBar{};
 		} suspension{};
 
 		struct Seat {
@@ -142,7 +163,7 @@ struct VehicleInfo {
 		phys::Distance radius;
 		phys::Distance halfWidth;
 		res::Model::JointIndex jointIndex;
-		phys::MassFlowRate suspensionDamping;
+		phys::LinearViscousDamping suspensionDamping;
 		bool turns;
 		bool drives;
 	};
@@ -178,8 +199,9 @@ struct VehicleSeats {
 };
 
 struct VehicleEngine {
-	phys::AngularSpeed rotationalSpeed{};
-	phys::AngularSpeed previousRotationalSpeed = rotationalSpeed;
+	int32_t gear = 0; // -1: reverse, 0: neutral, 1+: drive
+	phys::AngularSpeed angularSpeed{};
+	phys::AngularSpeed previousAngularSpeed = angularSpeed;
 	phys::Time startingTime{};
 	phys::Time timeSpentBelowShiftDownThreshold{};
 	phys::Time timeSpentAboveShiftUpThreshold{};
@@ -187,22 +209,26 @@ struct VehicleEngine {
 	bool starting = false;
 };
 
-struct VehicleDrivetrain {
-	int32_t gear = 0; // -1: reverse, 0: neutral, 1+: drive
-	phys::Torque2D torque{};
-	phys::AngularVelocity2D rotationalVelocity{};
-};
-
 struct VehicleWheels {
 	struct Wheel {
+		struct Contact {
+			phys::EntityID objectID;
+			phys::Length3D offsetA;
+			phys::Length3D offsetB;
+			phys::Direction3D normal;
+			phys::LinearVelocity3D relativeVelocity;
+			phys::Length1D suspensionOffset;
+		};
+
 		phys::Length3D suspensionOffset{};
 		phys::Length3D previousSuspensionOffset = suspensionOffset;
 		phys::Orientation3D suspensionOrientation{};
 		phys::Orientation3D previousSuspensionOrientation = suspensionOrientation;
-		phys::AbsoluteAngle rotationAngle{};
-		phys::AbsoluteAngle previousRotationAngle = rotationAngle;
-		phys::AngularVelocity2D rotationalVelocity{};
-		phys::AngularVelocity2D previousRotationalVelocity = rotationalVelocity;
+		phys::AbsoluteAngle angle{};
+		phys::AbsoluteAngle previousAngle = angle;
+		phys::AngularVelocity2D angularVelocity{};
+		phys::AngularVelocity2D previousAngularVelocity = angularVelocity;
+		Optional<Contact> contact{};
 	};
 
 	ArrayList<Wheel> wheels{};
@@ -338,15 +364,60 @@ void controlVehicles(exec::Entities<VehicleControls, const VehicleEngine, const 
 	}
 }
 
-void simulateVehicleEngines(exec::Entities<phys::Position3D, phys::Orientation3D, phys::Scale3D, phys::LinearVelocity3D, phys::AngularVelocity3D, VehicleEngine, VehicleDrivetrain,
-								const VehicleWheels, const VehicleControls, const VehicleType>
-								vehicleEntities,
-	const phys::SimulationOptions3D& simulationOptions) {
+void simulateVehicles(exec::Entities<phys::Position3D, phys::Orientation3D, phys::Scale3D, phys::ObjectActivity, phys::LinearVelocity3D, phys::AngularVelocity3D, VehicleEngine,
+						  VehicleWheels, const phys::InverseMass, const phys::InverseMomentOfInertiaTensor3D, const phys::FluidDensity, const VehicleControls, const VehicleType>
+						  vehicleEntities,
+	exec::Entities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D> objectEntities,
+	exec::Entities<phys::ObjectActivity, phys::LinearVelocity3D, phys::AngularVelocity3D, const phys::InverseMass, const phys::InverseMomentOfInertiaTensor3D> kinematicsEntities,
+	exec::Entities<const phys::Material> materialEntities, const VehicleInfos& infos, const phys::Broadphase3D& broadphase, const phys::SimulationOptions3D& simulationOptions) {
 	const phys::Time deltaTime = simulationOptions.stepInterval;
 
-	for (auto&& [entityID, position, orientation, scale, linearVelocity, angularVelocity, engine, drivetrain, wheels, controls, type] : vehicleEntities) {
-		engine.previousRotationalSpeed = engine.rotationalSpeed;
+	for (auto&& [entityID, position, orientation, scale, activity, linearVelocity, angularVelocity, engine, wheels, inverseMass, inverseMomentOfInertiaTensor,
+			 surroundingFluidDensity, controls, type] : vehicleEntities) {
+		const VehicleInfo& info = infos.at(type);
+		const size_t wheelCount = info.wheels.size();
+		GREM_ASSERT(wheels.wheels.size() == wheelCount);
 
+		// Save previous state for interpolation.
+		engine.previousAngularSpeed = engine.angularSpeed;
+		for (size_t wheelIndex = 0; wheelIndex < wheelCount; ++wheelIndex) {
+			VehicleWheels::Wheel& wheel = wheels.wheels[wheelIndex];
+			wheel.previousSuspensionOffset = wheel.suspensionOffset;
+			wheel.previousSuspensionOrientation = wheel.suspensionOrientation;
+			wheel.previousAngle = wheel.angle;
+			wheel.previousAngularVelocity = wheel.angularVelocity;
+		}
+
+		// Apply downforce to vehicle body.
+		const phys::OrthonormalBasis3D bodyBasis = rotate(orientation);
+		const phys::LinearVelocity1D bodyForwardVelocity = max(dot(linearVelocity, -bodyBasis[phys::Z]), phys::LinearVelocity1D{});
+		const phys::Force3D downforce = -0.5_x * surroundingFluidDensity * length2(bodyForwardVelocity) * type->body.downforceEffectiveArea * bodyBasis[phys::Y];
+		phys::applyCorrectionImpulse(activity, linearVelocity, angularVelocity, inverseMass, inverseMomentOfInertiaTensor, downforce * deltaTime,
+			orientation(scale * type->body.downforceOffset));
+
+		// Count the total number of driven wheels and find the fastest/slowest ones.
+		size_t fastestDrivenWheelIndex = wheelCount;
+		size_t slowestDrivenWheelIndex = wheelCount;
+		phys::Coefficient drivenWheelCount{};
+		for (size_t wheelIndex = 0; wheelIndex < wheelCount; ++wheelIndex) {
+			const VehicleWheels::Wheel& wheel = wheels.wheels[wheelIndex];
+			const VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
+			if (wheelInfo.drives) {
+				if (fastestDrivenWheelIndex >= wheelCount || abs(wheel.angularVelocity) > abs(wheels.wheels[fastestDrivenWheelIndex].angularVelocity)) {
+					fastestDrivenWheelIndex = wheelIndex;
+				}
+				if (slowestDrivenWheelIndex >= wheelCount || abs(wheel.angularVelocity) < abs(wheels.wheels[slowestDrivenWheelIndex].angularVelocity)) {
+					slowestDrivenWheelIndex = wheelIndex;
+				}
+				drivenWheelCount += 1_x;
+			}
+		}
+		const phys::AngularSpeed drivenWheelSpeedDifference =
+			(fastestDrivenWheelIndex < wheelCount)
+		        ? phys::AngularSpeed{abs(abs(wheels.wheels[fastestDrivenWheelIndex].angularVelocity) - abs(wheels.wheels[slowestDrivenWheelIndex].angularVelocity))}
+		        : phys::AngularSpeed{};
+
+		// Handle engine start/stop.
 		switch (controls.keyPosition) {
 			case VehicleControls::KeyPosition::OFF:
 				engine.running = false;
@@ -360,7 +431,7 @@ void simulateVehicleEngines(exec::Entities<phys::Position3D, phys::Orientation3D
 						engine.startingTime = {};
 					}
 					if (engine.startingTime < type->engine.startupTime) {
-						engine.rotationalSpeed = max(engine.rotationalSpeed, midpoint(type->engine.stallRPM, type->engine.idleRPM).as(phys::AngularSpeed::UNIT));
+						engine.angularSpeed = max(engine.angularSpeed, type->engine.starterMotorRPM.as(phys::AngularSpeed::UNIT));
 						if (countup(engine.startingTime, deltaTime, type->engine.startupTime)) {
 							engine.running = true;
 							engine.starting = false;
@@ -370,48 +441,41 @@ void simulateVehicleEngines(exec::Entities<phys::Position3D, phys::Orientation3D
 				break;
 		}
 
+		// Get driver controls.
 		const phys::Coefficient clutch = clamp(controls.clutchDirect + controls.clutchSmooth, 0_x, 1_x);
+		const phys::Coefficient brake = clamp(controls.brakeDirect + controls.brakeSmooth, 0_x, 1_x);
 		const phys::Coefficient gas = clamp(controls.gasDirect + controls.gasSmooth, 0_x, 1_x);
+		const phys::Coefficient handbrake = clamp(controls.handbrake, 0_x, 1_x);
+		const phys::Scale1D steering = clamp(controls.steeringDirect + controls.steeringSmooth + controls.steeringFromAim, -1_x, 1_x);
 
-		const phys::Coefficient oldEngagement = (drivetrain.gear == 0) ? 0_x : (1_x - clutch);
-		const phys::Coefficient oldGearRatio =
-			(drivetrain.gear == 0)  ? 1_x
-			: (drivetrain.gear < 0) ? -type->transmission.reverseGearRatio
-			                        : type->transmission.gearRatios[static_cast<size_t>(drivetrain.gear - 1)];
-		const phys::AngularVelocity2D disengagedRotationalVelocity = engine.rotationalSpeed;
-		const phys::AngularVelocity2D engagedRotationalVelocity = drivetrain.rotationalVelocity * oldGearRatio;
-		const phys::AngularVelocity2D expectedRotationalVelocity =
-			min(lerp(disengagedRotationalVelocity, engagedRotationalVelocity, oldEngagement), type->engine.redlineRPM.as(phys::AngularSpeed::UNIT));
-		engine.rotationalSpeed = expDecay(engine.rotationalSpeed, expectedRotationalVelocity, type->engine.synchronizationFrequency, deltaTime);
-		engine.rotationalSpeed = expDecay(engine.rotationalSpeed, type->engine.frictionFrequency, deltaTime);
-
+		// Shift gears.
+		phys::Coefficient engagement{};
 		if (type->transmission.automatic) {
 			if (engine.running) {
 				if (controls.gearStickPosition == 0) {
-					drivetrain.gear = 0;
+					engine.gear = 0;
 				} else {
-					const bool aboutToStall = engine.rotationalSpeed < type->engine.stallRPM.as(phys::AngularSpeed::UNIT) * 2_x;
-					const bool cruising = gas < 0.5_x;
+					if (engine.angularSpeed > type->engine.stallRPM.as(phys::AngularSpeed::UNIT)) {
+						engagement =
+							clamp(unlerp(engine.angularSpeed, type->engine.stallRPM.as(phys::AngularSpeed::UNIT), type->engine.idleRPM.as(phys::AngularSpeed::UNIT)), 0_x, 1_x);
+					}
+					const bool braking = brake > type->brakes.deadzone;
+					const bool cruising = engine.gear == 0 || (!braking && gas > 0.1_x && gas < 0.5_x);
 					const phys::AngularSpeed shiftUpThreshold =
 						((cruising) ? type->engine.automaticCruiseShiftUpThresholdRPM : type->engine.automaticGasShiftUpThresholdRPM).as(phys::AngularSpeed::UNIT);
 					const phys::AngularSpeed shiftDownThreshold =
 						((cruising) ? type->engine.automaticCruiseShiftDownThresholdRPM : type->engine.automaticGasShiftDownThresholdRPM).as(phys::AngularSpeed::UNIT);
-					if (aboutToStall && drivetrain.gear != 0) {
-						drivetrain.gear = 0;
-						engine.timeSpentBelowShiftDownThreshold = {};
-						engine.timeSpentAboveShiftUpThreshold = {};
-					} else if (drivetrain.gear != 0 && engine.rotationalSpeed < shiftDownThreshold) {
-						if (countup(engine.timeSpentBelowShiftDownThreshold, deltaTime, type->engine.automaticShiftDownTime)) {
-							drivetrain.gear = (controls.gearStickPosition < 0) ? 0 : max(drivetrain.gear - 1, int32_t{0});
+					if (engine.gear > 1 && engine.angularSpeed < shiftDownThreshold) {
+						if (braking || countup(engine.timeSpentBelowShiftDownThreshold, deltaTime, type->engine.automaticShiftDownTime)) {
+							engine.gear = (controls.gearStickPosition < 0) ? 0 : max(engine.gear - 1, int32_t{0});
 							engine.timeSpentBelowShiftDownThreshold = {};
 						}
 					} else {
 						engine.timeSpentBelowShiftDownThreshold = {};
-						if (engine.rotationalSpeed > shiftUpThreshold ||
-							(drivetrain.gear == 0 && engine.rotationalSpeed > type->engine.idleRPM.as(phys::AngularSpeed::UNIT) * 1.5_x)) {
-							if (engine.rotationalSpeed > type->engine.redlineRPM.as(phys::AngularSpeed::UNIT) || drivetrain.gear == 0 ||
+						if (engine.gear == 0 || engine.angularSpeed > shiftUpThreshold) {
+							if (engine.angularSpeed > type->engine.redlineRPM.as(phys::AngularSpeed::UNIT) || engine.gear == 0 ||
 								countup(engine.timeSpentAboveShiftUpThreshold, deltaTime, type->engine.automaticShiftUpTime)) {
-								drivetrain.gear = (controls.gearStickPosition < 0) ? -1 : min(drivetrain.gear + 1, static_cast<int32_t>(type->transmission.gearRatios.size()));
+								engine.gear = (controls.gearStickPosition < 0) ? -1 : min(engine.gear + 1, static_cast<int32_t>(type->transmission.gearRatios.size()));
 								engine.timeSpentAboveShiftUpThreshold = {};
 							}
 						} else {
@@ -420,199 +484,221 @@ void simulateVehicleEngines(exec::Entities<phys::Position3D, phys::Orientation3D
 					}
 				}
 			} else {
-				drivetrain.gear = 0;
+				engine.gear = 0;
 			}
 		} else {
-			drivetrain.gear = clamp(controls.gearStickPosition, -1, static_cast<int32_t>(type->transmission.gearRatios.size()));
+			engine.gear = clamp(controls.gearStickPosition, -1, static_cast<int32_t>(type->transmission.gearRatios.size()));
+			engagement = (engine.gear == 0) ? 0_x : 1_x - clutch;
 		}
 
-		const phys::Torque2D minTorque = type->engine.redlineHP.as(phys::Power::UNIT) / type->engine.redlineRPM.as(phys::AngularSpeed::UNIT);
-		const phys::Torque2D maxTorque = type->engine.idealHP.as(phys::Power::UNIT) / type->engine.idealRPM.as(phys::AngularSpeed::UNIT);
-		const phys::Coefficient torqueCurve =
-			exp(-length2((engine.rotationalSpeed - type->engine.idealRPM.as(phys::AngularSpeed::UNIT)) / (length2(type->engine.flatness) * phys::Frequency::UNIT)));
-		const phys::Torque2D availableTorque = (engine.running) ? lerp(minTorque, maxTorque, torqueCurve) : phys::Torque2D{};
-		const phys::Torque2D idleTorque =
-			(engine.running) ? min(type->engine.frictionFrequency * type->engine.idleRPM.as(phys::AngularSpeed::UNIT) * type->engine.rotationalInertia, availableTorque)
-			                 : phys::Torque2D{};
-		const phys::Torque2D torque = lerp(idleTorque, availableTorque, gas);
+		// Calculate engine torque.
+		const phys::Torque2D engineWideOpenThrottleTorqueAtIdleSpeed = type->engine.getAvailableTorque(type->engine.idleRPM.as(phys::AngularSpeed::UNIT));
+		const phys::Torque2D engineClosedThrottleTorque =
+			(type->engine.mechanicalEfficiency - 1_x) * engineWideOpenThrottleTorqueAtIdleSpeed * (engine.angularSpeed - type->engine.idleRPM.as(phys::AngularSpeed::UNIT)) /
+			type->engine.idleRPM.as(phys::AngularSpeed::UNIT);
+		const phys::Torque2D engineWideOpenThrottleTorque = max(type->engine.getAvailableTorque(engine.angularSpeed), min(engineClosedThrottleTorque, phys::Torque2D{}));
+		const phys::Torque2D engineTorque = (engine.running) ? lerp(engineClosedThrottleTorque, engineWideOpenThrottleTorque, gas) : phys::Torque2D{};
 
-		const phys::Coefficient engagement = (drivetrain.gear == 0) ? 0_x : (1_x - clutch);
-		const phys::Coefficient gearRatio =
-			(drivetrain.gear == 0)  ? 1_x
-			: (drivetrain.gear < 0) ? -type->transmission.reverseGearRatio
-			                        : type->transmission.gearRatios[static_cast<size_t>(drivetrain.gear - 1)];
-		drivetrain.torque = torque * engagement * gearRatio;
+		// Calculate torque transmitted to driven wheels.
+		const phys::Scale1D transmissionGearRatio =
+			(engine.gear == 0)  ? 1_x
+			: (engine.gear < 0) ? -type->transmission.reverseGearRatio
+			                    : type->transmission.gearRatios[static_cast<size_t>(engine.gear - 1)];
+		const phys::Coefficient combinedGearRatio = transmissionGearRatio * type->differential.gearRatio;
+		const phys::Torque2D driveTorque = engagement * engineTorque * combinedGearRatio;
 
-		engine.rotationalSpeed += torque * deltaTime / type->engine.rotationalInertia;
-		if (engine.rotationalSpeed < type->engine.stallRPM.as(phys::AngularSpeed::UNIT)) {
-			engine.rotationalSpeed = 0;
-			engine.running = false;
-		}
+		// Apply torque to the engine.
+		const phys::MomentOfInertia2D engineMomentOfInertia =
+			type->engine.momentOfInertia + engagement * drivenWheelCount * type->wheels.momentOfInertia / length2(combinedGearRatio);
+		const phys::MomentOfInertia2D driveMomentOfInertia =
+			drivenWheelCount * type->wheels.momentOfInertia + engagement * type->engine.momentOfInertia * length2(combinedGearRatio);
+		engine.angularSpeed += engineTorque * deltaTime / engineMomentOfInertia;
 
-		drivetrain.rotationalVelocity = lerp(drivetrain.rotationalVelocity, engine.rotationalSpeed / gearRatio, engagement);
-	}
-}
-
-void simulateVehicleWheels(
-	exec::Entities<phys::Position3D, phys::Orientation3D, phys::Scale3D, phys::ObjectActivity, phys::LinearVelocity3D, phys::AngularVelocity3D, VehicleWheels, VehicleDrivetrain,
-		const phys::InverseMass, const phys::InverseMomentOfInertiaTensor3D, const phys::FluidDensity, const VehicleControls, const VehicleType>
-		vehicleEntities,
-	exec::Entities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D> objectEntities,
-	exec::Entities<phys::ObjectActivity, phys::LinearVelocity3D, phys::AngularVelocity3D, const phys::InverseMass, const phys::InverseMomentOfInertiaTensor3D> kinematicsEntities,
-	exec::Entities<const phys::Material> materialEntities, const VehicleInfos& infos, const phys::Broadphase3D& broadphase, const phys::SimulationOptions3D& simulationOptions) {
-	const phys::Time deltaTime = simulationOptions.stepInterval;
-
-	for (auto&& [entityID, position, orientation, scale, activity, linearVelocity, angularVelocity, wheels, drivetrain, inverseMass, inverseMomentOfInertiaTensor,
-			 surroundingFluidDensity, controls, type] : vehicleEntities) {
-		const VehicleInfo& info = infos.at(type);
-
-		const phys::OrthonormalBasis3D bodyBasis = rotate(orientation);
-		const phys::LinearVelocity1D bodyForwardVelocity = max(dot(linearVelocity, -bodyBasis[phys::Z]), phys::LinearVelocity1D{});
-		const phys::Force3D downforce = -0.5_x * surroundingFluidDensity * length2(bodyForwardVelocity) * type->body.downforceEffectiveArea * bodyBasis[phys::Y];
-		phys::applyCorrectionImpulse(activity, linearVelocity, angularVelocity, inverseMass, inverseMomentOfInertiaTensor, downforce * deltaTime,
-			orientation(scale * type->body.downforceOffset));
-
-		const phys::Coefficient brake = clamp(controls.brakeDirect + controls.brakeSmooth, 0_x, 1_x);
-		const phys::Coefficient handbrake = clamp(controls.handbrake, 0_x, 1_x);
-		const phys::Scale1D steering = clamp(controls.steeringDirect + controls.steeringSmooth + controls.steeringFromAim, -1_x, 1_x);
-		const phys::Angle centerTurnAngle = steering * info.maxTurnAngle;
-
-		const size_t wheelCount = info.wheels.size();
-
-		size_t fastestDrivenWheelIndex = wheelCount;
-		size_t slowestDrivenWheelIndex = wheelCount;
-		phys::Coefficient drivenWheelCount{};
-		for (size_t wheelIndex = 0; wheelIndex < wheelCount; ++wheelIndex) {
-			const VehicleWheels::Wheel& wheel = wheels.wheels[wheelIndex];
-			const VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
-			if (wheelInfo.drives) {
-				if (fastestDrivenWheelIndex >= wheelCount || abs(wheel.rotationalVelocity) > abs(wheels.wheels[fastestDrivenWheelIndex].rotationalVelocity)) {
-					fastestDrivenWheelIndex = wheelIndex;
-				}
-				if (slowestDrivenWheelIndex >= wheelCount || abs(wheel.rotationalVelocity) < abs(wheels.wheels[slowestDrivenWheelIndex].rotationalVelocity)) {
-					slowestDrivenWheelIndex = wheelIndex;
-				}
-				drivenWheelCount += 1_x;
-			}
-		}
-		const phys::AngularSpeed drivenWheelSpeedDifference =
-			(fastestDrivenWheelIndex < wheelCount)
-		        ? phys::AngularSpeed{abs(abs(wheels.wheels[fastestDrivenWheelIndex].rotationalVelocity) - abs(wheels.wheels[slowestDrivenWheelIndex].rotationalVelocity))}
-		        : phys::AngularSpeed{};
-
-		const phys::AngularVelocity2D driveRotationalVelocity = drivetrain.rotationalVelocity / type->differential.ratio;
-
-		drivetrain.rotationalVelocity = {};
+		// Calculate wheel contacts.
+		phys::Length1D turningWheelRelativeSuspensionOffset{};
+		phys::Length1D nonTurningWheelRelativeSuspensionOffset{};
 		for (size_t wheelIndex = 0; wheelIndex < wheelCount; ++wheelIndex) {
 			VehicleWheels::Wheel& wheel = wheels.wheels[wheelIndex];
 			const VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
 
-			wheel.previousSuspensionOffset = wheel.suspensionOffset;
-			wheel.previousSuspensionOrientation = wheel.suspensionOrientation;
-			wheel.previousRotationAngle = wheel.rotationAngle;
-			wheel.previousRotationalVelocity = wheel.rotationalVelocity;
-
+			// Handle steering.
 			wheel.suspensionOrientation = orientation;
-			if (wheelInfo.turns && centerTurnAngle != 0) {
+			if (wheelInfo.turns && steering != 0) {
+				const phys::Angle centerTurnAngle = steering * info.maxTurnAngle;
 				const phys::Angle turnAngle = atan2(info.averageNonTurningWheelOffset.getZ() - wheelInfo.localOffset.getZ(),
 					info.averageNonTurningWheelOffset.getZ() / tan(centerTurnAngle) - wheelInfo.localOffset.getX());
 				const phys::Angle turnYaw = (centerTurnAngle < 0) ? phys::Angle{phys::PI - turnAngle} : phys::Angle{-turnAngle};
 				wheel.suspensionOrientation = wheel.suspensionOrientation * phys::Orientation3D::yaw(turnYaw);
 			}
 
-			const phys::Position3D restCenter = position + orientation(scale * wheelInfo.localOffset);
-			const phys::OrthonormalBasis3D suspensionBasis = rotate(wheel.suspensionOrientation);
-			const phys::Direction3D sideDirection = suspensionBasis[phys::X];
-			const phys::Direction3D forwardDirection = -suspensionBasis[phys::Z];
-			const phys::Direction3D suspensionDirection = suspensionBasis[phys::Y];
-			const phys::Distance maxOffset = type->suspension.maxOffset * ((wheelInfo.turns) ? type->suspension.turningWheelMultipliers.maxOffset : 1_x);
-			const phys::Distance radius = wheelInfo.radius * scale.getY();
-			const phys::Distance halfWidth = wheelInfo.halfWidth * scale.getX();
-			const phys::Length1D castOffset = maxOffset + radius;
-			const phys::Transformation3D castTransformation = translateRotateScale(restCenter + suspensionDirection * castOffset,
-				wheel.suspensionOrientation * phys::Orientation3D::roll(90_degrees), phys::Scale3D{radius / 1_meter, halfWidth / 1_meter, radius / 1_meter});
+			// Simulate suspension by casting the wheel shape along the suspension axis and seeing how far it is able to extend. This offset determines the spring force.
+			const phys::Position3D suspensionRestPositionWheelCenter = position + orientation(scale * wheelInfo.localOffset);
+			const phys::Direction3D suspensionDirection = wheel.suspensionOrientation(phys::Y_AXIS_3D);
+			const phys::Distance maxSuspensionOffset =
+				(wheelInfo.turns) ? type->suspension.springs.maxOffset * type->suspension.springs.turningWheelMultipliers.maxOffset : type->suspension.springs.maxOffset;
+			const phys::Distance wheelRadius = wheelInfo.radius * scale.getY();
+			const phys::Distance wheelHalfWidth = wheelInfo.halfWidth * scale.getX();
+			const phys::CylinderShape3D wheelShape{.radius = wheelRadius, .halfLength = wheelHalfWidth};
+			const phys::Transformation3D wheelCastStartTransformation =
+				translateRotate(suspensionRestPositionWheelCenter + suspensionDirection * maxSuspensionOffset, wheel.suspensionOrientation * phys::Orientation3D::roll(90_degrees));
+			phys::Length1D suspensionOffset{};
+			if (const Optional<phys::Broadphase3D::ShapecastResult> shapecastResult = broadphase.shapecastClosestHit(wheelShape, VEHICLE_COLLISION_FILTER,
+					wheelCastStartTransformation, -suspensionDirection, maxSuspensionOffset + 0.05_x * wheelRadius, objectEntities, simulationOptions.collisionAlgorithmOptions,
+					phys::CollisionFilterTest::RESPONSE, [&](phys::EntityID otherObjectID) -> bool { return otherObjectID != entityID; })) {
+				const phys::Position3D positionB = objectEntities.getComponent<phys::Position3D>(shapecastResult->objectID);
+				const phys::LinearVelocity3D linearVelocityB = kinematicsEntities.getComponent<phys::LinearVelocity3D>(shapecastResult->objectID);
+				const phys::AngularVelocity3D angularVelocityB = kinematicsEntities.getComponent<phys::AngularVelocity3D>(shapecastResult->objectID);
 
-			wheel.rotationalVelocity = expDecay(wheel.rotationalVelocity, type->wheels.frictionFrequency, deltaTime);
+				// Calculate suspension offset and tire contact point.
+				suspensionOffset = clamp(maxSuspensionOffset - shapecastResult->distance, phys::Length1D{}, maxSuspensionOffset);
+				wheel.suspensionOffset = suspensionOffset * suspensionDirection;
+				const phys::Position3D contactPoint = suspensionRestPositionWheelCenter + wheel.suspensionOffset - wheelRadius * shapecastResult->normal;
+				const phys::Length3D contactOffsetA = contactPoint - position;
+				const phys::Length3D contactOffsetB = contactPoint - positionB;
+				const phys::LinearVelocity3D contactVelocityA = phys::calculatePointVelocity(linearVelocity, angularVelocity, contactOffsetA);
+				const phys::LinearVelocity3D contactVelocityB = phys::calculatePointVelocity(linearVelocityB, angularVelocityB, contactOffsetB);
+				const phys::LinearVelocity3D contactRelativeVelocity = contactVelocityA - contactVelocityB;
 
-			phys::Coefficient driveContribution = 0_x;
-			if (wheelInfo.drives) {
-				driveContribution = ((drivenWheelSpeedDifference < phys::AngularSpeed::MACHINE_EPSILON)
-				                         ? 1_x / drivenWheelCount
-				                         : ((wheelIndex == fastestDrivenWheelIndex) ? type->differential.locking : (1_x - type->differential.locking)) / (drivenWheelCount - 1_x));
+				wheel.contact = VehicleWheels::Wheel::Contact{
+					.objectID = shapecastResult->objectID,
+					.offsetA = contactOffsetA,
+					.offsetB = contactOffsetB,
+					.normal = shapecastResult->normal,
+					.relativeVelocity = contactRelativeVelocity,
+					.suspensionOffset = suspensionOffset,
+				};
+			} else {
+				// The wheel is in the air. Decay the suspension back towards its rest position.
+				wheel.suspensionOffset = expDecay(wheel.suspensionOffset, 5_Hertz, deltaTime);
 
-				const phys::Torque2D driveTorque = driveContribution * drivetrain.torque * type->differential.ratio;
-				wheel.rotationalVelocity += driveTorque * deltaTime / type->wheels.rotationalInertia;
-
-				const phys::AngularVelocity2D expectedRotationalVelocity = driveContribution * driveRotationalVelocity;
-				wheel.rotationalVelocity = expDecay(wheel.rotationalVelocity, expectedRotationalVelocity, type->wheels.synchronizationFrequency, deltaTime);
+				wheel.contact.reset();
 			}
 
-			if (const Optional<phys::Broadphase3D::ShapecastResult> shapecastResult = broadphase.shapecastClosestHit(phys::SphereShape3D{.radius = 1_meter},
-					VEHICLE_COLLISION_FILTER, castTransformation, -suspensionDirection, castOffset + 0.05_x * radius, objectEntities, simulationOptions.collisionAlgorithmOptions,
-					phys::CollisionFilterTest::RESPONSE, [&](phys::EntityID otherObjectID) -> bool { return otherObjectID != entityID; })) {
-				const phys::Length1D suspensionSpringOffset = clamp(castOffset - shapecastResult->distance, phys::Length1D{}, maxOffset);
-				wheel.suspensionOffset = suspensionSpringOffset * suspensionDirection;
-				const phys::Position3D contactPoint = restCenter + wheel.suspensionOffset - radius * shapecastResult->normal;
+			phys::Length1D& relativeSuspensionOffset = (wheelInfo.turns) ? turningWheelRelativeSuspensionOffset : nonTurningWheelRelativeSuspensionOffset;
+			relativeSuspensionOffset += flipSignIf(suspensionOffset, signbit(wheelInfo.localOffset.getX()));
+		}
 
-				const phys::Stiffness suspensionSpringStiffness = type->suspension.stiffness * ((wheelInfo.turns) ? type->suspension.turningWheelMultipliers.stiffness : 1_x);
-				const phys::Force1D suspensionSpringForce = clampLength(suspensionSpringStiffness * suspensionSpringOffset, type->suspension.maxForce);
+		const phys::Stiffness turningWheelAntiRollBarStiffness = type->suspension.antiRollBar.stiffness * type->suspension.antiRollBar.turningWheelMultipliers.stiffness;
+		const phys::Stiffness nonTurningWheelAntiRollBarStiffness = type->suspension.antiRollBar.stiffness;
+		const phys::Force1D turningWheelAntiRollBarForce = turningWheelRelativeSuspensionOffset * turningWheelAntiRollBarStiffness;
+		const phys::Force1D nonTurningWheelAntiRollBarForce = nonTurningWheelRelativeSuspensionOffset * nonTurningWheelAntiRollBarStiffness;
 
-				const phys::Position3D positionB = objectEntities.getComponent<phys::Position3D>(shapecastResult->objectID);
-				const phys::Length3D offsetA = contactPoint - position;
-				const phys::Length3D offsetB = contactPoint - positionB;
-				auto&& [entityIDB, activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB] = kinematicsEntities[shapecastResult->objectID];
-				const phys::LinearVelocity3D velocityA = phys::calculatePointVelocity(linearVelocity, angularVelocity, offsetA);
-				const phys::LinearVelocity3D velocityB = phys::calculatePointVelocity(linearVelocityB, angularVelocityB, offsetB);
-				const phys::LinearVelocity3D relativeVelocity = velocityA - velocityB;
-				const phys::LinearVelocity1D relativeVelocityAlongSuspensionAxis = dot(relativeVelocity, suspensionDirection);
-				const phys::Force1D suspensionDampingForce = wheelInfo.suspensionDamping * relativeVelocityAlongSuspensionAxis;
-				const phys::Force3D suspensionForce = suspensionSpringForce * shapecastResult->normal - suspensionDampingForce * suspensionDirection;
+		// Simulate wheels.
+		phys::AngularImpulse2D finalDriveReflectedAngularImpulse{};
+		phys::AngularVelocity2D finalDriveAngularVelocity{};
+		for (size_t wheelIndex = 0; wheelIndex < wheelCount; ++wheelIndex) {
+			VehicleWheels::Wheel& wheel = wheels.wheels[wheelIndex];
+			const VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
 
-				const phys::LinearVelocity1D tireVelocity = wheel.rotationalVelocity * radius;
-				const phys::LinearVelocity1D sideVelocity = dot(relativeVelocity, sideDirection);
-				const phys::LinearVelocity1D forwardVelocity = dot(relativeVelocity, forwardDirection);
+			// Calculate torque contribution coefficient from the differential.
+			const phys::Coefficient driveContribution =
+				(wheelInfo.drives)
+			        ? ((drivenWheelSpeedDifference < type->differential.maxLockedSpeedDifference.as(phys::AngularSpeed::UNIT))
+			                  ? 1_x / drivenWheelCount
+			                  : ((wheelIndex == fastestDrivenWheelIndex) ? type->differential.locking : (1_x - type->differential.locking)) / (drivenWheelCount - 1_x))
+			        : 0_x;
+
+			// Apply angular acceleration from the engine.
+			const phys::MomentOfInertia2D momentOfInertia = (wheelInfo.drives) ? driveMomentOfInertia : type->wheels.momentOfInertia;
+			wheel.angularVelocity += driveContribution * driveTorque * deltaTime / momentOfInertia;
+
+			// Apply angular deceleration caused by brakes and damping (internal hub friction).
+			const phys::Coefficient brakeWithDeadzone = (brake < type->brakes.deadzone) ? 0_x : brake;
+			const phys::Coefficient brakeAmount = (wheelInfo.turns) ? brakeWithDeadzone : max(brakeWithDeadzone * (1_x - type->brakes.balance) / type->brakes.balance, handbrake);
+			const phys::AngularImpulse2D brakeImpulse =
+				clampLength(copysign(brakeAmount * type->brakes.torque * deltaTime, -wheel.angularVelocity) - wheel.angularVelocity * type->wheels.damping * deltaTime,
+					abs(wheel.angularVelocity) * momentOfInertia);
+			wheel.angularVelocity += brakeImpulse / momentOfInertia;
+
+			if (wheel.contact) {
+				const phys::OrthonormalBasis3D suspensionBasis = rotate(wheel.suspensionOrientation);
+				const phys::Direction3D suspensionDirection = suspensionBasis[phys::Y];
+				const phys::Direction3D sideDirection = suspensionBasis[phys::X];
+				const phys::Direction3D forwardDirection = -suspensionBasis[phys::Z];
+				const phys::LinearVelocity1D sideVelocity = dot(wheel.contact->relativeVelocity, sideDirection);
+				const phys::LinearVelocity1D forwardVelocity = dot(wheel.contact->relativeVelocity, forwardDirection);
 				const phys::Speed forwardSpeed = abs(forwardVelocity);
 				const bool hasForwardSpeed = forwardSpeed > phys::Speed::MACHINE_EPSILON;
+
+				// Calculate suspension force.
+				const phys::Stiffness suspensionSpringStiffness =
+					(wheelInfo.turns) ? type->suspension.springs.stiffness * type->suspension.springs.turningWheelMultipliers.stiffness : type->suspension.springs.stiffness;
+				const phys::Force1D suspensionSpringForce = suspensionSpringStiffness * wheel.contact->suspensionOffset;
+				const phys::Force1D suspensionDampingForce = wheelInfo.suspensionDamping * dot(wheel.contact->relativeVelocity, wheel.contact->normal);
+				const phys::Force1D suspensionNormalForce = suspensionSpringForce - suspensionDampingForce;
+
+				// Calculate anti-roll bar force.
+				const phys::Force1D antiRollBarForce =
+					flipSignIf((wheelInfo.turns) ? turningWheelAntiRollBarForce : nonTurningWheelAntiRollBarForce, signbit(wheelInfo.localOffset.getX()));
+
+				// Calculate friction forces.
+				const phys::Force1D tireLoadForce = max(suspensionNormalForce, phys::Force1D{});
+				const phys::Distance wheelRadius = wheelInfo.radius * scale.getY();
+				const phys::LinearVelocity1D tireVelocity = wheel.angularVelocity * wheelRadius;
 				const phys::Angle slipYaw = (sideVelocity == 0 && !hasForwardSpeed) ? phys::Angle{} : atan2(sideVelocity, forwardSpeed);
 				const phys::Angle slipAngle = -((slipYaw >= phys::PI) ? phys::Angle{slipYaw - phys::PI * 2_x} : slipYaw);
 				const phys::LinearVelocity1D slipVelocity = forwardVelocity - tireVelocity;
-				const phys::Force1D maxForwardForce = abs(slipVelocity) * (type->wheels.rotationalInertia / (deltaTime * radius * radius));
-				const phys::Coefficient slipRatio = (hasForwardSpeed) ? -slipVelocity / forwardSpeed : copysign(1_x, tireVelocity);
-				const phys::Force1D loadForce = max(dot(suspensionForce, shapecastResult->normal), phys::Force1D{});
+				const phys::Coefficient slipRatio = clamp((hasForwardSpeed) ? -slipVelocity / forwardSpeed : copysign(1_x, tireVelocity), -100_x, 100_x);
 				const VehicleSettings::Type::Tires::Friction& sideFriction = (wheelInfo.turns) ? type->tires.turningLateralFriction : type->tires.nonTurningLateralFriction;
 				const VehicleSettings::Type::Tires::Friction& forwardFriction =
 					(wheelInfo.turns) ? type->tires.turningLongitudalFriction : type->tires.nonTurningLongitudalFriction;
-				const phys::Force1D sideForce = sideFriction.getContactForce(slipAngle, loadForce);
-				const phys::Force1D forwardForce = clampLength(forwardFriction.getContactForce(slipRatio, loadForce), maxForwardForce);
+				const phys::Coefficient rollingResistance = (wheelInfo.turns) ? type->tires.turningRollingResistance : type->tires.nonTurningRollingResistance;
+				const phys::Force1D rollingResistanceForce = copysign(min(tireLoadForce * rollingResistance, forwardSpeed / (deltaTime * inverseMass)), forwardVelocity);
+				const phys::Force1D sideForce = sideFriction.getContactForce(slipAngle, tireLoadForce);
+				const phys::Force1D forwardForce = forwardFriction.getContactForce(slipRatio, tireLoadForce) - rollingResistanceForce;
+
+				// Clamp to friction ellipse.
 				const phys::Coefficient groundFriction =
-					clamp(unlerp(materialEntities.getComponent<phys::Material>(shapecastResult->objectID).kineticFriction, 0_x, 0.707_x), 0_x, 1_x);
-				const phys::Force1D sideForceLimit = loadForce * sideFriction.peak * groundFriction;
-				const phys::Force1D forwardForceLimit = loadForce * forwardFriction.peak * groundFriction;
+					clamp(unlerp(materialEntities.getComponent<phys::Material>(wheel.contact->objectID).kineticFriction, 0_x, 0.707_x), 0_x, 1_x);
+				const phys::Force1D sideForceLimit = groundFriction * tireLoadForce * sideFriction.peak;
+				const phys::Force1D forwardForceLimit = groundFriction * tireLoadForce * forwardFriction.peak;
 				const phys::Scale1D normalizedSideForce = tryDivide(sideForce, sideForceLimit).value_or(0_x);
 				const phys::Scale1D normalizedForwardForce = tryDivide(forwardForce, forwardForceLimit).value_or(0_x);
-				const phys::Force2D contactForce = phys::Force2D{sideForceLimit, forwardForceLimit} * clampLength(phys::Scale2D{normalizedSideForce, normalizedForwardForce}, 1_x);
-				const phys::Force3D totalForce = suspensionForce + contactForce.getX() * sideDirection + contactForce.getY() * forwardDirection;
+				const phys::Force2D frictionForces =
+					phys::Force2D{sideForceLimit, forwardForceLimit} * clampLength(phys::Scale2D{normalizedSideForce, normalizedForwardForce}, 1_x);
+
+				// Apply forces to vehicle body.
+				const phys::Force3D totalForce = suspensionNormalForce * wheel.contact->normal + antiRollBarForce * suspensionDirection + frictionForces.getX() * sideDirection +
+				                                 frictionForces.getY() * forwardDirection;
 				const phys::LinearImpulse3D linearImpulse = totalForce * deltaTime;
 				if (linearImpulse != 0) {
-					phys::applyCorrectionImpulse(activity, linearVelocity, angularVelocity, inverseMass, inverseMomentOfInertiaTensor, linearImpulse, offsetA);
-					phys::applyCorrectionImpulse(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, offsetB);
+					auto&& [entityIDB, activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB] = kinematicsEntities[wheel.contact->objectID];
+
+					phys::applyCorrectionImpulse(activity, linearVelocity, angularVelocity, inverseMass, inverseMomentOfInertiaTensor, linearImpulse, wheel.contact->offsetA);
+					phys::applyCorrectionImpulse(activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB, -linearImpulse, wheel.contact->offsetB);
 				}
 
-				wheel.rotationalVelocity -= contactForce.getY() * radius * deltaTime / type->wheels.rotationalInertia;
-			} else {
-				wheel.suspensionOffset = expDecay(wheel.suspensionOffset, 5_Hertz, deltaTime);
+				// Apply reflected angular impulse caused by contact friction.
+				const phys::AngularImpulse2D angularContactFrictionImpulse =
+					clampLength(-frictionForces.getY() * wheelRadius * deltaTime, abs(slipVelocity) * momentOfInertia / wheelRadius);
+				wheel.angularVelocity += angularContactFrictionImpulse / momentOfInertia;
+
+				finalDriveReflectedAngularImpulse += driveContribution * angularContactFrictionImpulse;
 			}
+			finalDriveReflectedAngularImpulse += driveContribution * brakeImpulse;
+			finalDriveAngularVelocity += driveContribution * wheel.angularVelocity;
 
-			const phys::Coefficient brakeAmount = (wheelInfo.turns) ? brake : max(brake * (1_x - type->brakes.balance) / type->brakes.balance, handbrake);
-			const phys::Torque2D brakeTorque = copysign(brakeAmount * type->brakes.torque, wheel.rotationalVelocity);
-			wheel.rotationalVelocity -= clampLength(brakeTorque * deltaTime / type->wheels.rotationalInertia, abs(wheel.rotationalVelocity));
+			// Update the wheel's rotation angle based on its current angular velocity, wrapping to 360 degrees to make sure it doesn't get too large.
+			const phys::Angle deltaAngle = wheel.angularVelocity * deltaTime;
+			const phys::AbsoluteAngle newAngle = wrap(wheel.angle + deltaAngle, phys::AbsoluteAngle{360_degrees});
+			wheel.angle = newAngle;
+			// Make sure the delta from previous to new angle is the same as it would have been without wrapping, for proper interpolation.
+			wheel.previousAngle = newAngle - deltaAngle;
+		}
 
-			const phys::Angle deltaAngle = wheel.rotationalVelocity * deltaTime;
-			const phys::AbsoluteAngle newAngle = wrap(wheel.rotationAngle + deltaAngle, phys::AbsoluteAngle{360_degrees});
-			wheel.rotationAngle = newAngle;
-			wheel.previousRotationAngle = newAngle - deltaAngle;
+		// Apply reflected angular impulse back to the engine.
+		engine.angularSpeed += engagement * finalDriveReflectedAngularImpulse / (combinedGearRatio * engineMomentOfInertia);
 
-			drivetrain.rotationalVelocity += driveContribution * wheel.rotationalVelocity * type->differential.ratio;
+		// Synchronize the engine with the wheels.
+		const phys::AngularVelocity2D engineAngularVelocityExpected = finalDriveAngularVelocity * combinedGearRatio;
+		const phys::AngularVelocity2D engineAngularVelocityError = engineAngularVelocityExpected - engine.angularSpeed;
+		engine.angularSpeed = moveTowards(engine.angularSpeed, engineAngularVelocityExpected,
+			engagement * abs(engineAngularVelocityError) * type->engine.synchronizationDamping * deltaTime / engineMomentOfInertia);
+
+		// Handle engine stall.
+		if (engine.angularSpeed < type->engine.stallRPM.as(phys::AngularSpeed::UNIT)) {
+			engine.angularSpeed = 0;
+			engine.running = false;
 		}
 	}
 }
@@ -648,11 +734,11 @@ void poseVehicles(exec::Entities<ObjectModelInstance, const phys::Orientation3D,
 			const VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
 			const phys::Length3D suspensionOffset = mix(wheel.previousSuspensionOffset, wheel.suspensionOffset, frameInfo.tickInterpolationAlpha);
 			const phys::Orientation3D suspensionOrientation = mix(wheel.previousSuspensionOrientation, wheel.suspensionOrientation, frameInfo.tickInterpolationAlpha);
-			const phys::AbsoluteAngle rotationAngle = mix(wheel.previousRotationAngle, wheel.rotationAngle, frameInfo.tickInterpolationAlpha);
+			const phys::AbsoluteAngle angle = mix(wheel.previousAngle, wheel.angle, frameInfo.tickInterpolationAlpha);
 			res::Model::Joint& localJoint = modelInstance.pose.localJoints[wheelInfo.jointIndex];
 			localJoint = info.model.getBindPose().localJoints[wheelInfo.jointIndex];
 			localJoint.translation += vec3{inverseScale * inverseOrientation(suspensionOffset).in(phys::METERS)};
-			localJoint.rotation = inverseOrientation * suspensionOrientation * phys::Orientation3D::pitch(-(+rotationAngle)) * localJoint.rotation;
+			localJoint.rotation = inverseOrientation * suspensionOrientation * phys::Orientation3D::pitch(-(+angle)) * localJoint.rotation;
 		}
 	}
 }
@@ -706,12 +792,13 @@ struct VehicleSystem final : System {
 			}
 			sortByAscending<&VehicleInfo::Wheel::jointIndex>(info.wheels);
 			for (VehicleInfo::Wheel& wheelInfo : info.wheels) {
-				wheelInfo.suspensionDamping = type.suspension.dampingRatio * 2.0f * sqrt(type.suspension.stiffness * type.body.mass / static_cast<float>(info.wheels.size()));
+				wheelInfo.suspensionDamping =
+					type.suspension.springs.dampingRatio * 2.0f * sqrt(type.suspension.springs.stiffness * type.body.mass / static_cast<float>(info.wheels.size()));
 			}
 			for (const size_t wheelIndex : type.turning.wheels) {
 				if (wheelIndex < info.wheels.size()) {
 					VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
-					wheelInfo.suspensionDamping *= type.suspension.turningWheelMultipliers.dampingRatio;
+					wheelInfo.suspensionDamping *= type.suspension.springs.turningWheelMultipliers.dampingRatio;
 					wheelInfo.turns = true;
 				}
 			}
@@ -752,8 +839,7 @@ struct VehicleSystem final : System {
 		scheduler.addTask<exitDestroyedVehicles>("Exit destroyed vehicles");
 		scheduler.addTask<resetVacantVehicleSeats>("Reset vacant vehicle seats");
 		scheduler.addTask<controlVehicles>("Control vehicles");
-		scheduler.addTask<simulateVehicleEngines>("Simulate vehicle engines");
-		scheduler.addTask<simulateVehicleWheels>("Simulate vehicle wheels");
+		scheduler.addTask<simulateVehicles>("Simulate vehicles");
 		scheduler.addTask<moveVehicleOccupants>("Move vehicle occupants");
 	}
 
@@ -961,11 +1047,10 @@ struct VehicleSystem final : System {
 			if (simulation.registry.hasComponent<VehicleDriverTag>(worldView.playerEntityID)) {
 				const VehicleControls* const controls = simulation.registry.findComponent<VehicleControls>(occupant->vehicleEntityID);
 				const VehicleEngine* const engine = simulation.registry.findComponent<VehicleEngine>(occupant->vehicleEntityID);
-				const VehicleDrivetrain* const drivetrain = simulation.registry.findComponent<VehicleDrivetrain>(occupant->vehicleEntityID);
 				const VehicleWheels* const wheels = simulation.registry.findComponent<VehicleWheels>(occupant->vehicleEntityID);
 				const VehicleType* const type = simulation.registry.findComponent<VehicleType>(occupant->vehicleEntityID);
 				const phys::Scale3D* const scale = simulation.registry.findComponent<phys::Scale3D>(occupant->vehicleEntityID);
-				if (controls && engine && drivetrain && wheels && type && scale) {
+				if (controls && engine && wheels && type && scale) {
 					const VehicleInfos& infos = simulation.resources.getResource<VehicleInfos>();
 					const VehicleInfo& info = infos.at(*type);
 
@@ -978,7 +1063,7 @@ struct VehicleSystem final : System {
 							const VehicleWheels::Wheel& wheel = wheels->wheels[wheelIndex];
 							const phys::Distance radius = wheelInfo.radius * scale->getY();
 
-							drivenWheelSpeedSum += radius * abs(mix(wheel.previousRotationalVelocity, wheel.rotationalVelocity, frameInfo.tickInterpolationAlpha));
+							drivenWheelSpeedSum += radius * abs(mix(wheel.previousAngularVelocity, wheel.angularVelocity, frameInfo.tickInterpolationAlpha));
 							drivenWheelCount += 1_x;
 						}
 					}
@@ -986,9 +1071,9 @@ struct VehicleSystem final : System {
 					const phys::Coefficient clutch = clamp(controls->clutchDirect + controls->clutchSmooth, 0_x, 1_x);
 					const phys::Coefficient brake = clamp(controls->brakeDirect + controls->brakeSmooth, 0_x, 1_x);
 					const phys::Coefficient gas = clamp(controls->gasDirect + controls->gasSmooth, 0_x, 1_x);
-					const float rpm = mix(engine->previousRotationalSpeed, engine->rotationalSpeed, frameInfo.tickInterpolationAlpha).in(phys::REVOLUTIONS_PER_MINUTE);
+					const float rpm = mix(engine->previousAngularSpeed, engine->angularSpeed, frameInfo.tickInterpolationAlpha).in(phys::REVOLUTIONS_PER_MINUTE);
 					const float kmph = speed.in(phys::KILOMETERS_PER_HOUR);
-					const String gearString = (drivetrain->gear < 0) ? "R" : ((drivetrain->gear == 0) ? "N" : formatString("{}", drivetrain->gear));
+					const String gearString = (engine->gear < 0) ? "R" : ((engine->gear == 0) ? "N" : formatString("{}", engine->gear));
 					const float driveGearCount = ((*type)->transmission.automatic) ? 1.0f : static_cast<float>((*type)->transmission.gearRatios.size());
 					const String gearStickLabel =
 						(controls->gearStickPosition < 0)
@@ -1002,14 +1087,18 @@ struct VehicleSystem final : System {
 					const phys::Scale1D steering = clamp(controls->steeringDirect + controls->steeringSmooth + controls->steeringFromAim, -1_x, 1_x);
 
 					if (const Span<const evt::Input> ignitionInputs = input.getBoundInputs(PlayerAction::IGNITION); !ignitionInputs.empty() && !engine->running) {
-						const float ignitionInputValue = input.getCurrentState(PlayerAction::IGNITION).value;
-						graphics.put2DText(screenCenter, mix(Color::GRAY, Color::WHITE, ignitionInputValue),
+						graphics.put2DText(screenCenter, (engine->starting) ? Color::WHITE : Color::GRAY,
 							formatString("[{}] Start Engine", evt::getInputString(ignitionInputs.front())), 2.0f, gfx::TextAlign::CENTER);
 					}
 
-					drawPedalMeter(Offset2D{96, y + 16}, clutch, "Clutch", PlayerAction::CLUTCH_SMOOTH);
-					drawPedalMeter(Offset2D{168, y + 16}, brake, "Brake", PlayerAction::BRAKE_SMOOTH);
-					drawPedalMeter(Offset2D{240, y + 16}, gas, "Gas", PlayerAction::GAS_SMOOTH);
+					if ((*type)->transmission.automatic) {
+						drawPedalMeter(Offset2D{132, y + 16}, brake, "Brake", PlayerAction::BRAKE_SMOOTH);
+						drawPedalMeter(Offset2D{204, y + 16}, gas, "Gas", PlayerAction::GAS_SMOOTH);
+					} else {
+						drawPedalMeter(Offset2D{96, y + 16}, clutch, "Clutch", PlayerAction::CLUTCH_SMOOTH);
+						drawPedalMeter(Offset2D{168, y + 16}, brake, "Brake", PlayerAction::BRAKE_SMOOTH);
+						drawPedalMeter(Offset2D{240, y + 16}, gas, "Gas", PlayerAction::GAS_SMOOTH);
+					}
 
 					if (const Span<const evt::Input> handbrakeInputs = input.getBoundInputs(PlayerAction::HANDBRAKE); !handbrakeInputs.empty()) {
 						const phys::Coefficient handbrake = clamp(controls->handbrake, 0_x, 1_x);
@@ -1019,7 +1108,7 @@ struct VehicleSystem final : System {
 
 					drawAnalogInstrumentMeter(Offset2D{screenCenter.x - 128, y}, rpm * 0.001f, "RPM\nx1000", 0.0f, 8.0f, 1.0f,
 						((*type)->engine.redlineRPM.in(phys::REVOLUTIONS_PER_MINUTE) - 1.0f) * 0.001f);
-					drawAnalogInstrumentMeter(Offset2D{screenCenter.x + 128, y}, kmph, "km/h", 0.0f, 140.0f, 20.0f, Limits<float>::MAX);
+					drawAnalogInstrumentMeter(Offset2D{screenCenter.x + 128, y}, kmph, "km/h", 0.0f, 160.0f, 20.0f, Limits<float>::MAX);
 
 					graphics.instances2D.putTextStringInstance(graphics.mainFont, gearString,
 						{
@@ -1068,7 +1157,6 @@ void createVehicle(phys::EntityBuilder3D& entity, phys::ResourceRegistry3D& reso
 	entity.addComponent<VehicleType>(type);
 	entity.addComponent<VehicleSeats>();
 	entity.addComponent<VehicleEngine>();
-	entity.addComponent<VehicleDrivetrain>();
 	entity.addComponent<VehicleWheels>(VehicleWheels{.wheels{info.wheels.size(), VehicleWheels::Wheel{.suspensionOrientation = orientation}}});
 	entity.addComponent<VehicleControls>();
 }

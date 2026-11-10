@@ -10,6 +10,7 @@
 #include "Audio.hpp"
 #include "Graphics.hpp"
 #include "System.hpp"
+#include "WorldView.hpp"
 #include "systems/collectible.hpp"
 #include "systems/level.hpp"
 #include "systems/object.hpp"

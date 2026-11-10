@@ -9,6 +9,7 @@
 #include "../Audio.hpp"
 #include "../Graphics.hpp"
 #include "../System.hpp"
+#include "../WorldView.hpp"
 #include "../physics.hpp"
 #include "level.hpp"
 #include "object.hpp"
@@ -132,15 +133,15 @@ struct PlayerSettingsJSON {
 		phys::Distance maxDistanceInVehicle = 15_meters;
 		phys::Distance targetDistanceAtZeroSpeed = 7_meters;
 		phys::Distance targetDistanceAtBaseSpeed = 5_meters;
-		phys::Distance targetDistanceAtZeroSpeedInVehicle = 8_meters;
-		phys::Distance targetDistanceAtBaseSpeedInVehicle = 7_meters;
+		phys::Distance targetDistanceAtZeroSpeedInVehicle = 7_meters;
+		phys::Distance targetDistanceAtBaseSpeedInVehicle = 6_meters;
 		phys::Coefficient targetDistanceMaxAffectingCoefficientOfBaseSpeed = 1.5_x;
 		phys::Coefficient targetDistanceMaxAffectingCoefficientOfBaseSpeedInVehicle = 1.5_x;
 		phys::Coefficient verticalTargetOffsetHeightCoefficient = 0.3_x;
 		phys::Frequency verticalTargetPositionDecayRate = 5_Hertz;
 		phys::Coefficient yawMinHorizontalDirectionScale = 0.5_x;
 		phys::Frequency yawDecayRateAtBaseSpeed = 1.25_Hertz;
-		phys::Frequency yawDecayRateAtBaseSpeedInVehicle = 3_Hertz;
+		phys::Frequency yawDecayRateAtBaseSpeedInVehicle = 3.5_Hertz;
 		phys::Coefficient yawDecayRateMaxAffectingCoefficientOfBaseSpeed = 1.25_x;
 		phys::Coefficient yawDecayRateMaxAffectingCoefficientOfBaseSpeedInVehicle = 1.5_x;
 		phys::Time yawFollowCooldownAfterAdjustment = 1_second;

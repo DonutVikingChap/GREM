@@ -8,6 +8,7 @@
 
 #include "../Graphics.hpp"
 #include "../System.hpp"
+#include "../WorldView.hpp"
 
 #include <utility> // std::move
 

@@ -9,6 +9,7 @@
 #include "../Audio.hpp"
 #include "../Graphics.hpp"
 #include "../System.hpp"
+#include "../WorldView.hpp"
 #include "../physics.hpp"
 #include "../shaders.hpp"
 #include "player.hpp"
