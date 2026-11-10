@@ -1316,6 +1316,7 @@ inline constexpr SIUnit<D> SI_UNIT{};
 	};
 
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Unitless, UNITLESS, {}, BaseSIUnit<DIMENSIONLESS>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Percent, PERCENT, "%", BaseMultipleOf<Unitless, 0.01l>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(Radians, RADIANS, "rad", BaseSIUnit<ANGLE>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Degrees, DEGREES, "deg", BaseMultipleOf<Radians, 0.01745329251994329576923690768489l>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Turns, TURNS, "turns", BaseMultipleOf<Radians, 6.28318530718l>)
@@ -1358,7 +1359,7 @@ GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(DecimetersPerSecond, DECIMETERS_PER_S
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(CentimetersPerSecond, CENTIMETERS_PER_SECOND, "cm/s", BaseQuotient<Centimeters, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(MillimetersPerSecond, MILLIMETERS_PER_SECOND, "mm/s", BaseQuotient<Millimeters, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(KilometersPerHour, KILOMETERS_PER_HOUR, "km/h", BaseQuotient<Kilometers, Hours>)
-GREM_PRIVATE_PHYSICS_DEFINE_UNIT(MetersPerSecondSquared, METERS_PER_SECOND_SQUARED, "m/s^2", BaseQuotient<Meters, BaseSquare<Seconds>>)
+GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(MetersPerSecondSquared, METERS_PER_SECOND_SQUARED, "m/s^2", BaseQuotient<Meters, BaseSquare<Seconds>>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(KilogramMetersPerSecondSquared, KILOGRAM_METERS_PER_SECOND_SQUARED, "kg m/s^2", BaseProduct<Kilograms, MetersPerSecondSquared>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(Newton, NEWTON, "N", KilogramMetersPerSecondSquared)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(KilogramMeters, KILOGRAM_METERS, "kg m", BaseProduct<Kilograms, Meters>)
@@ -1378,6 +1379,8 @@ GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(TurnsPerSecond, TURNS_PER_SECOND, "tu
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(RevolutionsPerMinute, REVOLUTIONS_PER_MINUTE, "RPM", BaseQuotient<Turns, Minutes>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(RadiansPerSecondSquared, RADIANS_PER_SECOND_SQUARED, "rad/s^2", BaseQuotient<Radians, BaseSquare<Seconds>>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(NewtonMeterSeconds, NEWTON_METER_SECONDS, "N m s", BaseProduct<Newton, Meters, Seconds>)
+GREM_PRIVATE_PHYSICS_DEFINE_UNIT(NewtonSecondsPerMeter, NEWTON_SECONDS_PER_METER, "N s/m", BaseQuotient<BaseProduct<Newton, Seconds>, Meters>)
+GREM_PRIVATE_PHYSICS_DEFINE_UNIT(NewtonMeterSecondsPerRadian, NEWTON_METER_SECONDS_PER_RADIAN, "N m s/rad", BaseQuotient<BaseProduct<Newton, Meters, Seconds>, Radians>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(KilogramSquareMetersPerSecond, KILOGRAM_SQUARE_METERS_PER_SECOND, "kg m^s/s", BaseQuotient<KilogramSquareMeters, Seconds>)
 GREM_PRIVATE_PHYSICS_DEFINE_UNIT(NewtonMeterSecondsSquared, NEWTON_METER_SECONDS_SQUARED, "N m s^2", BaseProduct<Newton, Meters, BaseSquare<Seconds>>)
 GREM_PRIVATE_PHYSICS_DEFINE_CANONICAL_UNIT(KilogramsPerSecond, KILOGRAMS_PER_SECOND, "kg/s", BaseQuotient<Kilograms, Seconds>)
@@ -3175,9 +3178,23 @@ template <detail::quantity_unary_operand A>
 template <detail::quantity_unary_operand A>
 [[nodiscard]] GREM_ALWAYS_INLINE auto GREM_VECTORCALL exp(A a) {
 	constexpr size_t N = detail::quantity_rank_v<A>;
-	using UnitT = detail::unit_type_t<A>;
-	static_assert(UnitT{} == UNITLESS, "Quantities that are not unitless cannot be used as an exponent.");
-	return Quantity<N, UnitT>::reinterpret(grem::exp(detail::toQuantity(a)._private_getUnderlyingValue()));
+	static_assert(detail::unit_type_t<A>{} == UNITLESS, "Quantities that are not unitless cannot be used as an exponent.");
+	return Quantity<N, Unitless>::reinterpret(grem::exp(detail::toQuantity(a)._private_getUnderlyingValue()));
+}
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE auto GREM_VECTORCALL exp2(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	static_assert(detail::unit_type_t<A>{} == UNITLESS, "Quantities that are not unitless cannot be used as an exponent.");
+	return Quantity<N, Unitless>::reinterpret(grem::exp2(detail::toQuantity(a)._private_getUnderlyingValue()));
+}
+
+template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B>
+[[nodiscard]] GREM_ALWAYS_INLINE auto GREM_VECTORCALL pow(A a, B b) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	static_assert(detail::unit_type_t<A>{} == UNITLESS, "Quantities that are not unitless cannot be used as a base.");
+	static_assert(detail::unit_type_t<B>{} == UNITLESS, "Quantities that are not unitless cannot be used as an exponent.");
+	return Quantity<N, Unitless>::reinterpret(grem::pow(detail::toQuantity(a)._private_getUnderlyingValue(), detail::toQuantity(b)._private_getUnderlyingValue()));
 }
 
 template <detail::quantity_binary_operand_a A, detail::quantity_binary_operand_b<A> B>
@@ -6007,6 +6024,20 @@ using AngularMomentumTensor2D = AngularMomentumTensor<2>; ///< Tensor of angular
 using AngularMomentumTensor3D = AngularMomentumTensor<3>; ///< Tensor of angular momentum quantities in 3-dimensional space. Unit: Kilogram square meters per second.
 
 /**
+ * %Scalar linear viscous damping quantity.
+ *
+ * Unit: Newton seconds per meter (AKA kilograms per second).
+ */
+using LinearViscousDamping = Quantity<1, NewtonSecondsPerMeter>;
+
+/**
+ * %Scalar angular viscous damping quantity.
+ *
+ * Unit: Newton meter seconds per radian.
+ */
+using AngularViscousDamping = Quantity<1, NewtonMeterSecondsPerRadian>;
+
+/**
  * %Scalar mass flow rate quantity.
  *
  * Unit: Kilograms per second.
@@ -6051,7 +6082,7 @@ using Stiffness = Quantity<1, NewtonPerMeter>;
 /**
  * Compliance quantity.
  *
- * Unit: Meters per newton (AKA square seconds per kilogram).
+ * Unit: Meters per Newton (AKA square seconds per kilogram).
  */
 using Compliance = Quantity<1, MetersPerNewton>;
 
@@ -7103,6 +7134,52 @@ using namespace time_literals;
 		throw physics::Error{"Syntax error: Expected \"1_radian_per_second_squared\". For values other than 1, use the plural form \"_radians_per_second_squared\" instead."};
 	}
 	return operator""_radians_per_second_squared(value);
+}
+
+[[nodiscard]] consteval LinearViscousDamping operator""_Newton_seconds_per_meter(long double value) {
+	return static_cast<Scalar>(value) * NEWTON_SECONDS_PER_METER;
+}
+
+[[nodiscard]] consteval LinearViscousDamping operator""_Newton_seconds_per_meter(unsigned long long value) {
+	return static_cast<Scalar>(value) * NEWTON_SECONDS_PER_METER;
+}
+
+[[nodiscard]] consteval LinearViscousDamping operator""_Newton_second_per_meter(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{"Syntax error: Expected \"1.0_Newton_second_per_meter\". For values other than 1, use the plural form \"_Newton_seconds_per_meter\" instead."};
+	}
+	return operator""_Newton_seconds_per_meter(value);
+}
+
+[[nodiscard]] consteval LinearViscousDamping operator""_Newton_second_per_meter(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{"Syntax error: Expected \"1_Newton_second_per_meter\". For values other than 1, use the plural form \"_Newton_seconds_per_meter\" instead."};
+	}
+	return operator""_Newton_seconds_per_meter(value);
+}
+
+[[nodiscard]] consteval AngularViscousDamping operator""_Newton_meter_seconds_per_radian(long double value) {
+	return static_cast<Scalar>(value) * NEWTON_METER_SECONDS_PER_RADIAN;
+}
+
+[[nodiscard]] consteval AngularViscousDamping operator""_Newton_meter_seconds_per_radian(unsigned long long value) {
+	return static_cast<Scalar>(value) * NEWTON_METER_SECONDS_PER_RADIAN;
+}
+
+[[nodiscard]] consteval AngularViscousDamping operator""_Newton_meter_second_per_radian(long double value) {
+	if (value != 1.0l) {
+		throw physics::Error{
+			"Syntax error: Expected \"1.0_Newton_meter_second_per_radian\". For values other than 1, use the plural form \"_Newton_meter_seconds_per_radian\" instead."};
+	}
+	return operator""_Newton_meter_seconds_per_radian(value);
+}
+
+[[nodiscard]] consteval AngularViscousDamping operator""_Newton_meter_second_per_radian(unsigned long long value) {
+	if (value != 1ull) {
+		throw physics::Error{
+			"Syntax error: Expected \"1_Newton_meter_second_per_radian\". For values other than 1, use the plural form \"_Newton_meter_seconds_per_radian\" instead."};
+	}
+	return operator""_Newton_meter_seconds_per_radian(value);
 }
 
 [[nodiscard]] consteval MassFlowRate operator""_kilograms_per_second(long double value) {

@@ -1069,7 +1069,6 @@ using std::cos;
 using std::cosh;
 using std::erf;
 using std::erfc;
-using std::exp2;
 using std::expm1;
 using std::fdim;
 using std::floor;
@@ -1093,7 +1092,6 @@ using std::lround;
 using std::modf;
 using std::nextafter;
 using std::nexttoward;
-using std::pow;
 using std::remainder;
 using std::remquo;
 using std::round;
@@ -1146,7 +1144,7 @@ template <typename T>
 }
 
 /**
- * Calculate the value of Euler's number raised to a power.
+ * Calculate the result of Euler's number raised to a given power.
  *
  * \param a exponent.
  *
@@ -1155,6 +1153,31 @@ template <typename T>
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL exp(T a) noexcept requires(floating_point<T>) {
 	return std::exp(a);
+}
+
+/**
+ * Calculate the result of 2 raised to a given power.
+ *
+ * \param a exponent.
+ *
+ * \return `2 ^ a`.
+ */
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL exp2(T a) noexcept requires(floating_point<T>) {
+	return std::exp2(a);
+}
+
+/**
+ * Calculate the result of raising a given value to a given power.
+ *
+ * \param a base.
+ * \param b exponent.
+ *
+ * \return `a ^ b`.
+ */
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr T GREM_VECTORCALL pow(T a, T b) noexcept requires(floating_point<T>) {
+	return std::pow(a, b);
 }
 
 /**
