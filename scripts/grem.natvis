@@ -766,13 +766,13 @@ SPDX-License-Identifier: MIT
 
   <Type Name="grem::physics::Quantity&lt;*,*&gt;">
     <AlternativeType Name="grem::physics::Direction&lt;*&gt;" />
-    <DisplayString Optional="true" Condition="$T1 == 1">({((float*)_private_value)[0]})</DisplayString>
-    <DisplayString Optional="true" Condition="$T1 == 2">({((float*)_private_value)[0]}, {((float*)_private_value)[1]})</DisplayString>
-    <DisplayString Optional="true" Condition="$T1 == 3">({((float*)_private_value)[0]}, {((float*)_private_value)[1]}, {((float*)_private_value)[2]})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 1">({((Scalar*)_private_value)[0]})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 2">({((Scalar*)_private_value)[0]}, {((Scalar*)_private_value)[1]})</DisplayString>
+    <DisplayString Optional="true" Condition="$T1 == 3">({((Scalar*)_private_value)[0]}, {((Scalar*)_private_value)[1]}, {((Scalar*)_private_value)[2]})</DisplayString>
     <Expand>
-      <Item Name="x" Optional="true" Condition="$T1 &gt;= 1">((float*)_private_value)[0]</Item>
-      <Item Name="y" Optional="true" Condition="$T1 &gt;= 2">((float*)_private_value)[1]</Item>
-      <Item Name="z" Optional="true" Condition="$T1 &gt;= 3">((float*)_private_value)[2]</Item>
+      <Item Name="x" Optional="true" Condition="$T1 &gt;= 1">((Scalar*)_private_value)[0]</Item>
+      <Item Name="y" Optional="true" Condition="$T1 &gt;= 2">((Scalar*)_private_value)[1]</Item>
+      <Item Name="z" Optional="true" Condition="$T1 &gt;= 3">((Scalar*)_private_value)[2]</Item>
     </Expand>
   </Type>
 

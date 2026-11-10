@@ -1077,7 +1077,7 @@ class PhysicsQuantityPrinter:
 
 	def to_string(self):
 		n = self.val.type.strip_typedefs().template_argument(0)
-		components = self.val['_private_value'].address.cast(gdb.lookup_type('float').pointer())
+		components = self.val['_private_value'].address.cast(gdb.lookup_type('grem::physics::Scalar').pointer())
 		result = '0'
 		if n == 1:
 			result = vis(components[0])
@@ -1093,7 +1093,7 @@ class PhysicsQuantityPrinter:
 
 	def children(self):
 		n = self.val.type.strip_typedefs().template_argument(0)
-		components = self.val['_private_value'].address.cast(gdb.lookup_type('float').pointer())
+		components = self.val['_private_value'].address.cast(gdb.lookup_type('grem::physics::Scalar').pointer())
 		if n == 2:
 			yield ('x', components[0])
 			yield ('y', components[1])
@@ -1108,7 +1108,7 @@ class PhysicsTensorQuantityPrinter:
 
 	def to_string(self):
 		n = self.val.type.strip_typedefs().template_argument(0)
-		components = self.val['_private_value'].address.cast(gdb.lookup_type('float').pointer())
+		components = self.val['_private_value'].address.cast(gdb.lookup_type('grem::physics::Scalar').pointer())
 		result = '0'
 		if n == 1:
 			result = f"[({vis(components[0])})]"
@@ -1124,7 +1124,7 @@ class PhysicsTensorQuantityPrinter:
 
 	def children(self):
 		n = self.val.type.strip_typedefs().template_argument(0)
-		components = self.val['_private_value'].address.cast(gdb.lookup_type('float').pointer())
+		components = self.val['_private_value'].address.cast(gdb.lookup_type('grem::physics::Scalar').pointer())
 		if n == 1:
 			yield ('[0][0]', components[0])
 		if n == 2:
