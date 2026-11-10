@@ -2,7 +2,7 @@ message(STATUS "Configuring libjpeg-turbo...")
 
 FetchContent_Declare(libjpeg-turbo
 	GIT_REPOSITORY https://github.com/libjpeg-turbo/libjpeg-turbo
-	GIT_TAG c85e6b905bf237038faa936dab160ebfc5da0344 # 3.2.0
+	GIT_TAG 7b4993786d856cbccabfc0ed2f923ba000e326cc # 3.2.1
 	SOURCE_SUBDIR "non-existent-directory")
 
 FetchContent_MakeAvailable(libjpeg-turbo)
@@ -11,9 +11,9 @@ file(READ "${libjpeg-turbo_SOURCE_DIR}/README.ijg" GREM_LIBJPEG_IJG_LICENSE_FILE
 string(REPLACE "\r\n" "\n" GREM_LIBJPEG_IJG_LICENSE_FILE_CONTENTS "${GREM_LIBJPEG_IJG_LICENSE_FILE_CONTENTS}")
 string(REGEX MATCH "The authors make.*assumed by the product vendor\\.\n" GREM_LIBJPEG_IJG_LICENSE_FILE_CONTENTS "${GREM_LIBJPEG_IJG_LICENSE_FILE_CONTENTS}")
 
-set(GREM_LIBJPEG_TURBO_TITLE "libjpeg-turbo (3.2.0)" PARENT_SCOPE)
+set(GREM_LIBJPEG_TURBO_TITLE "libjpeg-turbo (3.2.1)" PARENT_SCOPE)
 set(GREM_LIBJPEG_TURBO_USE "This software is based in part on the work of the Independent JPEG Group.\n\nUsed by GREM." PARENT_SCOPE)
-set(GREM_LIBJPEG_TURBO_LINK "https://github.com/libjpeg-turbo/libjpeg-turbo/tree/c85e6b905bf237038faa936dab160ebfc5da0344" PARENT_SCOPE)
+set(GREM_LIBJPEG_TURBO_LINK "https://github.com/libjpeg-turbo/libjpeg-turbo/tree/7b4993786d856cbccabfc0ed2f923ba000e326cc" PARENT_SCOPE)
 set(GREM_LIBJPEG_TURBO_COPYRIGHT "\
 Copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.\n\
 \n\
@@ -25,9 +25,9 @@ set(GREM_DEPENDENCY_PREFIXES ${GREM_DEPENDENCY_PREFIXES}
 	PARENT_SCOPE)
 
 set(JPEG_LIB_VERSION 62)
-set(VERSION 3.2.0)
-set(LIBJPEG_TURBO_VERSION_NUMBER 3002000)
-set(BUILD "20260630")
+set(VERSION 3.2.1)
+set(LIBJPEG_TURBO_VERSION_NUMBER 3002001)
+set(BUILD "20261027")
 if(CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang)$")
 	set(HIDDEN "__attribute__((visibility(\"hidden\")))")
 endif()

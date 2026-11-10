@@ -2,7 +2,7 @@ message(STATUS "Configuring physfs...")
 
 FetchContent_Declare(physfs
 	GIT_REPOSITORY https://github.com/icculus/physfs
-	GIT_TAG 23d0b5696445d86262221519c3db3ae351376da0 # 2026-06-17 (main)
+	GIT_TAG c30aa9086d4caf7548ee76655376aa7aa9098ffc # 2026-09-30 (main)
 	SOURCE_SUBDIR "non-existent-directory")
 
 FetchContent_MakeAvailable(physfs)
@@ -18,7 +18,7 @@ string(REPLACE "\n  " "\n" GREM_PHYSFS_TINFL_LICENSE_FILE_CONTENTS "${GREM_PHYSF
 
 set(GREM_PHYSFS_TITLE "PhysicsFS" PARENT_SCOPE)
 set(GREM_PHYSFS_USE "Used by GREM." PARENT_SCOPE)
-set(GREM_PHYSFS_LINK "https://github.com/icculus/physfs/tree/23d0b5696445d86262221519c3db3ae351376da0" PARENT_SCOPE)
+set(GREM_PHYSFS_LINK "https://github.com/icculus/physfs/tree/c30aa9086d4caf7548ee76655376aa7aa9098ffc" PARENT_SCOPE)
 set(GREM_PHYSFS_COPYRIGHT "${GREM_PHYSFS_COPYRIGHT_FILE_CONTENTS}" PARENT_SCOPE)
 set(GREM_PHYSFS_LICENSE "${GREM_PHYSFS_LICENSE_FILE_CONTENTS}" PARENT_SCOPE)
 
