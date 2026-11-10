@@ -1079,10 +1079,11 @@ struct DynamicExecutorOptions {
 	 * The default value tries to choose a reasonable degree of parallelism
 	 * based on the number of available threads reported by the standard library
 	 * implementation (and in turn, the operating system), which is then
-	 * decremented by 1 to leave some room for the main thread. A different
-	 * estimate may be required for better performance if the program has
-	 * multiple executors running simultaneously, or if the system has other
-	 * resource-intensive programs running that are contending for CPU time.
+	 * decremented by 1 to leave some room for the operating system and other
+	 * threads. A different estimate may be required for better performance if
+	 * the program has multiple executors running simultaneously, or if the
+	 * system has other resource-intensive programs running that are contending
+	 * for CPU time.
 	 */
 	Task::ParallelCount targetParallelism = static_cast<Task::ParallelCount>(clamp(Thread::hardware_concurrency(), 2u, 16u) - 1);
 
