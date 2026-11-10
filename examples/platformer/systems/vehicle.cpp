@@ -1,7 +1,10 @@
+// SPDX-FileCopyrightText: 2026 Ivar Härnqvist
+// SPDX-License-Identifier: MIT
+
 #include "vehicle.hpp"
 
-#include <GREM/GREM.hpp>    // GREM_..., grem::...
-#include <GREM/aliases.hpp> // ...
+#include <GREM/GREM.hpp>
+#include <GREM/aliases.hpp>
 
 #include "../Audio.hpp"
 #include "../Graphics.hpp"
