@@ -120,11 +120,11 @@ struct VehicleSettingsJSON {
 				}
 			};
 
-			Friction turningLongitudalFriction{.shape = 1.9_x, .peak = 1.7_x};
-			Friction turningLateralFriction{.shape = 1.6_x, .peak = 1.6_x};
+			Friction turningLongitudalFriction{.shape = 1.9_x, .peak = 2.2_x};
+			Friction turningLateralFriction{.shape = 1.6_x, .peak = 2.0_x};
 			phys::Coefficient turningRollingResistance = 0.005_x;
-			Friction nonTurningLongitudalFriction{.shape = 1.9_x, .peak = 1.7_x};
-			Friction nonTurningLateralFriction{.shape = 1.6_x, .peak = 1.6_x};
+			Friction nonTurningLongitudalFriction{.shape = 1.9_x, .peak = 2.2_x};
+			Friction nonTurningLateralFriction{.shape = 1.6_x, .peak = 2.0_x};
 			phys::Coefficient nonTurningRollingResistance = 0.005_x;
 		} tires{};
 
@@ -135,17 +135,17 @@ struct VehicleSettingsJSON {
 				phys::Distance maxOffset = 0.25_meters;
 
 				struct TurningWheelMultipliers {
-					phys::Coefficient stiffness = 1.4_x;
+					phys::Coefficient stiffness = 1.3_x;
 					phys::Coefficient dampingRatio = 1.0_x;
 					phys::Coefficient maxOffset = 1.0_x;
 				} turningWheelMultipliers{};
 			} springs{};
 
 			struct AntiRollBar {
-				phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 65_Newton_per_millimeter;
+				phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 140_Newton_per_millimeter;
 
 				struct TurningWheelMultipliers {
-					phys::Coefficient stiffness = 1.35_x;
+					phys::Coefficient stiffness = 1.0_x;
 				} turningWheelMultipliers{};
 			} antiRollBar{};
 		} suspension{};
@@ -218,7 +218,6 @@ struct VehicleWheels {
 			phys::EntityID objectID;
 			phys::Length3D offsetA;
 			phys::Length3D offsetB;
-			phys::Direction3D normal;
 			phys::LinearVelocity3D relativeVelocity;
 			phys::Length1D suspensionOffset;
 		};
@@ -518,8 +517,8 @@ void simulateVehicles(exec::Entities<phys::Position3D, phys::Orientation3D, phys
 		engine.angularSpeed += engineTorque * deltaTime / engineMomentOfInertia;
 
 		// Calculate wheel contacts.
-		phys::Length1D turningWheelRelativeSuspensionOffset{};
-		phys::Length1D nonTurningWheelRelativeSuspensionOffset{};
+		Optional<phys::Length1D> turningWheelRelativeSuspensionOffset = phys::Length1D{};
+		Optional<phys::Length1D> nonTurningWheelRelativeSuspensionOffset = phys::Length1D{};
 		for (size_t wheelIndex = 0; wheelIndex < wheelCount; ++wheelIndex) {
 			VehicleWheels::Wheel& wheel = wheels.wheels[wheelIndex];
 			const VehicleInfo::Wheel& wheelInfo = info.wheels[wheelIndex];
@@ -535,27 +534,29 @@ void simulateVehicles(exec::Entities<phys::Position3D, phys::Orientation3D, phys
 			}
 
 			// Simulate suspension by casting the wheel shape along the suspension axis and seeing how far it is able to extend. This offset determines the spring force.
-			const phys::Position3D suspensionRestPositionWheelCenter = position + orientation(scale * wheelInfo.localOffset);
+			const phys::Position3D wheelCenterAtSuspensionRestPosition = position + orientation(scale * wheelInfo.localOffset);
 			const phys::Direction3D suspensionDirection = wheel.suspensionOrientation(phys::Y_AXIS_3D);
 			const phys::Distance maxSuspensionOffset =
 				(wheelInfo.turns) ? type->suspension.springs.maxOffset * type->suspension.springs.turningWheelMultipliers.maxOffset : type->suspension.springs.maxOffset;
 			const phys::Distance wheelRadius = wheelInfo.radius * scale.getY();
 			const phys::Distance wheelHalfWidth = wheelInfo.halfWidth * scale.getX();
 			const phys::CylinderShape3D wheelShape{.radius = wheelRadius, .halfLength = wheelHalfWidth};
-			const phys::Transformation3D wheelCastStartTransformation =
-				translateRotate(suspensionRestPositionWheelCenter + suspensionDirection * maxSuspensionOffset, wheel.suspensionOrientation * phys::Orientation3D::roll(90_degrees));
-			phys::Length1D suspensionOffset{};
+			const phys::Transformation3D wheelCastStartTransformation = translateRotate(wheelCenterAtSuspensionRestPosition + suspensionDirection * maxSuspensionOffset,
+				wheel.suspensionOrientation * phys::Orientation3D::roll(90_degrees));
+			Optional<phys::Length1D>& relativeSuspensionOffset = (wheelInfo.turns) ? turningWheelRelativeSuspensionOffset : nonTurningWheelRelativeSuspensionOffset;
 			if (const Optional<phys::Broadphase3D::ShapecastResult> shapecastResult = broadphase.shapecastClosestHit(wheelShape, VEHICLE_COLLISION_FILTER,
-					wheelCastStartTransformation, -suspensionDirection, maxSuspensionOffset + 0.05_x * wheelRadius, objectEntities, simulationOptions.collisionAlgorithmOptions,
+					wheelCastStartTransformation, -suspensionDirection, maxSuspensionOffset, objectEntities, simulationOptions.collisionAlgorithmOptions,
 					phys::CollisionFilterTest::RESPONSE, [&](phys::EntityID otherObjectID) -> bool { return otherObjectID != entityID; })) {
 				const phys::Position3D positionB = objectEntities.getComponent<phys::Position3D>(shapecastResult->objectID);
 				const phys::LinearVelocity3D linearVelocityB = kinematicsEntities.getComponent<phys::LinearVelocity3D>(shapecastResult->objectID);
 				const phys::AngularVelocity3D angularVelocityB = kinematicsEntities.getComponent<phys::AngularVelocity3D>(shapecastResult->objectID);
 
 				// Calculate suspension offset and tire contact point.
-				suspensionOffset = clamp(maxSuspensionOffset - shapecastResult->distance, phys::Length1D{}, maxSuspensionOffset);
+				const phys::Length1D suspensionOffset = clamp(maxSuspensionOffset - shapecastResult->distance, phys::Length1D{}, maxSuspensionOffset);
 				wheel.suspensionOffset = suspensionOffset * suspensionDirection;
-				const phys::Position3D contactPoint = suspensionRestPositionWheelCenter + wheel.suspensionOffset - wheelRadius * shapecastResult->normal;
+				const phys::Position3D contactPoint =
+					(shapecastResult->distance > 0) ? wheelCastStartTransformation(shapecastResult->localOffsets.first)
+					                                : wheelCenterAtSuspensionRestPosition + wheel.suspensionOffset - wheelRadius * shapecastResult->normal;
 				const phys::Length3D contactOffsetA = contactPoint - position;
 				const phys::Length3D contactOffsetB = contactPoint - positionB;
 				const phys::LinearVelocity3D contactVelocityA = phys::calculatePointVelocity(linearVelocity, angularVelocity, contactOffsetA);
@@ -566,25 +567,26 @@ void simulateVehicles(exec::Entities<phys::Position3D, phys::Orientation3D, phys
 					.objectID = shapecastResult->objectID,
 					.offsetA = contactOffsetA,
 					.offsetB = contactOffsetB,
-					.normal = shapecastResult->normal,
 					.relativeVelocity = contactRelativeVelocity,
 					.suspensionOffset = suspensionOffset,
 				};
+
+				if (relativeSuspensionOffset) {
+					*relativeSuspensionOffset += flipSignIf(suspensionOffset, signbit(wheelInfo.localOffset.getX()));
+				}
 			} else {
 				// The wheel is in the air. Decay the suspension back towards its rest position.
 				wheel.suspensionOffset = expDecay(wheel.suspensionOffset, 5_Hertz, deltaTime);
 
 				wheel.contact.reset();
+				relativeSuspensionOffset.reset();
 			}
-
-			phys::Length1D& relativeSuspensionOffset = (wheelInfo.turns) ? turningWheelRelativeSuspensionOffset : nonTurningWheelRelativeSuspensionOffset;
-			relativeSuspensionOffset += flipSignIf(suspensionOffset, signbit(wheelInfo.localOffset.getX()));
 		}
 
 		const phys::Stiffness turningWheelAntiRollBarStiffness = type->suspension.antiRollBar.stiffness * type->suspension.antiRollBar.turningWheelMultipliers.stiffness;
 		const phys::Stiffness nonTurningWheelAntiRollBarStiffness = type->suspension.antiRollBar.stiffness;
-		const phys::Force1D turningWheelAntiRollBarForce = turningWheelRelativeSuspensionOffset * turningWheelAntiRollBarStiffness;
-		const phys::Force1D nonTurningWheelAntiRollBarForce = nonTurningWheelRelativeSuspensionOffset * nonTurningWheelAntiRollBarStiffness;
+		const phys::Force1D turningWheelAntiRollBarForce = turningWheelRelativeSuspensionOffset.value_or(phys::Length1D{}) * turningWheelAntiRollBarStiffness;
+		const phys::Force1D nonTurningWheelAntiRollBarForce = nonTurningWheelRelativeSuspensionOffset.value_or(phys::Length1D{}) * nonTurningWheelAntiRollBarStiffness;
 
 		// Simulate wheels.
 		phys::AngularImpulse2D finalDriveReflectedAngularImpulse{};
@@ -627,15 +629,15 @@ void simulateVehicles(exec::Entities<phys::Position3D, phys::Orientation3D, phys
 				const phys::Stiffness suspensionSpringStiffness =
 					(wheelInfo.turns) ? type->suspension.springs.stiffness * type->suspension.springs.turningWheelMultipliers.stiffness : type->suspension.springs.stiffness;
 				const phys::Force1D suspensionSpringForce = suspensionSpringStiffness * wheel.contact->suspensionOffset;
-				const phys::Force1D suspensionDampingForce = wheelInfo.suspensionDamping * dot(wheel.contact->relativeVelocity, wheel.contact->normal);
-				const phys::Force1D suspensionNormalForce = suspensionSpringForce - suspensionDampingForce;
+				const phys::Force1D suspensionDampingForce = wheelInfo.suspensionDamping * dot(wheel.contact->relativeVelocity, suspensionDirection);
+				const phys::Force1D suspensionForce = suspensionSpringForce - suspensionDampingForce;
 
 				// Calculate anti-roll bar force.
 				const phys::Force1D antiRollBarForce =
 					flipSignIf((wheelInfo.turns) ? turningWheelAntiRollBarForce : nonTurningWheelAntiRollBarForce, signbit(wheelInfo.localOffset.getX()));
 
 				// Calculate friction forces.
-				const phys::Force1D tireLoadForce = max(suspensionNormalForce, phys::Force1D{});
+				const phys::Force1D tireLoadForce = max(suspensionForce, phys::Force1D{});
 				const phys::Distance wheelRadius = wheelInfo.radius * scale.getY();
 				const phys::LinearVelocity1D tireVelocity = wheel.angularVelocity * wheelRadius;
 				const phys::Angle slipYaw = (sideVelocity == 0 && !hasForwardSpeed) ? phys::Angle{} : atan2(sideVelocity, forwardSpeed);
@@ -661,8 +663,8 @@ void simulateVehicles(exec::Entities<phys::Position3D, phys::Orientation3D, phys
 					phys::Force2D{sideForceLimit, forwardForceLimit} * clampLength(phys::Scale2D{normalizedSideForce, normalizedForwardForce}, 1_x);
 
 				// Apply forces to vehicle body.
-				const phys::Force3D totalForce = suspensionNormalForce * wheel.contact->normal + antiRollBarForce * suspensionDirection + frictionForces.getX() * sideDirection +
-				                                 frictionForces.getY() * forwardDirection;
+				const phys::Force3D totalForce =
+					(suspensionForce + antiRollBarForce) * suspensionDirection + frictionForces.getX() * sideDirection + frictionForces.getY() * forwardDirection;
 				const phys::LinearImpulse3D linearImpulse = totalForce * deltaTime;
 				if (linearImpulse != 0) {
 					auto&& [entityIDB, activityB, linearVelocityB, angularVelocityB, inverseMassB, inverseMomentOfInertiaTensorB] = kinematicsEntities[wheel.contact->objectID];
