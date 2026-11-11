@@ -175,6 +175,9 @@ def convert_orientation(orientation):
     scale = 1.0 / math.sqrt(orientation.x * orientation.x + orientation.y * orientation.y + orientation.z * orientation.z + orientation.w * orientation.w)
     return (orientation.x * scale, orientation.z * scale, -orientation.y * scale, orientation.w * scale)
 
+def convert_scale(scale):
+    return (scale[0], scale[2], scale[1])
+
 def convert_angles(basis):
     direction = basis @ mathutils.Vector((0, 1, 0))
     return (-math.asin(-direction.z), math.atan2(-direction.x, direction.y))
@@ -267,7 +270,7 @@ if 'Props' in bpy.data.collections:
         prop = {
             'position': convert_position(object.location),
             'orientation': convert_orientation(object.rotation_quaternion),
-            'scale': tuple(object.scale),
+            'scale': convert_scale(object.scale),
             'model': str(object['model']),
         }
         if 'kineticFriction' in object:
@@ -289,7 +292,7 @@ if 'Physics Objects' in bpy.data.collections:
         physics_object = {
             'position': convert_position(object.location),
             'orientation': convert_orientation(object.rotation_quaternion),
-            'scale': tuple(object.scale),
+            'scale': convert_scale(object.scale),
             'model': str(object['model']),
         }
         if 'linearVelocity' in object:
@@ -340,7 +343,7 @@ if 'Vehicles' in bpy.data.collections:
         vehicle = {
             'position': convert_position(object.location),
             'orientation': convert_orientation(object.rotation_quaternion),
-            'scale': tuple(object.scale),
+            'scale': convert_scale(object.scale),
             'vehicleType': str(object['vehicleType']),
         }
         level['vehicles'].append(vehicle)
