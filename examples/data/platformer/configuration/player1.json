@@ -13,7 +13,7 @@
         "key_arrow_left": "look_left",
         "key_arrow_right": "look_right",
         "key_left_shift": ["sprint", "clutch_smooth"],
-        "key_left_control": ["ground_pound"],
+        "key_left_control": "ground_pound",
         "mouse_motion_up": "aim_up",
         "mouse_motion_down": "aim_down",
         "mouse_motion_left": "aim_left",
