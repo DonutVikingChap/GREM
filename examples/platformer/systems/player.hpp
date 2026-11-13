@@ -84,7 +84,8 @@ struct PlayerInput : evt::InputManager {
 		phys::Frequency gasSmoothDecayRate = 4_Hertz;
 		phys::Frequency brakeSmoothDecayRate = 8_Hertz;
 		phys::Frequency clutchSmoothDecayRate = 6_Hertz;
-		phys::Frequency steeringSmoothDecayRate = 6_Hertz;
+		phys::Frequency steeringSmoothDecayRate = 4_Hertz;
+		phys::Frequency steeringSmoothReturnRate = 2_Hertz;
 		phys::Coefficient steeringFromAimSensitivity = 0.5_x;
 		phys::Coefficient shiftFromAimSensitivity = 10_x;
 		bool invertSteerWithAim = false;

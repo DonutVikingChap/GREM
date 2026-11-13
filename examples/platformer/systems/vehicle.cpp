@@ -315,7 +315,11 @@ void controlVehicles(exec::Entities<VehicleControls, const VehicleEngine, const 
 
 		controls.steeringDirect = clamp(input.getCurrentState1D(PlayerAction::STEER_LEFT, PlayerAction::STEER_RIGHT).value, -1.0f, 1.0f);
 		controls.steeringSmoothTarget = clamp(input.getCurrentState1D(PlayerAction::STEER_LEFT_SMOOTH, PlayerAction::STEER_RIGHT_SMOOTH).value, -1.0f, 1.0f);
-		controls.steeringSmooth = expDecay(controls.steeringSmooth, controls.steeringSmoothTarget, input.settings.steeringSmoothDecayRate, deltaTime);
+		if (controls.steeringSmoothTarget == 0) {
+			controls.steeringSmooth = moveTowards(controls.steeringSmooth, phys::Scale1D{}, input.settings.steeringSmoothReturnRate * deltaTime);
+		} else {
+			controls.steeringSmooth = expDecay(controls.steeringSmooth, controls.steeringSmoothTarget, input.settings.steeringSmoothDecayRate, deltaTime);
+		}
 		if (input.isPressed(PlayerAction::STEER_WITH_AIM) != input.settings.invertSteerWithAim) {
 			controls.steeringFromAim += input.getRelativeState1D(PlayerAction::AIM_LEFT, PlayerAction::AIM_RIGHT).motion * input.settings.steeringFromAimSensitivity;
 			controls.steeringFromAim = clamp(controls.steeringFromAim, -1_x, 1_x);
