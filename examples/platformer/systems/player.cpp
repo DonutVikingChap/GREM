@@ -714,9 +714,12 @@ void adjustPlayerCameras(exec::Entities<PlayerCamera, const PlayerMovement, cons
 				const phys::Angle pitchAtZeroSpeed = (isInVehicle) ? settings.camera.pitchAtZeroSpeedInVehicle : settings.camera.pitchAtZeroSpeed;
 				const phys::Angle pitchAtBaseSpeed = (isInVehicle) ? settings.camera.pitchAtBaseSpeedInVehicle : settings.camera.pitchAtBaseSpeed;
 				const phys::Angle pitchOffset = lerp(pitchAtZeroSpeed, pitchAtBaseSpeed, clamp(velocityInHorizontalDirection / settings.grounded.baseSpeed, 0_x, 1_x));
-				camera.desiredPitch = (horizontalSpeed > phys::Speed::MACHINE_EPSILON)
+				camera.desiredPitch =
+					(horizontalSpeed > phys::Speed::MACHINE_EPSILON)
+				        ? phys::Angle{(horizontalSpeed > settings.grounded.minSpeed)
 				                          ? phys::Angle{clamp(atan2(verticalVelocity, horizontalSpeed) + pitchOffset, -90_degrees, 90_degrees)}
-				                          : phys::Angle{(verticalSpeed > settings.grounded.minSpeed) ? copysign(90_degrees, verticalVelocity) : pitchOffset};
+				                          : pitchOffset}
+				        : phys::Angle{(verticalSpeed > settings.grounded.minSpeed) ? copysign(90_degrees, verticalVelocity) : pitchOffset};
 			}
 			const phys::Frequency pitchDecayRate = (isInVehicle) ? settings.camera.pitchDecayRateInVehicle : settings.camera.pitchDecayRate;
 			const phys::AbsoluteAngle newPitch = expDecay(camera.angles.getX(), camera.desiredPitch,
