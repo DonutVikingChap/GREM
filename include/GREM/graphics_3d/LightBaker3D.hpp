@@ -234,6 +234,26 @@ public:
 		FunctionView<void(RenderPass&, const Camera3D&)> drawRadiance);
 
 	/**
+	 * Render the irradiance maps of all light probes of all volumes in a set of
+	 * light probe volumes.
+	 *
+	 * \param lightProbeVolumes set of light probe volumes to bake the
+	 *        irradiance maps for.
+	 * \param drawRadiance function that records the draw commands
+	 *        for the radiance of the surroundings of the light probes. Should
+	 *        draw an image from the given camera's perspective in HDR color
+	 *        without tonemapping onto the given render pass. The alpha channel
+	 *        of the drawn image is ignored.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	GREM_API(graphics_3d)
+	void bakeAllLightProbeIrradianceMaps(LightProbeVolumes3D& lightProbeVolumes, FunctionView<void(RenderPass&, const Camera3D&)> drawRadiance);
+
+	/**
 	 * Render the distance map of a single light probe of a specific volume in a
 	 * set of light probe volumes.
 	 *
@@ -259,6 +279,26 @@ public:
 	GREM_API(graphics_3d)
 	void bakeLightProbeDistanceMap(LightProbeVolumes3D& lightProbeVolumes, uint32_t lightProbeVolumeIndex, u32vec3 lightProbeGridIndices,
 		FunctionView<void(RenderPass&, const Camera3D&)> drawDistance);
+
+	/**
+	 * Render the distance maps of all light probes of all volumes in a set of
+	 * light probe volumes.
+	 *
+	 * \param lightProbeVolumes set of light probe volumes to bake the distance
+	 *        maps for.
+	 * \param drawDistance function that records the draw commands for the
+	 *        distance of the surroundings of the light probe. Should draw an
+	 *        image from the given camera's perspective with distance in the red
+	 *        channel onto the given render pass, with backface culling
+	 *        disabled.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	GREM_API(graphics_3d)
+	void bakeAllLightProbeDistanceMaps(LightProbeVolumes3D& lightProbeVolumes, FunctionView<void(RenderPass&, const Camera3D&)> drawDistance);
 
 	/**
 	 * Render the reflection maps of a set of reflection probes.
@@ -301,6 +341,26 @@ public:
 	 */
 	GREM_API(graphics_3d)
 	void bakeReflectionProbeReflectionMap(ReflectionProbes3D& reflectionProbes, uint32_t reflectionProbeIndex, FunctionView<void(RenderPass&, const Camera3D&)> drawReflection);
+
+	/**
+	 * Render all reflection maps in a set of reflection probes.
+	 *
+	 * \param reflectionProbes set of reflection probes to bake the reflection
+	 *        probes of.
+	 * \param drawReflection function that records the draw commands for the
+	 *        surroundings of the reflection probes. Should draw an image from
+	 *        the given camera's perspective in HDR color without tonemapping
+	 *        onto the given render pass. The depth buffer of the drawn image is
+	 *        used to determine which pixels are part of the reflection probe's
+	 *        purview by comparing them to the maximum depth value.
+	 *
+	 * \throws graphics::Error if resource creation failed.
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 */
+	GREM_API(graphics_3d)
+	void bakeAllReflectionProbeReflectionMaps(ReflectionProbes3D& reflectionProbes, FunctionView<void(RenderPass&, const Camera3D&)> drawReflection);
 
 	/**
 	 * Generate a cubemap from a 2D equirectangular map texture.

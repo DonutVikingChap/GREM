@@ -195,27 +195,8 @@ void LightBaker3D::bakeDiffuseLighting(LightProbeVolumes3D& lightProbeVolumes, F
 	FunctionView<void(RenderPass&, const Camera3D&)> drawDistance) {
 	GREM_PROFILE_FUNCTION();
 
-	for (size_t lightProbeVolumeIndex = 0; lightProbeVolumeIndex < lightProbeVolumes.volumes.size(); ++lightProbeVolumeIndex) {
-		const u32vec3 probeCounts = lightProbeVolumes.volumeOptions[lightProbeVolumeIndex].probeCounts;
-		for (uint32_t y = 0; y < probeCounts.y; ++y) {
-			for (uint32_t z = 0; z < probeCounts.z; ++z) {
-				for (uint32_t x = 0; x < probeCounts.x; ++x) {
-					bakeLightProbeIrradianceMap(lightProbeVolumes, lightProbeVolumeIndex, u32vec3{x, y, z}, drawRadiance);
-				}
-			}
-		}
-	}
-
-	for (size_t lightProbeVolumeIndex = 0; lightProbeVolumeIndex < lightProbeVolumes.volumes.size(); ++lightProbeVolumeIndex) {
-		const u32vec3 probeCounts = lightProbeVolumes.volumeOptions[lightProbeVolumeIndex].probeCounts;
-		for (uint32_t y = 0; y < probeCounts.y; ++y) {
-			for (uint32_t z = 0; z < probeCounts.z; ++z) {
-				for (uint32_t x = 0; x < probeCounts.x; ++x) {
-					bakeLightProbeDistanceMap(lightProbeVolumes, lightProbeVolumeIndex, u32vec3{x, y, z}, drawDistance);
-				}
-			}
-		}
-	}
+	bakeAllLightProbeIrradianceMaps(lightProbeVolumes, drawRadiance);
+	bakeAllLightProbeDistanceMaps(lightProbeVolumes, drawDistance);
 }
 
 void LightBaker3D::bakeLightProbeIrradianceMap(LightProbeVolumes3D& lightProbeVolumes, uint32_t lightProbeVolumeIndex, u32vec3 lightProbeGridIndices,
@@ -266,6 +247,21 @@ void LightBaker3D::bakeLightProbeIrradianceMap(LightProbeVolumes3D& lightProbeVo
 	});
 	renderPass.draw(lightProbeBaker.lightProbeAtlasIrradianceDrawCommandBuffer, lightProbeBaker.lightProbeAtlasIrradianceFragmentParameterBuffer);
 	device.render(renderPass);
+}
+
+void LightBaker3D::bakeAllLightProbeIrradianceMaps(LightProbeVolumes3D& lightProbeVolumes, FunctionView<void(RenderPass&, const Camera3D&)> drawRadiance) {
+	GREM_PROFILE_FUNCTION();
+
+	for (size_t lightProbeVolumeIndex = 0; lightProbeVolumeIndex < lightProbeVolumes.volumeOptions.size(); ++lightProbeVolumeIndex) {
+		const u32vec3 probeCounts = lightProbeVolumes.volumeOptions[lightProbeVolumeIndex].probeCounts;
+		for (uint32_t y = 0; y < probeCounts.y; ++y) {
+			for (uint32_t z = 0; z < probeCounts.z; ++z) {
+				for (uint32_t x = 0; x < probeCounts.x; ++x) {
+					bakeLightProbeIrradianceMap(lightProbeVolumes, lightProbeVolumeIndex, u32vec3{x, y, z}, drawRadiance);
+				}
+			}
+		}
+	}
 }
 
 void LightBaker3D::bakeLightProbeDistanceMap(LightProbeVolumes3D& lightProbeVolumes, uint32_t lightProbeVolumeIndex, u32vec3 lightProbeGridIndices,
@@ -319,12 +315,25 @@ void LightBaker3D::bakeLightProbeDistanceMap(LightProbeVolumes3D& lightProbeVolu
 	device.render(renderPass);
 }
 
+void LightBaker3D::bakeAllLightProbeDistanceMaps(LightProbeVolumes3D& lightProbeVolumes, FunctionView<void(RenderPass&, const Camera3D&)> drawDistance) {
+	GREM_PROFILE_FUNCTION();
+
+	for (size_t lightProbeVolumeIndex = 0; lightProbeVolumeIndex < lightProbeVolumes.volumeOptions.size(); ++lightProbeVolumeIndex) {
+		const u32vec3 probeCounts = lightProbeVolumes.volumeOptions[lightProbeVolumeIndex].probeCounts;
+		for (uint32_t y = 0; y < probeCounts.y; ++y) {
+			for (uint32_t z = 0; z < probeCounts.z; ++z) {
+				for (uint32_t x = 0; x < probeCounts.x; ++x) {
+					bakeLightProbeDistanceMap(lightProbeVolumes, lightProbeVolumeIndex, u32vec3{x, y, z}, drawDistance);
+				}
+			}
+		}
+	}
+}
+
 void LightBaker3D::bakeSpecularReflections(ReflectionProbes3D& reflectionProbes, FunctionView<void(RenderPass&, const Camera3D&)> drawReflection) {
 	GREM_PROFILE_FUNCTION();
 
-	for (size_t reflectionProbeIndex = 0; reflectionProbeIndex < reflectionProbes.probes.size(); ++reflectionProbeIndex) {
-		bakeReflectionProbeReflectionMap(reflectionProbes, reflectionProbeIndex, drawReflection);
-	}
+	bakeAllReflectionProbeReflectionMaps(reflectionProbes, drawReflection);
 }
 
 void LightBaker3D::bakeReflectionProbeReflectionMap(ReflectionProbes3D& reflectionProbes, uint32_t reflectionProbeIndex,
@@ -367,6 +376,14 @@ void LightBaker3D::bakeReflectionProbeReflectionMap(ReflectionProbes3D& reflecti
 				reflectionProbeBaker.cubemapReflectionFragmentParameterBuffer);
 			device.render(renderPass);
 		}
+	}
+}
+
+void LightBaker3D::bakeAllReflectionProbeReflectionMaps(ReflectionProbes3D& reflectionProbes, FunctionView<void(RenderPass&, const Camera3D&)> drawReflection) {
+	GREM_PROFILE_FUNCTION();
+
+	for (size_t reflectionProbeIndex = 0; reflectionProbeIndex < reflectionProbes.probeOptions.size(); ++reflectionProbeIndex) {
+		bakeReflectionProbeReflectionMap(reflectionProbes, reflectionProbeIndex, drawReflection);
 	}
 }
 
