@@ -287,9 +287,9 @@ private:
 	}
 
 	static constexpr Array SYSTEMS{
+		&objectSystem,
 		&playerSystem,
 		&playerControlSystem,
-		&objectSystem,
 		&vehicleSystem,
 		&objectPhysicsSystem,
 		&levelSystem,
