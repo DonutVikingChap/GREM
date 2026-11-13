@@ -78,6 +78,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case VK_FORMAT_R32G32_SFLOAT: return TextureFormat::R32G32_FLOAT;
 			case VK_FORMAT_R8G8B8A8_UNORM: return TextureFormat::R8G8B8A8_UNORM;
 			case VK_FORMAT_R8G8B8A8_SRGB: return TextureFormat::R8G8B8A8_SRGB;
+			case VK_FORMAT_B8G8R8A8_UNORM: return TextureFormat::B8G8R8A8_UNORM;
+			case VK_FORMAT_B8G8R8A8_SRGB: return TextureFormat::B8G8R8A8_SRGB;
 			case VK_FORMAT_R16G16B16A16_SFLOAT: return TextureFormat::R16G16B16A16_FLOAT;
 			case VK_FORMAT_R32G32B32A32_SFLOAT: return TextureFormat::R32G32B32A32_FLOAT;
 			case VK_FORMAT_D16_UNORM: return TextureFormat::D16_UNORM;
@@ -327,6 +329,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::R32G32_FLOAT: return VK_FORMAT_R32G32_SFLOAT;
 			case TextureFormat::R8G8B8A8_UNORM: return VK_FORMAT_R8G8B8A8_UNORM;
 			case TextureFormat::R8G8B8A8_SRGB: return VK_FORMAT_R8G8B8A8_SRGB;
+			case TextureFormat::B8G8R8A8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+			case TextureFormat::B8G8R8A8_SRGB: return VK_FORMAT_B8G8R8A8_SRGB;
 			case TextureFormat::R16G16B16A16_FLOAT: return VK_FORMAT_R16G16B16A16_SFLOAT;
 			case TextureFormat::R32G32B32A32_FLOAT: return VK_FORMAT_R32G32B32A32_SFLOAT;
 			case TextureFormat::D16_UNORM: return VK_FORMAT_D16_UNORM;
@@ -674,7 +678,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 
 	TextureImplementation(Device& device, Window& window, const SwapchainOptions& options, VkSwapchainKHR oldSwapchain)
 		: type(TextureType::SWAPCHAIN)
-		, format(VK_FORMAT_UNDEFINED)
+		, format(device.get()->physicalDevice.surfaceFormat.format)
 		, size{.width = 0, .height = 0}
 		, mipLevelCount(1)
 		, maxMultisampleCount(clamp(window.getMultisampleCount(), uint32_t{1}, device.get()->physicalDevice.supportedFeatures.maxSupportedMultisampleCount))

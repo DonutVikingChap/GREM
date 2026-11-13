@@ -53,6 +53,21 @@ namespace {
 		throw graphics::Error{"Render pass has no render targets."};
 	}
 
+	const Extent2D maxFramebufferSize = device.getSupportedFeatures().maxFramebufferSize;
+	for (const TextureSubresourceReference& renderTarget : renderTargets) {
+		GREM_ASSERT(renderTarget.texture);
+		if (!Texture::isFramebufferCompatibleFormat(renderTarget.texture->getInternalFormat()) && renderTarget.texture->getType() != TextureType::SWAPCHAIN) {
+			throw graphics::Error{"Cannot render to a non-framebuffer-compatible texture."};
+		}
+		if (resolveTarget.texture && Texture::getFormatAspects(renderTarget.texture->getInternalFormat()).contains(TextureAspect::COLOR) &&
+			renderTarget.subresource.aspects.contains(TextureAspect::COLOR) && renderTarget.texture->getInternalFormat() != resolveTarget.texture->getInternalFormat()) {
+			throw graphics::Error{"Cannot resolve from a color texture of a different format."};
+		}
+		if (renderTarget.texture->getWidth() > maxFramebufferSize.width && renderTarget.texture->getHeight() > maxFramebufferSize.height) {
+			throw graphics::Error{"Maximum framebuffer size exceeded."};
+		}
+	}
+
 	if (resolveTarget.texture) {
 		if (!Texture::isFramebufferCompatibleFormat(resolveTarget.texture->getInternalFormat()) && resolveTarget.texture->getType() != TextureType::SWAPCHAIN) {
 			throw graphics::Error{"Cannot resolve to a non-framebuffer-compatible texture."};
@@ -64,20 +79,6 @@ namespace {
 			!resolveTarget.subresource.aspects.contains(TextureAspect::COLOR)) {
 			throw graphics::Error{"Cannot resolve to a non-color texture."};
 		}
-	}
-
-	if (anyOf(renderTargets, [](const TextureSubresourceReference& renderTarget) -> bool {
-			GREM_ASSERT(renderTarget.texture);
-			return !Texture::isFramebufferCompatibleFormat(renderTarget.texture->getInternalFormat()) && renderTarget.texture->getType() != TextureType::SWAPCHAIN;
-		})) {
-		throw graphics::Error{"Cannot render to a non-framebuffer-compatible texture."};
-	}
-
-	const Extent2D maxFramebufferSize = device.getSupportedFeatures().maxFramebufferSize;
-	if (anyOf(renderTargets, [&](const TextureSubresourceReference& renderTarget) -> bool {
-			return renderTarget.texture->getWidth() > maxFramebufferSize.width && renderTarget.texture->getHeight() > maxFramebufferSize.height;
-		})) {
-		throw graphics::Error{"Maximum framebuffer size exceeded."};
 	}
 
 	DoubleEndedQueue<SharedPointer<RenderPassImplementation>>& renderPassesForReuse = device.get()->renderPassesForReuse;

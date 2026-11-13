@@ -34,7 +34,17 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 	struct UninitializedTag {};
 
 	[[nodiscard]] static GLbitfield getAspectBits(TextureAspects aspects) noexcept {
-		return static_cast<GLbitfield>(aspects.bits) & (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		GLbitfield result{};
+		if (aspects.contains(TextureAspect::COLOR)) {
+			result |= GL_COLOR_BUFFER_BIT;
+		}
+		if (aspects.contains(TextureAspect::DEPTH)) {
+			result |= GL_DEPTH_BUFFER_BIT;
+		}
+		if (aspects.contains(TextureAspect::STENCIL)) {
+			result |= GL_STENCIL_BUFFER_BIT;
+		}
+		return result;
 	}
 
 	[[nodiscard]] static GLenum getTextureTarget(TextureType type) {
@@ -75,6 +85,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::R5G6B5_UNORM_PACK16: [[fallthrough]];
@@ -120,6 +132,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::R5G6B5_UNORM_PACK16: [[fallthrough]];
@@ -150,6 +164,53 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::EAC_R11G11_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::PVRTC1_4BPP_RGBA_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::PVRTC1_4BPP_RGBA_SRGB_BLOCK: throw graphics::Error{"Texture format is not framebuffer compatible."};
+		}
+		unreachable();
+	}
+
+	[[nodiscard]] static GLint getInternalFormat(TextureFormat internalFormat) noexcept {
+		switch (internalFormat) {
+			case TextureFormat::UNKNOWN: return 0;
+			case TextureFormat::R8_UNORM: return GL_R8;
+			case TextureFormat::R16_FLOAT: return GL_R16F;
+			case TextureFormat::R32_FLOAT: return GL_R32F;
+			case TextureFormat::R8G8_UNORM: return GL_RG8;
+			case TextureFormat::R16G16_FLOAT: return GL_RG16F;
+			case TextureFormat::R32G32_FLOAT: return GL_RG32F;
+			case TextureFormat::R8G8B8A8_UNORM: return GL_RGBA8;
+			case TextureFormat::R8G8B8A8_SRGB: return GL_SRGB8_ALPHA8;
+			case TextureFormat::B8G8R8A8_UNORM: return 0x93A1; // GL_RGBA8_EXT
+			case TextureFormat::B8G8R8A8_SRGB: return 0x93A1;  // GL_RGBA8_EXT
+			case TextureFormat::R16G16B16A16_FLOAT: return GL_RGBA16F;
+			case TextureFormat::R32G32B32A32_FLOAT: return GL_RGBA32F;
+			case TextureFormat::D16_UNORM: return GL_DEPTH_COMPONENT16;
+			case TextureFormat::D32_FLOAT: return GL_DEPTH_COMPONENT32F;
+			case TextureFormat::D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
+			case TextureFormat::D32_FLOAT_S8_UINT: return GL_DEPTH32F_STENCIL8;
+			case TextureFormat::R5G6B5_UNORM_PACK16: return 0x8D62; // GL_RGB565
+			case TextureFormat::A1R5G5B5_UNORM_PACK16: return GL_RGB5_A1;
+			case TextureFormat::B10G11R11_UFLOAT_PACK32: return GL_R11F_G11F_B10F;
+			case TextureFormat::A2B10G10R10_UNORM_PACK32: return GL_RGB10_A2UI;
+			case TextureFormat::ASTC_4x4_RGBA_UNORM_BLOCK: return 0x93B0;    // GL_COMPRESSED_RGBA_ASTC_4x4_KHR
+			case TextureFormat::ASTC_4x4_RGBA_SRGB_BLOCK: return 0x93D0;     // GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR
+			case TextureFormat::BC1_RGB_UNORM_BLOCK: return 0x83F0;          // GL_COMPRESSED_RGB_S3TC_DXT1_EXT
+			case TextureFormat::BC1_RGB_SRGB_BLOCK: return 0x8C4C;           // COMPRESSED_SRGB_S3TC_DXT1_EXT
+			case TextureFormat::BC3_RGBA_UNORM_BLOCK: return 0x83F3;         // GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+			case TextureFormat::BC3_RGBA_SRGB_BLOCK: return 0x8C4F;          // COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT
+			case TextureFormat::BC4_R_UNORM_BLOCK: return 0x8DBB;            // GL_COMPRESSED_RED_RGTC1_EXT
+			case TextureFormat::BC5_RG_UNORM_BLOCK: return 0x8DBD;           // GL_COMPRESSED_RED_GREEN_RGTC2_EXT
+			case TextureFormat::BC6H_RGB_UFLOAT_BLOCK: return 0x8E8F;        // GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT
+			case TextureFormat::BC6H_RGB_FLOAT_BLOCK: return 0x8E8E;         // GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT
+			case TextureFormat::BC7_RGBA_UNORM_BLOCK: return 0x8E8C;         // GL_COMPRESSED_RGBA_BPTC_UNORM_EXT
+			case TextureFormat::BC7_RGBA_SRGB_BLOCK: return 0x8E8D;          // GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT
+			case TextureFormat::ETC2_R8G8B8_UNORM_BLOCK: return 0x9274;      // GL_COMPRESSED_RGB8_ETC2
+			case TextureFormat::ETC2_R8G8B8_SRGB_BLOCK: return 0x9275;       // GL_COMPRESSED_SRGB8_ETC2
+			case TextureFormat::ETC2_R8G8B8A8_UNORM_BLOCK: return 0x9278;    // GL_COMPRESSED_RGBA8_ETC2_EAC
+			case TextureFormat::ETC2_R8G8B8A8_SRGB_BLOCK: return 0x9279;     // GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC
+			case TextureFormat::EAC_R11_UNORM_BLOCK: return 0x9270;          // GL_COMPRESSED_R11_EAC
+			case TextureFormat::EAC_R11G11_UNORM_BLOCK: return 0x9272;       // GL_COMPRESSED_RG11_EAC
+			case TextureFormat::PVRTC1_4BPP_RGBA_UNORM_BLOCK: return 0x8C02; // GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG
+			case TextureFormat::PVRTC1_4BPP_RGBA_SRGB_BLOCK: return 0x8A57;  // GL_COMPRESSED_SRGB_ALPHA_PVRTC_4BPPV1_EXT
 		}
 		unreachable();
 	}
@@ -191,6 +252,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::ETC2_R8G8B8A8_SRGB_BLOCK: [[fallthrough]];
 			case TextureFormat::PVRTC1_4BPP_RGBA_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::PVRTC1_4BPP_RGBA_SRGB_BLOCK: return GL_RGBA;
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: return GL_BGRA;
 			case TextureFormat::D16_UNORM: [[fallthrough]];
 			case TextureFormat::D32_FLOAT: return GL_DEPTH_COMPONENT;
 			case TextureFormat::D24_UNORM_S8_UINT: [[fallthrough]];
@@ -206,6 +269,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::R8G8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::ASTC_4x4_RGBA_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::ASTC_4x4_RGBA_SRGB_BLOCK: [[fallthrough]];
 			case TextureFormat::BC1_RGB_UNORM_BLOCK: [[fallthrough]];
@@ -314,6 +379,8 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::R5G6B5_UNORM_PACK16: [[fallthrough]];
@@ -612,14 +679,14 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 						GREM_ASSERT(size.depth == 1);
 						for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 							const Extent2D mipLevelSize = resource::Image::getMipLevelSize2D(Extent2D{size.width, size.height}, mipLevel);
-							glTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
+							glTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(mipLevel), getInternalFormat(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
 								static_cast<GLsizei>(mipLevelSize.height), 0, imageFormat, imageType, nullptr);
 						}
 						break;
 					case TextureType::TEXTURE_2D_ARRAY:
 						for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 							const Extent3D mipLevelSize = resource::Image::getMipLevelSize3D(size, mipLevel);
-							glTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
+							glTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), getInternalFormat(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
 								static_cast<GLsizei>(mipLevelSize.height), static_cast<GLsizei>(mipLevelSize.depth), 0, imageFormat, imageType, nullptr);
 						}
 						break;
@@ -628,7 +695,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 						for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 							const Extent3D mipLevelSize = resource::Image::getMipLevelSize3D(size, mipLevel);
 							for (uint32_t layer = 0; layer < mipLevelSize.depth; ++layer) {
-								glTexImage2D(TextureImplementation::getCubemapTarget(layer), static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat),
+								glTexImage2D(TextureImplementation::getCubemapTarget(layer), static_cast<GLint>(mipLevel), getInternalFormat(internalFormat),
 									static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), 0, imageFormat, imageType, nullptr);
 							}
 						}
@@ -637,7 +704,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 						GREM_ASSERT(size.depth % 6 == 0);
 						for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 							const Extent3D mipLevelSize = resource::Image::getMipLevelSize3D(size, mipLevel);
-							glTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
+							glTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), getInternalFormat(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
 								static_cast<GLsizei>(mipLevelSize.height), static_cast<GLsizei>(mipLevelSize.depth), 0, imageFormat, imageType, nullptr);
 						}
 						break;
@@ -654,9 +721,9 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 				glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(renderbufferObject.get()));
 
 				if (maxMultisampleCount <= 1) {
-					glRenderbufferStorage(GL_RENDERBUFFER, static_cast<GLenum>(internalFormat), static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height));
+					glRenderbufferStorage(GL_RENDERBUFFER, getInternalFormat(internalFormat), static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height));
 				} else {
-					glRenderbufferStorageMultisample(GL_RENDERBUFFER, static_cast<GLsizei>(maxMultisampleCount), static_cast<GLenum>(internalFormat),
+					glRenderbufferStorageMultisample(GL_RENDERBUFFER, static_cast<GLsizei>(maxMultisampleCount), getInternalFormat(internalFormat),
 						static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height));
 				}
 

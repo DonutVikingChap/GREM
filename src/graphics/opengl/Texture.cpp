@@ -147,10 +147,11 @@ void copyImageFlippedVertically(byte* output, const resource::ImageView& image) 
 
 	maxMultisampleCount = clamp(maxMultisampleCount, uint32_t{1}, device.getSupportedFeatures().maxSupportedMultisampleCount);
 	if (maxMultisampleCount <= 1) {
-		glRenderbufferStorage(GL_RENDERBUFFER, static_cast<GLenum>(internalFormat), static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height));
-	} else {
-		glRenderbufferStorageMultisample(GL_RENDERBUFFER, static_cast<GLsizei>(maxMultisampleCount), static_cast<GLenum>(internalFormat), static_cast<GLsizei>(size.width),
+		glRenderbufferStorage(GL_RENDERBUFFER, static_cast<GLenum>(TextureImplementation::getInternalFormat(internalFormat)), static_cast<GLsizei>(size.width),
 			static_cast<GLsizei>(size.height));
+	} else {
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, static_cast<GLsizei>(maxMultisampleCount), static_cast<GLenum>(TextureImplementation::getInternalFormat(internalFormat)),
+			static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height));
 	}
 	return TextureImplementation::create(device, std::move(renderbufferObject), TextureType::RENDERBUFFER, internalFormat, size, 1, maxMultisampleCount, {});
 }
@@ -255,24 +256,24 @@ void validateTextureShape(TextureType type, Extent3D size, uint32_t mipLevelCoun
 				for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 					const Extent2D mipLevelSize = resource::Image::getMipLevelSize2D(Extent2D{size.width, size.height}, mipLevel);
 					const size_t mipLevelStride = (pixels) ? resource::Image::getMipLevelStride(Texture::getImageFormat(internalFormat), mipLevelSize) : size_t{0};
-					glCompressedTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
-						static_cast<GLsizei>(mipLevelSize.height), 0, static_cast<GLsizei>(mipLevelStride), input);
+					glCompressedTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(mipLevel), static_cast<GLenum>(TextureImplementation::getInternalFormat(internalFormat)),
+						static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), 0, static_cast<GLsizei>(mipLevelStride), input);
 					input += mipLevelStride;
 				}
 			} else {
 				const GLenum imageFormat = TextureImplementation::getBaseImageFormat(internalFormat);
 				const GLenum imageType = TextureImplementation::getBaseImageType(internalFormat);
 				if (generateMipmap) {
-					glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height), 0, imageFormat,
-						imageType, pixels);
+					glTexImage2D(GL_TEXTURE_2D, 0, TextureImplementation::getInternalFormat(internalFormat), static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height), 0,
+						imageFormat, imageType, pixels);
 					glGenerateMipmap(GL_TEXTURE_2D);
 				} else {
 					const byte* input = static_cast<const byte*>(pixels);
 					for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 						const Extent2D mipLevelSize = resource::Image::getMipLevelSize2D(Extent2D{size.width, size.height}, mipLevel);
 						const size_t mipLevelStride = (pixels) ? resource::Image::getMipLevelStride(Texture::getImageFormat(internalFormat), mipLevelSize) : size_t{0};
-						glTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
-							static_cast<GLsizei>(mipLevelSize.height), 0, imageFormat, imageType, input);
+						glTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(mipLevel), TextureImplementation::getInternalFormat(internalFormat),
+							static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), 0, imageFormat, imageType, input);
 						input += mipLevelStride;
 					}
 				}
@@ -287,8 +288,9 @@ void validateTextureShape(TextureType type, Extent3D size, uint32_t mipLevelCoun
 					const Extent2D mipLevelSize = resource::Image::getMipLevelSize2D(Extent2D{size.width, size.height}, mipLevel);
 					const size_t layerStride = (pixels) ? resource::Image::getLayerStride(Texture::getImageFormat(internalFormat), mipLevelSize) : size_t{0};
 					for (uint32_t side = 0; side < 6; ++side) {
-						glCompressedTexImage2D(TextureImplementation::getCubemapTarget(side), static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat),
-							static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), 0, static_cast<GLsizei>(layerStride), input);
+						glCompressedTexImage2D(TextureImplementation::getCubemapTarget(side), static_cast<GLint>(mipLevel),
+							static_cast<GLenum>(TextureImplementation::getInternalFormat(internalFormat)), static_cast<GLsizei>(mipLevelSize.width),
+							static_cast<GLsizei>(mipLevelSize.height), 0, static_cast<GLsizei>(layerStride), input);
 						input += layerStride;
 					}
 				}
@@ -299,7 +301,7 @@ void validateTextureShape(TextureType type, Extent3D size, uint32_t mipLevelCoun
 					const byte* input = static_cast<const byte*>(pixels);
 					const size_t layerStride = (pixels) ? resource::Image::getLayerStride(Texture::getImageFormat(internalFormat), Extent2D{size.width, size.height}) : size_t{0};
 					for (uint32_t side = 0; side < 6; ++side) {
-						glTexImage2D(TextureImplementation::getCubemapTarget(side), 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(size.width),
+						glTexImage2D(TextureImplementation::getCubemapTarget(side), 0, TextureImplementation::getInternalFormat(internalFormat), static_cast<GLsizei>(size.width),
 							static_cast<GLsizei>(size.height), 0, imageFormat, imageType, input);
 						input += layerStride;
 					}
@@ -310,7 +312,7 @@ void validateTextureShape(TextureType type, Extent3D size, uint32_t mipLevelCoun
 						const Extent2D mipLevelSize = resource::Image::getMipLevelSize2D(Extent2D{size.width, size.height}, mipLevel);
 						const size_t layerStride = (pixels) ? resource::Image::getLayerStride(Texture::getImageFormat(internalFormat), mipLevelSize) : size_t{0};
 						for (uint32_t side = 0; side < 6; ++side) {
-							glTexImage2D(TextureImplementation::getCubemapTarget(side), static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat),
+							glTexImage2D(TextureImplementation::getCubemapTarget(side), static_cast<GLint>(mipLevel), TextureImplementation::getInternalFormat(internalFormat),
 								static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), 0, imageFormat, imageType, input);
 							input += layerStride;
 						}
@@ -327,24 +329,26 @@ void validateTextureShape(TextureType type, Extent3D size, uint32_t mipLevelCoun
 				for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 					const Extent3D mipLevelSize = resource::Image::getMipLevelSize3D(size, mipLevel);
 					const size_t mipLevelStride = (pixels) ? resource::Image::getMipLevelStride(Texture::getImageFormat(internalFormat), mipLevelSize) : size_t{0};
-					glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
-						static_cast<GLsizei>(mipLevelSize.height), static_cast<GLsizei>(mipLevelSize.depth), 0, static_cast<GLsizei>(mipLevelStride), input);
+					glCompressedTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), TextureImplementation::getInternalFormat(internalFormat),
+						static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), static_cast<GLsizei>(mipLevelSize.depth), 0,
+						static_cast<GLsizei>(mipLevelStride), input);
 					input += mipLevelStride;
 				}
 			} else {
 				const GLenum imageFormat = TextureImplementation::getBaseImageFormat(internalFormat);
 				const GLenum imageType = TextureImplementation::getBaseImageType(internalFormat);
 				if (generateMipmap) {
-					glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, static_cast<GLint>(internalFormat), static_cast<GLsizei>(size.width), static_cast<GLsizei>(size.height),
-						static_cast<GLsizei>(size.depth), 0, imageFormat, imageType, pixels);
+					glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, TextureImplementation::getInternalFormat(internalFormat), static_cast<GLsizei>(size.width),
+						static_cast<GLsizei>(size.height), static_cast<GLsizei>(size.depth), 0, imageFormat, imageType, pixels);
 					glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 				} else {
 					const byte* input = static_cast<const byte*>(pixels);
 					for (uint32_t mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
 						const Extent3D mipLevelSize = resource::Image::getMipLevelSize3D(size, mipLevel);
 						const size_t mipLevelStride = (pixels) ? resource::Image::getMipLevelStride(Texture::getImageFormat(internalFormat), mipLevelSize) : size_t{0};
-						glTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), static_cast<GLint>(internalFormat), static_cast<GLsizei>(mipLevelSize.width),
-							static_cast<GLsizei>(mipLevelSize.height), static_cast<GLsizei>(mipLevelSize.depth), 0, imageFormat, imageType, input);
+						glTexImage3D(GL_TEXTURE_2D_ARRAY, static_cast<GLint>(mipLevel), TextureImplementation::getInternalFormat(internalFormat),
+							static_cast<GLsizei>(mipLevelSize.width), static_cast<GLsizei>(mipLevelSize.height), static_cast<GLsizei>(mipLevelSize.depth), 0, imageFormat,
+							imageType, input);
 						input += mipLevelStride;
 					}
 				}

@@ -1612,8 +1612,13 @@ DeviceImplementation::RenderPassContext::FramebufferContext::FramebufferContext(
 			.width = max(colorTargetHandle->size.width >> key.colorTargetMipLevel, uint32_t{1}),
 			.height = max(colorTargetHandle->size.height >> key.colorTargetMipLevel, uint32_t{1}),
 		};
-		GREM_ASSERT(size == Extent2D{} || colorTargetSize == size);
-		size = colorTargetSize;
+		if (size == Extent2D{}) {
+			size = colorTargetSize;
+		} else {
+			GREM_ASSERT(colorTargetSize == size || colorTargetHandle->type == TextureType::SWAPCHAIN);
+			size.width = min(size.width, colorTargetSize.width);
+			size.height = min(size.height, colorTargetSize.height);
+		}
 	}
 
 	if (const SharedPointer<TextureImplementation> depthStencilTargetHandle = key.depthStencilTargetHandle.lock()) {
@@ -1649,8 +1654,13 @@ DeviceImplementation::RenderPassContext::FramebufferContext::FramebufferContext(
 			.width = max(depthStencilTargetHandle->size.width >> key.depthStencilTargetMipLevel, uint32_t{1}),
 			.height = max(depthStencilTargetHandle->size.height >> key.depthStencilTargetMipLevel, uint32_t{1}),
 		};
-		GREM_ASSERT(size == Extent2D{} || depthStencilTargetSize == size);
-		size = depthStencilTargetSize;
+		if (size == Extent2D{}) {
+			size = depthStencilTargetSize;
+		} else {
+			GREM_ASSERT(depthStencilTargetSize == size || depthStencilTargetHandle->type == TextureType::SWAPCHAIN);
+			size.width = min(size.width, depthStencilTargetSize.width);
+			size.height = min(size.height, depthStencilTargetSize.height);
+		}
 	}
 
 	if (const SharedPointer<TextureImplementation> resolveTargetHandle = key.resolveTargetHandle.lock()) {
@@ -1686,8 +1696,13 @@ DeviceImplementation::RenderPassContext::FramebufferContext::FramebufferContext(
 			.width = max(resolveTargetHandle->size.width >> key.resolveTargetMipLevel, uint32_t{1}),
 			.height = max(resolveTargetHandle->size.height >> key.resolveTargetMipLevel, uint32_t{1}),
 		};
-		GREM_ASSERT(size == Extent2D{} || resolveTargetSize == size);
-		size = resolveTargetSize;
+		if (size == Extent2D{}) {
+			size = resolveTargetSize;
+		} else {
+			GREM_ASSERT(resolveTargetSize == size || resolveTargetHandle->type == TextureType::SWAPCHAIN);
+			size.width = min(size.width, resolveTargetSize.width);
+			size.height = min(size.height, resolveTargetSize.height);
+		}
 	}
 
 	GREM_ASSERT(size != Extent2D{});

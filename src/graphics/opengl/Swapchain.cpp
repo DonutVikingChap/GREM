@@ -17,8 +17,30 @@
 
 namespace grem::graphics {
 
+namespace {
+
+[[nodiscard]] TextureFormat getSwapchainTextureFormat(Window& window) {
+	SDL_GL_MakeCurrent(static_cast<SDL_Window*>(const_cast<void*>(window.get())), static_cast<SDL_GLContext>(const_cast<void*>(window.getSurface())));
+	int redSize = 0;
+	int greenSize = 0;
+	int blueSize = 0;
+	int alphaSize = 0;
+	if (SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &redSize) && SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &greenSize) && SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &blueSize) &&
+		SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &alphaSize)) {
+		if (redSize == 10 && greenSize == 10 && blueSize == 10 && alphaSize == 2) {
+			return TextureFormat::A2B10G10R10_UNORM_PACK32;
+		}
+		if (redSize == 16 && greenSize == 16 && blueSize == 16 && alphaSize == 16) {
+			return TextureFormat::R16G16B16A16_FLOAT;
+		}
+	}
+	return TextureFormat::R8G8B8A8_SRGB;
+}
+
+} // namespace
+
 Swapchain::Swapchain(Device& device, Window& window, const SwapchainOptions& options)
-	: Texture(TextureImplementation::create(device, &window, TextureType::SWAPCHAIN, TextureFormat::UNKNOWN, Extent3D{}, 1, window.getMultisampleCount(), {})) {
+	: Texture(TextureImplementation::create(device, &window, TextureType::SWAPCHAIN, getSwapchainTextureFormat(window), Extent3D{}, 1, window.getMultisampleCount(), {})) {
 	setVerticalSynchronizationEnabled(options.useVerticalSynchronization);
 }
 

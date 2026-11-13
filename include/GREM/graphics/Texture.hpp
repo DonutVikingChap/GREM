@@ -29,7 +29,7 @@ class Swapchain;             // Forward declaration, to avoid a circular include
 class Device;                // Forward declaration, to avoid a circular include of Device.hpp.
 struct DeviceImplementation; // Forward declaration, to avoid a circular include of Device.hpp.
 
-struct TextureImplementation; ///< Backend-specific implementation of UniformBuffer.
+struct TextureImplementation; ///< Backend-specific implementation of Texture.
 
 /**
  * Type of a Texture.
@@ -47,10 +47,10 @@ enum class TextureType : uint8_t {
 /**
  * Aspect of a texture format.
  */
-enum class TextureAspect : uint32_t { // NOLINT(performance-enum-size)
-	COLOR = 0x00004000,               ///< Color buffer. \hideinitializer
-	DEPTH = 0x00000100,               ///< Depth buffer. \hideinitializer
-	STENCIL = 0x00000400,             ///< Stencil buffer. \hideinitializer
+enum class TextureAspect : uint8_t { // NOLINT(performance-enum-size)
+	COLOR = 1 << 0,                  ///< Color buffer.
+	DEPTH = 1 << 1,                  ///< Depth buffer.
+	STENCIL = 1 << 2,                ///< Stencil buffer.
 };
 
 /**
@@ -87,7 +87,7 @@ public:
 	 *       operator|(TextureAspects, TextureAspects).
 	 */
 	constexpr TextureAspects(TextureAspect aspect)
-		: bits(static_cast<uint32_t>(aspect)) {}
+		: bits(static_cast<uint8_t>(aspect)) {}
 
 	/**
 	 * Compare this aspect set to another for equality.
@@ -139,7 +139,7 @@ public:
 	 *         otherwise.
 	 */
 	[[nodiscard]] constexpr bool containsAllOf(TextureAspects aspects) const noexcept {
-		return (bits & aspects.bits) == aspects.bits;
+		return static_cast<uint8_t>(bits & aspects.bits) == aspects.bits;
 	}
 
 	/**
@@ -151,7 +151,7 @@ public:
 	 *         set.
 	 */
 	[[nodiscard]] friend constexpr TextureAspects operator~(TextureAspects a) noexcept {
-		return TextureAspects{~a.bits};
+		return TextureAspects{static_cast<uint8_t>(~a.bits)};
 	}
 
 	/**
@@ -163,7 +163,7 @@ public:
 	 * \return a set containing all aspects contained in both a and b.
 	 */
 	[[nodiscard]] friend constexpr TextureAspects operator&(TextureAspects a, TextureAspects b) noexcept {
-		return TextureAspects{a.bits & b.bits};
+		return TextureAspects{static_cast<uint8_t>(a.bits & b.bits)};
 	}
 
 	/**
@@ -175,7 +175,7 @@ public:
 	 * \return a set containing all aspects contained in a or b or both.
 	 */
 	[[nodiscard]] friend constexpr TextureAspects operator|(TextureAspects a, TextureAspects b) noexcept {
-		return TextureAspects{a.bits | b.bits};
+		return TextureAspects{static_cast<uint8_t>(a.bits | b.bits)};
 	}
 
 	/**
@@ -188,7 +188,7 @@ public:
 	 *         both.
 	 */
 	[[nodiscard]] friend constexpr TextureAspects operator^(TextureAspects a, TextureAspects b) noexcept {
-		return TextureAspects{a.bits ^ b.bits};
+		return TextureAspects{static_cast<uint8_t>(a.bits ^ b.bits)};
 	}
 
 	/**
@@ -228,12 +228,10 @@ public:
 	}
 
 private:
-	friend TextureImplementation;
-
-	constexpr explicit TextureAspects(uint32_t bits) noexcept
+	constexpr explicit TextureAspects(uint8_t bits) noexcept
 		: bits(bits) {}
 
-	uint32_t bits{};
+	uint8_t bits{};
 };
 
 /**
@@ -266,49 +264,50 @@ inline constexpr TextureAspects TextureAspects::COLOR_DEPTH_STENCIL = TextureAsp
 /**
  * Description of the internal format of a Texture.
  */
-enum class TextureFormat : int32_t { // NOLINT(performance-enum-size)
+enum class TextureFormat : uint8_t { // NOLINT(performance-enum-size)
 	UNKNOWN = 0,                     ///< Unknown texture format.
-	R8_UNORM = 0x8229,               ///< Raw bitmap where each texel comprises 1 normalized 8-bit unsigned integer component: red. \hideinitializer
-	R16_FLOAT = 0x822D,              ///< Raw bitmap where each texel comprises 1 16-bit floating-point component: red. \hideinitializer
-	R32_FLOAT = 0x822E,              ///< Raw bitmap where each texel comprises 1 32-bit floating-point component: red. \hideinitializer
-	R8G8_UNORM = 0x822B,             ///< Raw bitmap where each texel comprises 2 normalized 8-bit unsigned integer components: red, green. \hideinitializer
-	R16G16_FLOAT = 0x822F,           ///< Raw bitmap where each texel comprises 2 16-bit floating-point components: red, green. \hideinitializer
-	R32G32_FLOAT = 0x8230,           ///< Raw bitmap where each texel comprises 2 32-bit floating-point components: red, green. \hideinitializer
+	R8_UNORM,                        ///< Raw bitmap where each texel comprises 1 normalized 8-bit unsigned integer component: red.
+	R16_FLOAT,                       ///< Raw bitmap where each texel comprises 1 16-bit floating-point component: red.
+	R32_FLOAT,                       ///< Raw bitmap where each texel comprises 1 32-bit floating-point component: red.
+	R8G8_UNORM,                      ///< Raw bitmap where each texel comprises 2 normalized 8-bit unsigned integer components: red, green.
+	R16G16_FLOAT,                    ///< Raw bitmap where each texel comprises 2 16-bit floating-point components: red, green.
+	R32G32_FLOAT,                    ///< Raw bitmap where each texel comprises 2 32-bit floating-point components: red, green.
 	// Note: Raw 3-channel RGB formats without alpha are intentionally omitted since many GPUs don't support them.
-	R8G8B8A8_UNORM = 0x8058, ///< Raw bitmap where each texel comprises 4 normalized 8-bit unsigned integer components: red, green, blue, alpha. \hideinitializer
-	R8G8B8A8_SRGB = 0x8C43,  ///< Raw bitmap where each texel comprises 3 sRGB-encoded and 1 normalized 8-bit unsigned integer components: red, green, blue, alpha. \hideinitializer
-	R16G16B16A16_FLOAT = 0x881A, ///< Raw bitmap where each texel comprises 4 16-bit floating-point components: red, green, blue, alpha. \hideinitializer
-	R32G32B32A32_FLOAT = 0x8814, ///< Raw bitmap where each texel comprises 4 32-bit floating-point components: red, green, blue, alpha. \hideinitializer
-	D16_UNORM = 0x81A5,          ///< Raw bitmap where each texel comprises 1 normalized 16-bit unsigned integer component: depth. \hideinitializer
+	R8G8B8A8_UNORM,     ///< Raw bitmap where each texel comprises 4 normalized 8-bit unsigned integer components: red, green, blue, alpha.
+	R8G8B8A8_SRGB,      ///< Raw bitmap where each texel comprises 3 sRGB-encoded and 1 normalized 8-bit unsigned integer components: red, green, blue, alpha.
+	B8G8R8A8_UNORM,     ///< Raw bitmap where each texel comprises 4 normalized 8-bit unsigned integer components: blue, green, red, alpha.
+	B8G8R8A8_SRGB,      ///< Raw bitmap where each texel comprises 3 sRGB-encoded and 1 normalized 8-bit unsigned integer components: blue, green, red, alpha.
+	R16G16B16A16_FLOAT, ///< Raw bitmap where each texel comprises 4 16-bit floating-point components: red, green, blue, alpha.
+	R32G32B32A32_FLOAT, ///< Raw bitmap where each texel comprises 4 32-bit floating-point components: red, green, blue, alpha.
+	D16_UNORM,          ///< Raw bitmap where each texel comprises 1 normalized 16-bit unsigned integer component: depth.
 	// Note: Raw 24-bit depth formats without stencil are intentionally omitted since many GPUs don't support them.
-	D32_FLOAT = 0x8CAC, ///< Raw bitmap where each texel comprises 1 32-bit floating-point component: depth. \hideinitializer
-	D24_UNORM_S8_UINT =
-		0x88F0, ///< Raw bitmap where each texel comprises 1 normalized 24-bit unsigned integer depth component and 1 8-bit unsigned integer stencil component. \hideinitializer
-	D32_FLOAT_S8_UINT = 0x8CAD, ///< Raw bitmap where each texel comprises 1 32-bit floating-point depth component and 1 8-bit unsigned integer stencil component. \hideinitializer
-	R5G6B5_UNORM_PACK16 = 0x8D62,          ///< Packed bitmap with the following 16-bit unsigned integer RGB texel format: RRRRRGGGGGGBBBBB. \hideinitializer
-	A1R5G5B5_UNORM_PACK16 = 0x8057,        ///< Packed bitmap with the following 16-bit unsigned integer RGBA texel format: ARRRRRGGGGGBBBBB. \hideinitializer
-	B10G11R11_UFLOAT_PACK32 = 0x8C3A,      ///< Packed bitmap with the following 32-bit unsigned floating-point RGB texel format: BBBBBBBBBBGGGGGGGGGGGRRRRRRRRRRR. \hideinitializer
-	A2B10G10R10_UNORM_PACK32 = 0x906F,     ///< Packed bitmap with the following 32-bit unsigned integer RGBA texel format: AABBBBBBBBBBGGGGGGGGGGRRRRRRRRRR. \hideinitializer
-	ASTC_4x4_RGBA_UNORM_BLOCK = 0x93B0,    ///< ASTC block-compressed RGBA texture using 128 bits per 4x4 block. \hideinitializer
-	ASTC_4x4_RGBA_SRGB_BLOCK = 0x93D0,     ///< ASTC block-compressed RGBA texture using 128 bits per 4x4 block. \hideinitializer
-	BC1_RGB_UNORM_BLOCK = 0x83F0,          ///< S3TC BC1 (DXT1) block-compressed RGB texture using 64 bits per 4x4 block. \hideinitializer
-	BC1_RGB_SRGB_BLOCK = 0x8C4C,           ///< S3TC BC1 (DXT1) block-compressed sRGB texture using 64 bits per 4x4 block. \hideinitializer
-	BC3_RGBA_UNORM_BLOCK = 0x83F3,         ///< S3TC BC3 (DXT5) block-compressed RGBA texture using 128 bits per 4x4 block. \hideinitializer
-	BC3_RGBA_SRGB_BLOCK = 0x8C4F,          ///< S3TC BC3 (DXT5) block-compressed sRGBA texture using 128 bits per 4x4 block. \hideinitializer
-	BC4_R_UNORM_BLOCK = 0x8DBB,            ///< S3TC BC4 (RGTC1) block-compressed single-channel texture using 64 bits per 4x4 block. \hideinitializer
-	BC5_RG_UNORM_BLOCK = 0x8DBD,           ///< S3TC BC5 (RGTC2) block-compressed double-channel texture using 128 bits per 4x4 block. \hideinitializer
-	BC6H_RGB_UFLOAT_BLOCK = 0x8E8F,        ///< S3TC BC6H (BPTC) block-compressed unsigned floating-point RGB texture using 128 bits per 4x4 block. \hideinitializer
-	BC6H_RGB_FLOAT_BLOCK = 0x8E8E,         ///< S3TC BC6H (BPTC) block-compressed signed floating-point RGB texture using 128 bits per 4x4 block. \hideinitializer
-	BC7_RGBA_UNORM_BLOCK = 0x8E8C,         ///< S3TC BC7 (BPTC) block-compressed RGBA texture using 128 bits per 4x4 block. \hideinitializer
-	BC7_RGBA_SRGB_BLOCK = 0x8E8D,          ///< S3TC BC7 (BPTC) block-compressed sRGBA texture using 128 bits per 4x4 block. \hideinitializer
-	ETC2_R8G8B8_UNORM_BLOCK = 0x9274,      ///< ETC2 block-compressed RGB texture using 64 bits per 4x4 block. \hideinitializer
-	ETC2_R8G8B8_SRGB_BLOCK = 0x9275,       ///< ETC2 block-compressed sRGB texture using 64 bits per 4x4 block. \hideinitializer
-	ETC2_R8G8B8A8_UNORM_BLOCK = 0x9278,    ///< ETC2 block-compressed RGBA texture using 128 bits per 4x4 block. \hideinitializer
-	ETC2_R8G8B8A8_SRGB_BLOCK = 0x9279,     ///< ETC2 block-compressed sRGBA texture using 128 bits per 4x4 block. \hideinitializer
-	EAC_R11_UNORM_BLOCK = 0x9270,          ///< ETC2 EAC block-compressed single-channel texture using 64 bits per 4x4 block. \hideinitializer
-	EAC_R11G11_UNORM_BLOCK = 0x9272,       ///< ETC2 EAC block-compressed double-channel texture using 128 bits per 4x4 block. \hideinitializer
-	PVRTC1_4BPP_RGBA_UNORM_BLOCK = 0x8C02, ///< PVRTC1 block-compressed RGBA texture using 64 bits per 4x4 block. \hideinitializer
-	PVRTC1_4BPP_RGBA_SRGB_BLOCK = 0x8A57,  ///< PVRTC1 block-compressed sRGBA texture using 64 bits per 4x4 block. \hideinitializer
+	D32_FLOAT,                    ///< Raw bitmap where each texel comprises 1 32-bit floating-point component: depth.
+	D24_UNORM_S8_UINT,            ///< Raw bitmap where each texel comprises 1 normalized 24-bit unsigned integer depth component and 1 8-bit unsigned integer stencil component.
+	D32_FLOAT_S8_UINT,            ///< Raw bitmap where each texel comprises 1 32-bit floating-point depth component and 1 8-bit unsigned integer stencil component.
+	R5G6B5_UNORM_PACK16,          ///< Packed bitmap with the following 16-bit unsigned integer RGB texel format: RRRRRGGGGGGBBBBB.
+	A1R5G5B5_UNORM_PACK16,        ///< Packed bitmap with the following 16-bit unsigned integer RGBA texel format: ARRRRRGGGGGBBBBB.
+	B10G11R11_UFLOAT_PACK32,      ///< Packed bitmap with the following 32-bit unsigned floating-point RGB texel format: BBBBBBBBBBGGGGGGGGGGGRRRRRRRRRRR.
+	A2B10G10R10_UNORM_PACK32,     ///< Packed bitmap with the following 32-bit unsigned integer RGBA texel format: AABBBBBBBBBBGGGGGGGGGGRRRRRRRRRR.
+	ASTC_4x4_RGBA_UNORM_BLOCK,    ///< ASTC block-compressed RGBA texture using 128 bits per 4x4 block.
+	ASTC_4x4_RGBA_SRGB_BLOCK,     ///< ASTC block-compressed RGBA texture using 128 bits per 4x4 block.
+	BC1_RGB_UNORM_BLOCK,          ///< S3TC BC1 (DXT1) block-compressed RGB texture using 64 bits per 4x4 block.
+	BC1_RGB_SRGB_BLOCK,           ///< S3TC BC1 (DXT1) block-compressed sRGB texture using 64 bits per 4x4 block.
+	BC3_RGBA_UNORM_BLOCK,         ///< S3TC BC3 (DXT5) block-compressed RGBA texture using 128 bits per 4x4 block.
+	BC3_RGBA_SRGB_BLOCK,          ///< S3TC BC3 (DXT5) block-compressed sRGBA texture using 128 bits per 4x4 block.
+	BC4_R_UNORM_BLOCK,            ///< S3TC BC4 (RGTC1) block-compressed single-channel texture using 64 bits per 4x4 block.
+	BC5_RG_UNORM_BLOCK,           ///< S3TC BC5 (RGTC2) block-compressed double-channel texture using 128 bits per 4x4 block.
+	BC6H_RGB_UFLOAT_BLOCK,        ///< S3TC BC6H (BPTC) block-compressed unsigned floating-point RGB texture using 128 bits per 4x4 block.
+	BC6H_RGB_FLOAT_BLOCK,         ///< S3TC BC6H (BPTC) block-compressed signed floating-point RGB texture using 128 bits per 4x4 block.
+	BC7_RGBA_UNORM_BLOCK,         ///< S3TC BC7 (BPTC) block-compressed RGBA texture using 128 bits per 4x4 block.
+	BC7_RGBA_SRGB_BLOCK,          ///< S3TC BC7 (BPTC) block-compressed sRGBA texture using 128 bits per 4x4 block.
+	ETC2_R8G8B8_UNORM_BLOCK,      ///< ETC2 block-compressed RGB texture using 64 bits per 4x4 block.
+	ETC2_R8G8B8_SRGB_BLOCK,       ///< ETC2 block-compressed sRGB texture using 64 bits per 4x4 block.
+	ETC2_R8G8B8A8_UNORM_BLOCK,    ///< ETC2 block-compressed RGBA texture using 128 bits per 4x4 block.
+	ETC2_R8G8B8A8_SRGB_BLOCK,     ///< ETC2 block-compressed sRGBA texture using 128 bits per 4x4 block.
+	EAC_R11_UNORM_BLOCK,          ///< ETC2 EAC block-compressed single-channel texture using 64 bits per 4x4 block.
+	EAC_R11G11_UNORM_BLOCK,       ///< ETC2 EAC block-compressed double-channel texture using 128 bits per 4x4 block.
+	PVRTC1_4BPP_RGBA_UNORM_BLOCK, ///< PVRTC1 block-compressed RGBA texture using 64 bits per 4x4 block.
+	PVRTC1_4BPP_RGBA_SRGB_BLOCK,  ///< PVRTC1 block-compressed sRGBA texture using 64 bits per 4x4 block.
 };
 
 /**
@@ -720,6 +719,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::R5G6B5_UNORM_PACK16: [[fallthrough]];
@@ -790,6 +791,8 @@ public:
 	[[nodiscard]] static constexpr resource::ImageFormat getImageFormat(TextureFormat internalFormat) {
 		switch (internalFormat) {
 			case TextureFormat::UNKNOWN: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
 			case TextureFormat::D32_FLOAT: [[fallthrough]];
 			case TextureFormat::D24_UNORM_S8_UINT: [[fallthrough]];
@@ -926,6 +929,7 @@ public:
 			case TextureFormat::R16G16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
@@ -950,6 +954,7 @@ public:
 			case TextureFormat::EAC_R11G11_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::PVRTC1_4BPP_RGBA_UNORM_BLOCK: return Color::TransferFunction::LINEAR;
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::ASTC_4x4_RGBA_SRGB_BLOCK: [[fallthrough]];
 			case TextureFormat::BC1_RGB_SRGB_BLOCK: [[fallthrough]];
 			case TextureFormat::BC3_RGBA_SRGB_BLOCK: [[fallthrough]];
@@ -1045,6 +1050,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: return TextureFormat::R32G32_FLOAT;
 			case TextureFormat::R8G8B8A8_UNORM: return TextureFormat::R8G8B8A8_UNORM;
 			case TextureFormat::R8G8B8A8_SRGB: return TextureFormat::R8G8B8A8_SRGB;
+			case TextureFormat::B8G8R8A8_UNORM: return TextureFormat::B8G8R8A8_UNORM;
+			case TextureFormat::B8G8R8A8_SRGB: return TextureFormat::B8G8R8A8_SRGB;
 			case TextureFormat::R16G16B16A16_FLOAT: return TextureFormat::R16G16B16A16_FLOAT;
 			case TextureFormat::R32G32B32A32_FLOAT: return TextureFormat::R32G32B32A32_FLOAT;
 			case TextureFormat::D16_UNORM: return TextureFormat::D16_UNORM;
@@ -1102,6 +1109,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: return TextureFormat::R32G32_FLOAT;
 			case TextureFormat::R8G8B8A8_UNORM: return TextureFormat::R8G8B8A8_UNORM;
 			case TextureFormat::R8G8B8A8_SRGB: return TextureFormat::R8G8B8A8_SRGB;
+			case TextureFormat::B8G8R8A8_UNORM: return TextureFormat::B8G8R8A8_UNORM;
+			case TextureFormat::B8G8R8A8_SRGB: return TextureFormat::B8G8R8A8_SRGB;
 			case TextureFormat::R16G16B16A16_FLOAT: return TextureFormat::R16G16B16A16_FLOAT;
 			case TextureFormat::R32G32B32A32_FLOAT: return TextureFormat::R32G32B32A32_FLOAT;
 			case TextureFormat::D16_UNORM: return TextureFormat::D16_UNORM;
@@ -1149,6 +1158,8 @@ public:
 	[[nodiscard]] static constexpr bool isCompatibleFormat(TextureFormat internalFormat, resource::ImageFormat format) noexcept {
 		switch (internalFormat) {
 			case TextureFormat::UNKNOWN: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
 			case TextureFormat::D32_FLOAT: [[fallthrough]];
 			case TextureFormat::D24_UNORM_S8_UINT: [[fallthrough]];
@@ -1226,6 +1237,8 @@ public:
 			case TextureFormat::ETC2_R8G8B8_SRGB_BLOCK: [[fallthrough]];
 			case TextureFormat::EAC_R11_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::EAC_R11G11_UNORM_BLOCK: return false;
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
@@ -1287,6 +1300,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
@@ -1318,6 +1333,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
@@ -1374,6 +1391,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
@@ -1450,6 +1469,8 @@ public:
 			case TextureFormat::R32G32_FLOAT: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_UNORM: [[fallthrough]];
 			case TextureFormat::R8G8B8A8_SRGB: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
+			case TextureFormat::B8G8R8A8_SRGB: [[fallthrough]];
 			case TextureFormat::R16G16B16A16_FLOAT: [[fallthrough]];
 			case TextureFormat::R32G32B32A32_FLOAT: [[fallthrough]];
 			case TextureFormat::D16_UNORM: [[fallthrough]];
