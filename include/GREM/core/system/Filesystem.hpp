@@ -119,14 +119,13 @@ public:
 	 *
 	 * \return true if a file is mounted at the given filepath, false otherwise.
 	 *
-	 * \sa getInputFileMetadata()
+	 * \sa getFileMetadata()
 	 * \sa forEachInputFilenameInDirectory()
 	 */
 	[[nodiscard]] virtual bool inputFileExists(CStringView filepath) const = 0;
 
 	/**
-	 * Get the metadata of an input file that is mounted at a given virtual
-	 * filepath.
+	 * Get the metadata of a file that is mounted at a given virtual filepath.
 	 *
 	 * \param filepath virtual filepath of the file to get the metadata of.
 	 *
@@ -136,7 +135,7 @@ public:
 	 *         mounted at the given filepath.
 	 * \throws std::bad_alloc on allocation failure.
 	 */
-	[[nodiscard]] virtual File::Metadata getInputFileMetadata(CStringView filepath) const = 0;
+	[[nodiscard]] virtual File::Metadata getFileMetadata(CStringView filepath) const = 0;
 
 	/**
 	 * Iterate the filenames of all readable virtual filepaths that are direct
@@ -163,10 +162,10 @@ public:
 	 *       the directory filepath that was passed to the function, and
 	 *       `filename` is the current filename. Note that this path may refer
 	 *       to any kind of file, including a subdirectory. Use
-	 *       getInputFileMetadata() to find out which kind of file it refers to.
+	 *       getFileMetadata() to find out which kind of file it refers to.
 	 *
 	 * \sa inputFileExists()
-	 * \sa getInputFileMetadata()
+	 * \sa getFileMetadata()
 	 */
 	virtual void forEachInputFilenameInDirectory(CStringView filepath, FunctionView<bool(CStringView filename)> callback) const = 0; // NOLINT(modernize-use-nodiscard)
 
@@ -192,10 +191,10 @@ public:
 	 *       the directory filepath that was passed to the function, and
 	 *       `filename` is the current filename. Note that this path may refer
 	 *       to any kind of file, including a subdirectory. Use
-	 *       getInputFileMetadata() to find out which kind of file it refers to.
+	 *       getFileMetadata() to find out which kind of file it refers to.
 	 *
 	 * \sa inputFileExists()
-	 * \sa getInputFileMetadata()
+	 * \sa getFileMetadata()
 	 */
 	void forEachInputFilenameInDirectory(CStringView filepath, auto callback) const requires(std::is_void_v<decltype(callback(CStringView{}))>) {
 		forEachInputFilenameInDirectory(filepath, [&](CStringView filename) -> bool {

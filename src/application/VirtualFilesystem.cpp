@@ -154,7 +154,7 @@ bool VirtualFilesystem::inputFileExists(CStringView filepath) const {
 	return PHYSFS_exists(filepath.c_str()) != 0;
 }
 
-File::Metadata VirtualFilesystem::getInputFileMetadata(CStringView filepath) const {
+File::Metadata VirtualFilesystem::getFileMetadata(CStringView filepath) const {
 	PHYSFS_Stat metadata{};
 	if (PHYSFS_stat(filepath.c_str(), &metadata) == 0) {
 		throw File::Error{String{"Failed to get file metadata:\n"} + PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())};

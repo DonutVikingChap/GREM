@@ -96,7 +96,7 @@ bool NativeFilesystem::inputFileExists(CStringView filepath) const {
 	return result;
 }
 
-File::Metadata NativeFilesystem::getInputFileMetadata(CStringView filepath) const {
+File::Metadata NativeFilesystem::getFileMetadata(CStringView filepath) const {
 	const std::filesystem::path path{filepath.c_str()};
 	std::error_code errorCode{};
 	const std::filesystem::file_status status = std::filesystem::status(path, errorCode);

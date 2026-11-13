@@ -363,7 +363,7 @@ const ModelDescription& Schema::loadModelDescription(const Filesystem& filesyste
 				const size_t filepathOffset = filepath.size();
 				filepath.push_back('/');
 				filepath.append(filename);
-				if (filesystem.getInputFileMetadata(filepath).kind == File::Kind::DIRECTORY) {
+				if (filesystem.getFileMetadata(filepath).kind == File::Kind::DIRECTORY) {
 					bool found = false;
 					filesystem.forEachInputFilenameInDirectory(filepath, [&](CStringView filename) -> bool {
 						if (self(self, filename)) {

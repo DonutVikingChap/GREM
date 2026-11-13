@@ -283,7 +283,7 @@ public:
 	GREM_API(application) void deleteOutputFile(CStringView filepath) override;
 
 	[[nodiscard]] GREM_API(application) bool inputFileExists(CStringView filepath) const override;
-	[[nodiscard]] GREM_API(application) File::Metadata getInputFileMetadata(CStringView filepath) const override;
+	[[nodiscard]] GREM_API(application) File::Metadata getFileMetadata(CStringView filepath) const override;
 
 	GREM_API(application)
 	void forEachInputFilenameInDirectory(CStringView filepath, FunctionView<bool(CStringView filename)> callback) const override; // NOLINT(modernize-use-nodiscard)

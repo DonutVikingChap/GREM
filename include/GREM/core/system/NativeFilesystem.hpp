@@ -47,7 +47,7 @@ public:
 	GREM_API(core) void deleteOutputFile(CStringView filepath) override;
 
 	[[nodiscard]] GREM_API(core) bool inputFileExists(CStringView filepath) const override;
-	[[nodiscard]] GREM_API(core) File::Metadata getInputFileMetadata(CStringView filepath) const override;
+	[[nodiscard]] GREM_API(core) File::Metadata getFileMetadata(CStringView filepath) const override;
 	GREM_API(core) void forEachInputFilenameInDirectory(CStringView filepath, FunctionView<bool(CStringView filename)> callback) const override;
 
 	[[nodiscard]] GREM_API(core) InputFileHandle openInputFile(CStringView filepath) const override;
