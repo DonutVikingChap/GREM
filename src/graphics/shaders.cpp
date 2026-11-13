@@ -522,7 +522,7 @@ vec3 GREM_getDirectLightContribution(GREM_Light light, GREM_Material material, v
 
 vec3 GREM_getAmbientLightContribution(vec3 irradiance, vec3 reflection, GREM_Light sunLight, float skyReflectionVisibility, GREM_Material material, vec3 normal, vec2 splitSumBRDFIntegration, vec3 reflectionDirection, float nDotV) {
 	float sunNDotL = max(dot(normal, sunLight.direction), 0.0);
-	vec3 sunIrradiance = sunNDotL * sunLight.intensity;
+	vec3 sunIrradiance = max(irradiance, sunNDotL * sunLight.intensity);
 	float sunReflectionVisibility = skyReflectionVisibility * clamp(1.03 * dot(reflectionDirection, sunLight.direction), 0.0, 1.0); // Scale up slightly and clamp to try and cover the whole sun with 1.
 	float diffuseBrightness = (1.0 / GREM_PI) * length(irradiance);
 	float reflectionBrightness = max(length(reflection), 1.0);
