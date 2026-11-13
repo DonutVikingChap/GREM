@@ -42,7 +42,16 @@ namespace grem::imgui {
 /**
  * Configuration options for a GraphicalUserInterface.
  */
-struct GraphicalUserInterfaceOptions {};
+struct GraphicalUserInterfaceOptions {
+	/**
+	 * Compare these options to another set of options for equality.
+	 *
+	 * \param other the options to compare these to.
+	 *
+	 * \return true if the options are equal, false otherwise.
+	 */
+	[[nodiscard]] constexpr bool operator==(const GraphicalUserInterfaceOptions& other) const = default;
+};
 
 /**
  * Persistent system that manages a platform+renderer backend for Dear ImGui.
