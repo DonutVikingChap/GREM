@@ -217,6 +217,23 @@ namespace grem::ascii {
 }
 
 /**
+ * Convert each character in a string to its corresponding lowercase ASCII
+ * letter (a-z) if it has one.
+ *
+ * \param string string to convert.
+ *
+ * \return a string containing the lowercase version of each character in the
+ *         given string that is an uppercase ASCII letter, or a copy for each
+ *         character that isn't.
+ */
+[[nodiscard]] constexpr String convertToLowercaseString(String&& string) {
+	for (char& ch : string) {
+		ch = convertToLowercaseCharacter(ch);
+	}
+	return std::move(string);
+}
+
+/**
  * Convert each character in a string to its corresponding uppercase ASCII
  * letter (A-Z) if it has one.
  *
@@ -237,6 +254,23 @@ namespace grem::ascii {
 		result[i] = convertToUppercaseCharacter(string[i]);
 	}
 	return result;
+}
+
+/**
+ * Convert each character in a string to its corresponding uppercase ASCII
+ * letter (A-Z) if it has one.
+ *
+ * \param string string to convert.
+ *
+ * \return a string containing the uppercase version of each character in the
+ *         given string that is a lowercase ASCII letter, or a copy for each
+ *         character that isn't.
+ */
+[[nodiscard]] constexpr String convertToUppercaseString(String&& string) {
+	for (char& ch : string) {
+		ch = convertToUppercaseCharacter(ch);
+	}
+	return std::move(string);
 }
 
 /**
