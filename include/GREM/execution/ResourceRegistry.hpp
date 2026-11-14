@@ -179,6 +179,33 @@ public:
 	}
 
 	/**
+	 * Add an owned resource to the registry, or assign a new value to the
+	 * existing resource if the registry already has it.
+	 *
+	 * \tparam T resource type to add.
+	 *
+	 * \param value value of the resource to add or assign.
+	 *
+	 * \return a reference to the newly created resource, or to the existing
+	 *         resource if it was already in place.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the resource's copy/move constructor or
+	 *         copy/move assignment operator.
+	 */
+	template <resource T>
+	T& addResourceOrAssign(T&& value) {
+		T* result = addResourceIfMissing<T>(std::forward<T>(value));
+		if (!result) {
+			result = &getResource<T>();
+			*result = std::forward<T>(value);
+		}
+		return *result;
+	}
+
+	/**
 	 * Add a reference-counted resource to the registry, whose ownership is
 	 * shared between copies of the registry.
 	 *
@@ -257,6 +284,34 @@ public:
 			return nullptr;
 		}
 		return &addSharedResource<T>(std::forward<Args>(args)...);
+	}
+
+	/**
+	 * Add a reference-counted resource to the registry, whose ownership is
+	 * shared between copies of the registry, or assign a new value to the
+	 * existing resource if the registry already has it.
+	 *
+	 * \tparam T resource type to add.
+	 *
+	 * \param value value of the resource to add or assign.
+	 *
+	 * \return a reference to the newly created resource, or to the existing
+	 *         resource if it was already in place.
+	 *
+	 * \throws std::length_error if an internal size limit was exceeded.
+	 * \throws std::bad_array_new_length if an internal size limit was exceeded.
+	 * \throws std::bad_alloc on allocation failure.
+	 * \throws any exception thrown by the resource's copy/move constructor or
+	 *         copy/move assignment operator.
+	 */
+	template <resource T>
+	T& addSharedResourceOrAssign(T&& value) {
+		T* result = addSharedResourceIfMissing<T>(std::forward<T>(value));
+		if (!result) {
+			result = &getResource<T>();
+			*result = std::forward<T>(value);
+		}
+		return *result;
 	}
 
 	/**
