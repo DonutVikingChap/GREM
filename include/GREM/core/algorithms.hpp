@@ -531,16 +531,16 @@ constexpr auto partialSortCopy(input_range auto&& range, random_access_range aut
 	return std::partial_sort_copy(std::begin(range), std::end(range), std::begin(outputRange), std::end(outputRange), std::move(compare));
 }
 
-constexpr auto partition(forward_range auto&& range, auto compare) {
-	return std::partition(std::begin(range), std::end(range), std::move(compare));
+constexpr auto partition(forward_range auto&& range, auto predicate) {
+	return std::partition(std::begin(range), std::end(range), std::move(predicate));
 }
 
-constexpr auto stablePartition(bidirectional_range auto&& range, auto compare) {
-	return std::stable_partition(std::begin(range), std::end(range), std::move(compare));
+constexpr auto stablePartition(bidirectional_range auto&& range, auto predicate) {
+	return std::stable_partition(std::begin(range), std::end(range), std::move(predicate));
 }
 
-constexpr auto partitionCopy(input_range auto&& range, auto trueOutputIterator, auto falseOutputIterator, auto compare) {
-	return std::partition_copy(std::begin(range), std::end(range), std::move(trueOutputIterator), std::move(falseOutputIterator), std::move(compare));
+constexpr auto partitionCopy(input_range auto&& range, auto trueOutputIterator, auto falseOutputIterator, auto predicate) {
+	return std::partition_copy(std::begin(range), std::end(range), std::move(trueOutputIterator), std::move(falseOutputIterator), std::move(predicate));
 }
 
 constexpr auto nthElement(random_access_range auto&& range, auto nthIterator) {
