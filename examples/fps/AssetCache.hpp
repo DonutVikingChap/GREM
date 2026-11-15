@@ -107,7 +107,7 @@ public:
 	}
 
 	[[nodiscard]] const SharedPointer<gfx::Texture>& getTexture(gfx::Device& device, CStringView filepath, const res::ImageOptions& imageOptions = {},
-		const gfx::TextureImageUploadOptions& textureImageUploadOptions = {}, Optional<gfx::TextureSamplerOptions> textureSamplerOptions = {}) {
+		const gfx::TextureImageUploadOptions& textureImageUploadOptions = {}, Optional<gfx::TextureSamplerOptions> textureSamplerOptions = gfx::TextureSamplerOptions{}) {
 		GREM_PROFILE_FUNCTION();
 
 		return getAsset<SharedPointer<gfx::Texture>>(textures,

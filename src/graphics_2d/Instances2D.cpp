@@ -157,6 +157,18 @@ void Instances2D::putShadedTextStringInstance(const Model2D::ShaderPipeline& sha
 }
 
 void Instances2D::putShadedModelInstanceImplementation(SharedPointer<ShaderPipelineImplementation> shaderPipelineHandle, const Model2D& model, const ModelInstance2D& instance) {
+	if (instance.texture) {
+		if (instance.texture->getType() != TextureType::TEXTURE_2D) {
+			throw graphics::Error{"Invalid texture type provided to Instances2D."};
+		}
+		const Optional<TextureSamplerOptions> samplerOptions = instance.texture->getSamplerOptions();
+		if (!samplerOptions) {
+			throw graphics::Error{"Missing sampler in texture provided to Instances2D."};
+		}
+		if (samplerOptions->depthComparisonMode) {
+			throw graphics::Error{"Texture with depth comparison mode provided to Instances2D."};
+		}
+	}
 	const uint32_t instanceIndex = instanceBuffer.push(Model2D::Instance{
 		.instancePosition = instance.position,
 		.instanceBasis = instance.basis,

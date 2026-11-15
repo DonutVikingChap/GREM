@@ -592,6 +592,18 @@ void Instances3D::putVisibleShadedModelInstancesImplementation(
 
 void Instances3D::putShadedFlatModelInstanceImplementation(SharedPointer<ShaderPipelineImplementation> shaderPipelineHandle, const Model2D& model,
 	const FlatModelInstance3D& instance) {
+	if (instance.texture) {
+		if (instance.texture->getType() != TextureType::TEXTURE_2D) {
+			throw graphics::Error{"Invalid texture type provided to Instances3D."};
+		}
+		const Optional<TextureSamplerOptions> samplerOptions = instance.texture->getSamplerOptions();
+		if (!samplerOptions) {
+			throw graphics::Error{"Missing sampler in texture provided to Instances3D."};
+		}
+		if (samplerOptions->depthComparisonMode) {
+			throw graphics::Error{"Texture with depth comparison mode provided to Instances3D."};
+		}
+	}
 	const Texture& texture = (instance.texture) ? *instance.texture : renderer3D->getWhiteTexture2D();
 	const uint32_t instanceOffset = model2DInstanceBuffer.push(Model2D::Instance{
 		.instancePosition{0.0f, 0.0f},
