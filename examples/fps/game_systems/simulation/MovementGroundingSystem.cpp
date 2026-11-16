@@ -32,7 +32,7 @@ private:
 
 	[[nodiscard]] static CollisionResolution getCollisionResolution(phys::Position3D positionA, phys::Orientation3D orientationA, phys::Scale3D scaleA,
 		phys::LinearVelocity3D linearVelocityA, phys::InverseMass inverseMassA, const phys::InverseMomentOfInertiaTensor3D& inverseMomentOfInertiaTensorA, phys::EntityID objectIDB,
-		const Pair<phys::Length3D>& localOffsets, phys::Scale3D normal,
+		const Pair<phys::Length3D>& localOffsets, phys::Direction3D normal,
 		Entities<const phys::Position3D, const phys::Orientation3D, const phys::Scale3D, const phys::Collider3D, const phys::ObjectBounds3D> objectEntities,
 		Entities<const phys::LinearVelocity3D, const phys::InverseMass, const phys::InverseMomentOfInertiaTensor3D> kinematicsEntities) {
 		CollisionResolution result{};
@@ -46,14 +46,10 @@ private:
 			result.positionCorrection = -penetrationDepth * normal;
 			if (kinematicsEntities.containsEntity(objectIDB)) {
 				const auto& [kinematicEntityIDB, linearVelocityB, inverseMassB, inverseMomentOfInertiaTensorB] = kinematicsEntities[objectIDB];
-				const phys::MomentArm3D momentArmA = cross(offsetA, normal);
-				const phys::MomentArm3D momentArmB = cross(offsetB, normal);
-				const phys::InverseMass generalizedInverseMassA = inverseMassA + dot(momentArmA, inverseMomentOfInertiaTensorA * momentArmA);
-				const phys::InverseMass generalizedInverseMassB = inverseMassB + dot(momentArmB, inverseMomentOfInertiaTensorB * momentArmB);
-				const phys::InverseMass combinedGeneralizedInverseMass = generalizedInverseMassA + generalizedInverseMassB;
-				const phys::Mass combinedGeneralizedMass = (combinedGeneralizedInverseMass > 0) ? 1.0f / combinedGeneralizedInverseMass : phys::Mass{};
+				const phys::Mass combinedEffectiveMassAlongNormal = phys::calculateCombinedEffectiveMassAlongAxis(inverseMassA, inverseMassB, inverseMomentOfInertiaTensorA,
+					inverseMomentOfInertiaTensorB, offsetA, offsetB, normal);
 				const phys::LinearVelocity1D relativeNormalVelocity = dot(linearVelocityA - linearVelocityB, normal);
-				const phys::LinearImpulse1D normalImpulse = -relativeNormalVelocity * combinedGeneralizedMass;
+				const phys::LinearImpulse1D normalImpulse = -relativeNormalVelocity * combinedEffectiveMassAlongNormal;
 				result.linearVelocityCorrection = inverseMassA * normalImpulse * normal;
 			} else {
 				result.linearVelocityCorrection = -dot(linearVelocityA, normal) * normal;
