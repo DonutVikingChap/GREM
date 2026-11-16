@@ -2608,13 +2608,16 @@ Texture& DeviceImplementation::acquireSwapchainImage(TextureImplementation& swap
 				const DeviceImplementation::GraphicsQueueSubmission& submission = graphicsQueueSubmissions.front();
 				const GraphicsQueueSubmissionGenerationIndex generationIndex = submission.generationIndex;
 				const Array fences{submission.fence.get()};
-				const TimePoint waitStartTime = Clock::now();
-				if (const VkResult result = vkWaitForFences(logicalDevice.get(), static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, Limits<uint64_t>::MAX);
-					result != VK_SUCCESS) {
-					throw detail::VulkanError{"vkWaitForFences", result};
+				{
+					GREM_PROFILE_BLOCK("Wait for fence");
+					const TimePoint waitStartTime = Clock::now();
+					if (const VkResult result = vkWaitForFences(logicalDevice.get(), static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, Limits<uint64_t>::MAX);
+						result != VK_SUCCESS) {
+						throw detail::VulkanError{"vkWaitForFences", result};
+					}
+					const TimePoint waitEndTime = Clock::now();
+					currentPresentationSubmission.totalWaitTime += waitEndTime - waitStartTime;
 				}
-				const TimePoint waitEndTime = Clock::now();
-				currentPresentationSubmission.totalWaitTime += waitEndTime - waitStartTime;
 				popGraphicsQueueSubmission(*this);
 				while (generationIndex >= swapchainImplementation.imagePresentationSubmissions.front().graphicsQueueSubmissionGenerationIndex) {
 					swapchainImplementation.imagePresentationSubmissions.pop_front();

@@ -787,6 +787,15 @@ public:
 	 *       lights.
 	 */
 	void setOptions(const Lights3DOptions& newOptions) {
+		if (newOptions.cascadedShadowMapResolution != options.cascadedShadowMapResolution) {
+			cascadedShadowMapCapacity = 0;
+		}
+		if (newOptions.pointLightShadowMapResolution != options.pointLightShadowMapResolution) {
+			pointLightShadowMapCapacity = 0;
+		}
+		if (newOptions.spotLightShadowMapResolution != options.spotLightShadowMapResolution) {
+			spotLightShadowMapCapacity = 0;
+		}
 		options = newOptions;
 		shadowMapIndicesDirty = true;
 		shadowMatrixIndicesDirty = true;

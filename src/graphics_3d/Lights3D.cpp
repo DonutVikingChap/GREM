@@ -469,12 +469,11 @@ void Lights3D::flushIndices(Device& device) const {
 		}
 
 		if (cascadedShadowMapCount > cascadedShadowMapCapacity) {
-			cascadedShadowMapCapacity = cascadedShadowMapCount;
 			cascadedShadowMaps = Texture::create(device, TextureType::TEXTURE_2D_ARRAY, TextureFormat::D16_UNORM,
 				Extent3D{
 					.width = options.cascadedShadowMapResolution,
 					.height = options.cascadedShadowMapResolution,
-					.depth = cascadedShadowMapCapacity,
+					.depth = cascadedShadowMapCount,
 				},
 				1, ClearValues{},
 				TextureSamplerOptions{
@@ -486,12 +485,12 @@ void Lights3D::flushIndices(Device& device) const {
 					.maxAnisotropy = 1.0f,
 					.depthComparisonMode = TextureDepthComparisonMode::LESS_OR_EQUAL,
 				});
+			cascadedShadowMapCapacity = cascadedShadowMapCount;
 		}
 
 		if (pointLightShadowMapCount > pointLightShadowMapCapacity) {
-			pointLightShadowMapCapacity = pointLightShadowMapCount;
 			pointLightShadowMaps = Texture::create(device, TextureType::TEXTURE_CUBE_ARRAY, TextureFormat::D16_UNORM,
-				Extent3D{options.pointLightShadowMapResolution, options.pointLightShadowMapResolution, pointLightShadowMapCapacity * 6}, 1, ClearValues{},
+				Extent3D{options.pointLightShadowMapResolution, options.pointLightShadowMapResolution, pointLightShadowMapCount * 6}, 1, ClearValues{},
 				TextureSamplerOptions{
 					.minificationFilter = TextureFilter::LINEAR,
 					.magnificationFilter = TextureFilter::LINEAR,
@@ -501,15 +500,15 @@ void Lights3D::flushIndices(Device& device) const {
 					.maxAnisotropy = 1.0f,
 					.depthComparisonMode = TextureDepthComparisonMode::LESS_OR_EQUAL,
 				});
+			pointLightShadowMapCapacity = pointLightShadowMapCount;
 		}
 
 		if (spotLightShadowMapCount > spotLightShadowMapCapacity) {
-			spotLightShadowMapCapacity = spotLightShadowMapCount;
 			spotLightShadowMaps = Texture::create(device, TextureType::TEXTURE_2D_ARRAY, TextureFormat::D16_UNORM,
 				Extent3D{
 					.width = options.spotLightShadowMapResolution,
 					.height = options.spotLightShadowMapResolution,
-					.depth = spotLightShadowMapCapacity,
+					.depth = spotLightShadowMapCount,
 				},
 				1, ClearValues{},
 				TextureSamplerOptions{
@@ -521,6 +520,7 @@ void Lights3D::flushIndices(Device& device) const {
 					.maxAnisotropy = 1.0f,
 					.depthComparisonMode = TextureDepthComparisonMode::LESS_OR_EQUAL,
 				});
+			spotLightShadowMapCapacity = spotLightShadowMapCount;
 		}
 
 		shadowMapIndicesDirty = false;
