@@ -216,13 +216,14 @@ protected:
 			.up = cameraBasis[phys::Y],
 		});
 
-		WorldView worldView{
-			.frustum = Frustum<phys::Scalar>::fromViewProjectionMatrix(mat<4, 4, phys::Scalar>{graphics.camera3D.getProjectionMatrix() * graphics.camera3D.getViewMatrix()}),
-			.visibleBounds = calculateBoundingBox<3, phys::Scalar>(worldView.frustum.corners),
-			.playerEntityID = playerEntityID,
+		const Frustum<phys::Scalar> frustum =
+			Frustum<phys::Scalar>::fromViewProjectionMatrix(mat<4, 4, phys::Scalar>{graphics.camera3D.getProjectionMatrix() * graphics.camera3D.getViewMatrix()});
+		const Box<3, phys::Scalar> frustumBounds = calculateBoundingBox<3, phys::Scalar>(frustum.corners);
+		const Box<3, phys::Scalar> visibleBounds{
+			.min = max(frustumBounds.min, Point<3, phys::Scalar>{levelBounds.min.in(phys::METERS)}),
+			.max = min(frustumBounds.max, Point<3, phys::Scalar>{levelBounds.max.in(phys::METERS)}),
 		};
-		worldView.visibleBounds.min = max(worldView.visibleBounds.min, vec<3, phys::Scalar>{levelBounds.min.in(phys::METERS)});
-		worldView.visibleBounds.max = min(worldView.visibleBounds.max, vec<3, phys::Scalar>{levelBounds.max.in(phys::METERS)});
+		WorldView worldView{.frustum = frustum, .visibleBounds = visibleBounds, .playerEntityID = playerEntityID};
 
 		simulation.resources.addExternalResource(&frameInfo);
 		simulation.resources.addExternalResource(&worldView);
