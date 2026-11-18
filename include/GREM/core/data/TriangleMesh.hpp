@@ -58,35 +58,9 @@ public:
 	TriangleMesh(Allocation<Vertex> vertices, Allocation<VertexIndex> indices)
 		: vertices(std::move(vertices))
 		, indices(std::move(indices))
-		, boundingBox([&]() -> Box<N, Scalar> {
-			if (this->vertices.empty()) {
-				return Box<N, Scalar>{};
-			}
-			Box<N, Scalar> result{
-				.min = this->vertices.front(),
-				.max = this->vertices.front(),
-			};
-			for (const Vertex vertex : Span{this->vertices}.subspan(1)) {
-				result.min = min(result.min, vertex);
-				result.max = max(result.max, vertex);
-			}
-			return result;
-		}())
-		, boundingRadius([&]() -> Scalar {
-			Scalar result = Scalar{0};
-			for (const Vertex vertex : this->vertices) {
-				result = max(result, length2(vertex));
-			}
-			return sqrt(result);
-		}())
-		, faceOrthtree(boundingBox, [&]() -> Scalar {
-			const Length<N, Scalar> extents = boundingBox.max - boundingBox.min;
-			Scalar result = extents[0];
-			for (size_t i = 1; i < N; ++i) {
-				result = max(result, extents[i]);
-			}
-			return result;
-		}() * Scalar{0.002}) {
+		, boundingBox(calculateBoundingBox<N, Scalar>(this->vertices))
+		, boundingRadius(calculateBoundingRadius<N, Scalar>(this->vertices))
+		, faceOrthtree(boundingBox, maxComponent(boundingBox.max - boundingBox.min) * Scalar{0.002}) {
 		GREM_ASSERT(this->indices.size() % 3 == 0);
 		GREM_ASSERT(this->indices.size() / 3 <= size_t{Limits<FaceIndex>::MAX});
 		const FaceIndex faceCount = static_cast<FaceIndex>(this->indices.size() / 3);
