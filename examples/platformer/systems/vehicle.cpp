@@ -142,7 +142,7 @@ struct VehicleSettingsJSON {
 			} springs{};
 
 			struct AntiRollBar {
-				phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 140_Newton_per_millimeter;
+				phys::Quantity<1, phys::NewtonPerMillimeter> stiffness = 75_Newton_per_millimeter;
 
 				struct TurningWheelMultipliers {
 					phys::Coefficient stiffness = 1.0_x;

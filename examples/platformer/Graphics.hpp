@@ -203,7 +203,7 @@ struct Graphics {
 						const Array<vec<3, phys::Scalar>, 8> tileFrustumCornersInWorldSpace =
 							meta::transform(tileFrustumCornersInViewportRelativeScreenSpace, [&](vec<3, phys::Scalar> cornerInViewportRelativeScreenSpace) -> vec<3, phys::Scalar> {
 								const vec<4, phys::Scalar> cornerInNDCSpace{
-									(vec<2, phys::Scalar>{cornerInViewportRelativeScreenSpace} / viewportSize) * phys::Scalar{2} - phys::Scalar{1},
+									(vec<2, phys::Scalar>{cornerInViewportRelativeScreenSpace} / viewportSize) * phys::Scalar{2} - vec<2, phys::Scalar>{phys::Scalar{1}},
 									cornerInViewportRelativeScreenSpace.z,
 									phys::Scalar{1},
 								};
