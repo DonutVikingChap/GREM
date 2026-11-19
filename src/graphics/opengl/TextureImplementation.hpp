@@ -253,7 +253,7 @@ struct TextureImplementation : detail::ReusableCopyOnWriteResourceBase<TextureIm
 			case TextureFormat::PVRTC1_4BPP_RGBA_UNORM_BLOCK: [[fallthrough]];
 			case TextureFormat::PVRTC1_4BPP_RGBA_SRGB_BLOCK: return GL_RGBA;
 			case TextureFormat::B8G8R8A8_UNORM: [[fallthrough]];
-			case TextureFormat::B8G8R8A8_SRGB: return GL_BGRA;
+			case TextureFormat::B8G8R8A8_SRGB: return 0x80E1; // GL_BGRA
 			case TextureFormat::D16_UNORM: [[fallthrough]];
 			case TextureFormat::D32_FLOAT: return GL_DEPTH_COMPONENT;
 			case TextureFormat::D24_UNORM_S8_UINT: [[fallthrough]];
