@@ -434,7 +434,8 @@ using ScheduleStepOptions3D = ScheduleStepOptions<3>; ///< Options for schedulin
 template <size_t N>
 struct Simulation {
 	/**
-	 * %Add all resources required to run a simulation to a resource registry.
+	 * %Add all resources required to run a simulation to a resource registry,
+	 * reassigning them to their default state if already present.
 	 *
 	 * \param resources resource registry to add the resources to.
 	 * \param options initial configuration options of the simulation, see

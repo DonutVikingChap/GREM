@@ -19,8 +19,6 @@ namespace grem::physics {
 
 namespace detail {
 
-struct InvalidatedJoints : Buffer<EntityID> {};
-
 using ContactIndex = uint32_t;
 struct ActiveContactList : Buffer<ContactIndex> {};
 

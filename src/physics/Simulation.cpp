@@ -42,11 +42,10 @@ void Simulation<N>::addRequiredResources(ResourceRegistry<N>& resources, const S
 	resources.template getResource<SeparationEvents<N>>().clear();
 	resources.template getResource<Broadphase<N>>() = {};
 	resources.template getResource<Contacts<N>>().clear();
-	resources.template addResource<detail::InvalidatedJoints>();
-	resources.template addResource<detail::ActiveContactList>();
-	resources.template addResource<detail::ContactColorGraph<N>>();
-	resources.template addResource<detail::ContactColorOverflow>();
-	resources.template addResource<detail::ContactManifoldInvalidation<N>>();
+	resources.template addResourceIfMissing<detail::ActiveContactList>();
+	resources.template addResourceIfMissing<detail::ContactColorGraph<N>>();
+	resources.template addResourceIfMissing<detail::ContactColorOverflow>();
+	resources.template addResourceIfMissing<detail::ContactManifoldInvalidation<N>>();
 }
 
 template <size_t N>
@@ -56,7 +55,6 @@ void Simulation<N>::removeResources(ResourceRegistry<N>& resources) noexcept {
 	resources.template getResource<SeparationEvents<N>>().clear();
 	resources.template getResource<Broadphase<N>>() = {};
 	resources.template getResource<Contacts<N>>().clear();
-	resources.template removeResource<detail::InvalidatedJoints>();
 	resources.template removeResource<detail::ActiveContactList>();
 	resources.template removeResource<detail::ContactColorGraph<N>>();
 	resources.template removeResource<detail::ContactColorOverflow>();
