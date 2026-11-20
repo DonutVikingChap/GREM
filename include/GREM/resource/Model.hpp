@@ -583,41 +583,23 @@ struct Model {
 		AnimationChannelIndex animationChannelOffset;
 	};
 
-	/** Transparent hash function object type for strings. */
-	struct TransparentStringHash {
-		using is_transparent = void;
-
-		[[nodiscard]] size_t operator()(StringView string) const {
-			return getHash(string);
-		}
-	};
-
-	/** Transparent equality comparison function object type for strings. */
-	struct TransparentStringEqual {
-		using is_transparent = void;
-
-		[[nodiscard]] bool operator()(StringView a, StringView b) const {
-			return a == b;
-		}
-	};
-
 	/** Map from name strings to joint indices. */
-	using JointMap = HashMap<String, JointIndex, TransparentStringHash, TransparentStringEqual>;
+	using JointMap = HashMap<String, JointIndex, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 	/** Map from name strings to animation indices. */
-	using AnimationMap = HashMap<String, AnimationIndex, TransparentStringHash, TransparentStringEqual>;
+	using AnimationMap = HashMap<String, AnimationIndex, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 	/** Map from name strings to texture indices. */
-	using TextureMap = HashMap<String, TextureIndex, TransparentStringHash, TransparentStringEqual>;
+	using TextureMap = HashMap<String, TextureIndex, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 	/** Map from name strings to material indices. */
-	using MaterialMap = HashMap<String, MaterialIndex, TransparentStringHash, TransparentStringEqual>;
+	using MaterialMap = HashMap<String, MaterialIndex, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 	/** Map from name strings to light indices. */
-	using LightMap = HashMap<String, LightIndex, TransparentStringHash, TransparentStringEqual>;
+	using LightMap = HashMap<String, LightIndex, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 	/** Map from name strings to collision layer indices. */
-	using CollisionLayerMap = HashMap<String, CollisionLayerIndex, TransparentStringHash, TransparentStringEqual>;
+	using CollisionLayerMap = HashMap<String, CollisionLayerIndex, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 	/**
 	 * Non-owning read-only view over a set of animation channels and their

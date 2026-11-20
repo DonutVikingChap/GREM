@@ -192,22 +192,6 @@ private:
 	template <typename Options, typename Asset>
 	using AssetMap = HashMap<AssetKey<Options>, SharedPointer<AssetStorage<Asset>>, typename AssetKey<Options>::Hash, typename AssetKey<Options>::Equal>;
 
-	struct TransparentCStringHash {
-		using is_transparent = void;
-
-		[[nodiscard]] size_t operator()(CStringView string) const {
-			return getHash(string);
-		}
-	};
-
-	struct TransparentCStringKeyEqual {
-		using is_transparent = void;
-
-		[[nodiscard]] bool operator()(CStringView a, CStringView b) const {
-			return a == b;
-		}
-	};
-
 	struct TextureOptions {
 		res::ImageOptions imageOptions;
 		gfx::TextureImageUploadOptions textureImageUploadOptions;
@@ -263,7 +247,7 @@ private:
 	AssetMap<Model3DOptions, SharedPointer<gfx::Model3D>> model3Ds{};
 	AssetMap<gfx::Font2DOptions, SharedPointer<gfx::Font2D>> fonts{};
 	AssetMap<aud::SoundOptions, SharedPointer<aud::Sound>> sounds{};
-	HashMap<String, SharedPointer<AssetStorage<SharedPointer<Prefab>>>, TransparentCStringHash, TransparentCStringKeyEqual> prefabs{};
+	HashMap<String, SharedPointer<AssetStorage<SharedPointer<Prefab>>>, TransparentHash<CStringView>, TransparentEqual<CStringView>> prefabs{};
 };
 
 #endif

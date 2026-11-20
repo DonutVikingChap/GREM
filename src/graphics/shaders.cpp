@@ -1187,23 +1187,7 @@ vec4 GREM_ReflectionProbes3D_getReflectionProbeReflection(uint reflectionProbeIn
 	return {};
 }
 
-struct TransparentStringHash {
-	using is_transparent = void;
-
-	[[nodiscard]] size_t operator()(StringView string) const {
-		return getHash(string);
-	}
-};
-
-struct TransparentStringEqual {
-	using is_transparent = void;
-
-	[[nodiscard]] bool operator()(StringView a, StringView b) const {
-		return a == b;
-	}
-};
-
-using IncludedFilepathSet = HashSet<String, TransparentStringHash, TransparentStringEqual>;
+using IncludedFilepathSet = HashSet<String, TransparentHash<StringView>, TransparentEqual<StringView>>;
 
 size_t expandShaderIncludes(ExpandedStringBuffer& output, AllocatedStringBuffer& allocatedStrings, IncludedFilepathSet& includedFilepaths, const Filesystem* filesystem,
 	StringView filepath, const char* input) {

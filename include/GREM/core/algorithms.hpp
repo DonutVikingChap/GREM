@@ -115,6 +115,29 @@ struct Negate {
 };
 inline constexpr Negate NEGATE{};
 
+template <typename T>
+class TransparentHash {
+public:
+	using is_transparent = void;
+
+	[[nodiscard]] constexpr size_t operator()(const T& value) const {
+		return hasher(value);
+	}
+
+private:
+	[[no_unique_address]] std::hash<T> hasher;
+};
+
+template <typename T>
+class TransparentEqual {
+public:
+	using is_transparent = void;
+
+	[[nodiscard]] constexpr size_t operator()(const T& a, const T& b) const {
+		return a == b;
+	}
+};
+
 [[nodiscard]] constexpr std::size_t combineHashes(std::size_t hash, convertible_to<std::size_t> auto... otherHashes) {
 	((hash ^= std::size_t{otherHashes} + (hash << 6) + (hash >> 2)), ...);
 	return hash;
