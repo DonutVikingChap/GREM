@@ -1437,7 +1437,7 @@ struct Model {
 	}
 
 	/**
-	 * Find the index of an animation with a specific name.
+	 * Get the index of an animation with a specific name.
 	 *
 	 * \param name name of the animation to search for.
 	 *
@@ -1522,6 +1522,22 @@ struct Model {
 	}
 
 	/**
+	 * Get the index of a joint with a specific name.
+	 *
+	 * \param name name of the joint to search for.
+	 *
+	 * \return the index of the given joint in the model's joint array.
+	 *
+	 * \throws std::out_of_range if the given joint wasn't found.
+	 */
+	[[nodiscard]] JointIndex getJointIndex(StringView name) const {
+		if (const Optional<JointIndex> jointIndex = findJointIndex(name)) {
+			return *jointIndex;
+		}
+		throw std::out_of_range{"Joint \"" + String{name} + "\" not found."};
+	}
+
+	/**
 	 * Find the index of the root joint of a skin with a specific name.
 	 *
 	 * \param name name of the skin whose root joint to search for.
@@ -1534,6 +1550,23 @@ struct Model {
 			return it->second;
 		}
 		return {};
+	}
+
+	/**
+	 * Get the index of the root joint of a skin with a specific name.
+	 *
+	 * \param name name of the skin whose root joint to search for.
+	 *
+	 * \return the index of the root joint of the given skin in the model's
+	 *         joint array.
+	 *
+	 * \throws std::out_of_range if the given skin wasn't found.
+	 */
+	[[nodiscard]] JointIndex getSkinRootJointIndex(StringView name) const {
+		if (const Optional<JointIndex> rootJointIndex = findSkinRootJointIndex(name)) {
+			return *rootJointIndex;
+		}
+		throw std::out_of_range{"Skin \"" + String{name} + "\" not found."};
 	}
 
 	/**
@@ -1552,6 +1585,22 @@ struct Model {
 	}
 
 	/**
+	 * Get the index of a texture with a specific name.
+	 *
+	 * \param name name of the texture to search for.
+	 *
+	 * \return the index of the given texture in the model's texture array.
+	 *
+	 * \throws std::out_of_range if the given texture wasn't found.
+	 */
+	[[nodiscard]] TextureIndex getTextureIndex(StringView name) const {
+		if (const Optional<TextureIndex> textureIndex = findTextureIndex(name)) {
+			return *textureIndex;
+		}
+		throw std::out_of_range{"Texture \"" + String{name} + "\" not found."};
+	}
+
+	/**
 	 * Find the index of a material with a specific name.
 	 *
 	 * \param name name of the material to search for.
@@ -1564,6 +1613,22 @@ struct Model {
 			return it->second;
 		}
 		return {};
+	}
+
+	/**
+	 * Get the index of a material with a specific name.
+	 *
+	 * \param name name of the material to search for.
+	 *
+	 * \return the index of the given material in the model's material array.
+	 *
+	 * \throws std::out_of_range if the given material wasn't found.
+	 */
+	[[nodiscard]] MaterialIndex getMaterialIndex(StringView name) const {
+		if (const Optional<MaterialIndex> materialIndex = findMaterialIndex(name)) {
+			return *materialIndex;
+		}
+		throw std::out_of_range{"Material \"" + String{name} + "\" not found."};
 	}
 
 	/**
@@ -1582,6 +1647,22 @@ struct Model {
 	}
 
 	/**
+	 * Get the index of a light with a specific name.
+	 *
+	 * \param name name of the light to search for.
+	 *
+	 * \return the index of the given light in the model's light array.
+	 *
+	 * \throws std::out_of_range if the given light wasn't found.
+	 */
+	[[nodiscard]] LightIndex getLightIndex(StringView name) const {
+		if (const Optional<LightIndex> lightIndex = findLightIndex(name)) {
+			return *lightIndex;
+		}
+		throw std::out_of_range{"Light \"" + String{name} + "\" not found."};
+	}
+
+	/**
 	 * Find the index of a collision layer with a specific name.
 	 *
 	 * \param name name of the collision layer to search for.
@@ -1594,6 +1675,23 @@ struct Model {
 			return it->second;
 		}
 		return {};
+	}
+
+	/**
+	 * Get the index of a collision layer with a specific name.
+	 *
+	 * \param name name of the collision layer to search for.
+	 *
+	 * \return the index of the given collision layer in the model's collision
+	 *         layer array.
+	 *
+	 * \throws std::out_of_range if the given collision layer wasn't found.
+	 */
+	[[nodiscard]] CollisionLayerIndex getCollisionLayerIndex(StringView name) const {
+		if (const Optional<CollisionLayerIndex> collisionLayerIndex = findCollisionLayerIndex(name)) {
+			return *collisionLayerIndex;
+		}
+		throw std::out_of_range{"Collision layer \"" + String{name} + "\" not found."};
 	}
 };
 

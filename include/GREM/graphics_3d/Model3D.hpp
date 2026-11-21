@@ -671,8 +671,8 @@ public:
 			.faceCullingMode = ((shaderConfiguration.fragmentFlags & resource::Model::FRAGMENT_DOUBLE_SIDED) != 0) ? FaceCullingMode::NONE : FaceCullingMode::CULL_BACK_FACES,
 			.frontFace = shaderConfiguration.frontFace,
 			.blendState = ((shaderConfiguration.fragmentFlags & resource::Model::FRAGMENT_ALPHA_BLENDED) != 0)
-		                      ? Optional<BlendState>{BlendState::ALPHA_BLENDING_PREMULTIPLIED}
-		                      : Optional<BlendState>{},
+			                  ? Optional<BlendState>{BlendState::ALPHA_BLENDING_PREMULTIPLIED}
+			                  : Optional<BlendState>{},
 		};
 	};
 
@@ -1028,7 +1028,7 @@ public:
 	}
 
 	/**
-	 * Find the index of an animation with a specific name.
+	 * Get the index of an animation with a specific name.
 	 *
 	 * \param name name of the animation to search for.
 	 *
@@ -1113,6 +1113,22 @@ public:
 	}
 
 	/**
+	 * Get the index of a joint with a specific name.
+	 *
+	 * \param name name of the joint to search for.
+	 *
+	 * \return the index of the given joint in the model's joint array.
+	 *
+	 * \throws std::out_of_range if the given joint wasn't found.
+	 */
+	[[nodiscard]] resource::Model::JointIndex getJointIndex(StringView name) const {
+		if (const Optional<resource::Model::JointIndex> jointIndex = findJointIndex(name)) {
+			return *jointIndex;
+		}
+		throw std::out_of_range{"Joint \"" + String{name} + "\" not found."};
+	}
+
+	/**
 	 * Find the index of the root joint of a skin with a specific name.
 	 *
 	 * \param name name of the skin whose root joint to search for.
@@ -1125,6 +1141,23 @@ public:
 			return it->second;
 		}
 		return {};
+	}
+
+	/**
+	 * Get the index of the root joint of a skin with a specific name.
+	 *
+	 * \param name name of the skin whose root joint to search for.
+	 *
+	 * \return the index of the root joint of the given skin in the model's
+	 *         joint array.
+	 *
+	 * \throws std::out_of_range if the given skin wasn't found.
+	 */
+	[[nodiscard]] resource::Model::JointIndex getSkinRootJointIndex(StringView name) const {
+		if (const Optional<resource::Model::JointIndex> rootJointIndex = findSkinRootJointIndex(name)) {
+			return *rootJointIndex;
+		}
+		throw std::out_of_range{"Skin \"" + String{name} + "\" not found."};
 	}
 
 	/**
