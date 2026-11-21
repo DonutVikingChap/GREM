@@ -3147,27 +3147,19 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE T GREM_VECTORCALL getPitch(qua<T> orientation) requires(floating_point<T>) {
-	const T x = length2(orientation.w) - length2(orientation.x) - length2(orientation.y) + length2(orientation.z);
-	const T y = T{2} * (orientation.y * orientation.z + orientation.x * orientation.w);
-	if (abs(x) < Limits<T>::MACHINE_EPSILON && abs(y) < Limits<T>::MACHINE_EPSILON) {
-		return T{2} * atan2(orientation.x, orientation.w);
-	}
-	return atan2(y, x);
+	return asin(T{2} * (orientation.w * orientation.x - orientation.y * orientation.z));
 }
 
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE T GREM_VECTORCALL getYaw(qua<T> orientation) requires(floating_point<T>) {
-	return asin(clamp(T{-2} * (orientation.x * orientation.z - orientation.y * orientation.w), T{-1}, T{1}));
+	return atan2(T{2} * (orientation.x * orientation.z + orientation.w * orientation.y),
+		length2(orientation.w) - length(orientation.x) - length2(orientation.y) + length2(orientation.z));
 }
 
 template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE T GREM_VECTORCALL getRoll(qua<T> orientation) requires(floating_point<T>) {
-	const T x = length2(orientation.w) + length2(orientation.x) - length2(orientation.y) - length2(orientation.z);
-	const T y = T{2} * (orientation.x * orientation.y + orientation.z * orientation.w);
-	if (abs(x) < Limits<T>::MACHINE_EPSILON && abs(y) < Limits<T>::MACHINE_EPSILON) {
-		return T{0};
-	}
-	return atan2(y, x);
+	return atan2(T{2} * (orientation.x * orientation.y + orientation.w * orientation.z),
+		length2(orientation.w) - length(orientation.x) + length2(orientation.y) - length2(orientation.z));
 }
 
 template <typename T>
