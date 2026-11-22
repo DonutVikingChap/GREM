@@ -2123,7 +2123,7 @@ template <size_t N, typename T>
 	return {};
 }
 
-// Vector angle:
+// Vector decomposition:
 
 /**
  * Get the absolute angle of a 2-dimensional vector, in radians.
@@ -2149,6 +2149,47 @@ template <typename T>
 [[nodiscard]] GREM_ALWAYS_INLINE constexpr Optional<T> GREM_VECTORCALL tryGetAngle(vec<2, T> a) requires(floating_point<T>) {
 	if (length2(a) > length2(Limits<T>::MACHINE_EPSILON)) {
 		return atan2(a.y, a.x);
+	}
+	return {};
+}
+
+template <size_t N, typename T>
+struct DecomposeMagnitudeDirectionResult {
+	T magnitude;
+	vec<N, T> direction;
+};
+
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr DecomposeMagnitudeDirectionResult<N, T> decomposeMagnitudeDirection(vec<N, T> a) requires(floating_point<T>) {
+	const T magnitude = length(a);
+	return {.magnitude = magnitude, .direction = a / magnitude};
+}
+
+template <size_t N, typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Optional<DecomposeMagnitudeDirectionResult<N, T>> tryDecomposeMagnitudeDirection(vec<N, T> a) requires(floating_point<T>) {
+	const T magnitude = length(a);
+	if (magnitude > Limits<T>::MACHINE_EPSILON) {
+		return DecomposeMagnitudeDirectionResult<N, T>{.magnitude = magnitude, .direction = a / magnitude};
+	}
+	return {};
+}
+
+template <typename T>
+struct DecomposeMagnitudeAngleResult {
+	T magnitude;
+	T angle;
+};
+
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr DecomposeMagnitudeAngleResult<T> decomposeMagnitudeAngle(vec<2, T> a) requires(floating_point<T>) {
+	return {.magnitude = length(a), .angle = getAngle(a)};
+}
+
+template <typename T>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr Optional<DecomposeMagnitudeAngleResult<T>> tryDecomposeMagnitudeAngle(vec<2, T> a) requires(floating_point<T>) {
+	const T magnitude = length(a);
+	if (magnitude > Limits<T>::MACHINE_EPSILON) {
+		return DecomposeMagnitudeAngleResult<T>{.magnitude = magnitude, .angle = getAngle(a)};
 	}
 	return {};
 }

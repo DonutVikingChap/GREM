@@ -4282,6 +4282,51 @@ template <size_t N>
 	return Direction<N>::reinterpret(grem::flipZ(a._private_getUnderlyingValue()));
 }
 
+template <size_t N, typename UnitT>
+struct DecomposeMagnitudeDirectionResult {
+	Quantity<1, UnitT> magnitude;
+	Direction<N> direction;
+};
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto decomposeMagnitudeDirection(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	const auto magnitude = length(a);
+	return DecomposeMagnitudeDirectionResult{magnitude, Direction<N>::reinterpret(a / magnitude)};
+}
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto tryDecomposeMagnitudeDirection(A a) {
+	constexpr size_t N = detail::quantity_rank_v<A>;
+	using R = decltype(decomposeMagnitudeDirection(a));
+	const auto magnitude = length(a);
+	if (magnitude > decltype(magnitude)::MACHINE_EPSILON) {
+		return Optional<R>{DecomposeMagnitudeDirectionResult{magnitude, Direction<N>::reinterpret(a / magnitude)}};
+	}
+	return Optional<R>{};
+}
+
+template <typename UnitT>
+struct DecomposeMagnitudeAngleResult {
+	Quantity<1, UnitT> magnitude;
+	Quantity<1, Radians> angle;
+};
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto decomposeMagnitudeAngle(A a) {
+	return DecomposeMagnitudeAngleResult{length(a), getAngle(a)};
+}
+
+template <detail::quantity_unary_operand A>
+[[nodiscard]] GREM_ALWAYS_INLINE constexpr auto tryDecomposeMagnitudeAngle(A a) {
+	using R = decltype(decomposeMagnitudeAngle(a));
+	const auto magnitude = length(a);
+	if (magnitude > decltype(magnitude)::MACHINE_EPSILON) {
+		return DecomposeMagnitudeAngleResult{magnitude, getAngle(a)};
+	}
+	return Optional<R>{};
+}
+
 /**
  * Basis whose columns are all unit vectors that are orthogonal to each other.
  *

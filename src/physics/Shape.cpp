@@ -1325,8 +1325,7 @@ RaycastResult<N> LocallyTransformedShape<N>::castLocalRay(Length<N> localRayOrig
 	const InverseLocalTransformation<N> inverseLocalTransformation = inverseTranslateRotateScale(localOffset, localOrientation, localScale);
 	const Length<N> shapeLocalRayOrigin = inverseLocalTransformation(localRayOrigin);
 	const Length<N> shapeLocalRayVector = inverseLocalTransformation.getRelative(localRayDirection * maxLocalRayDistance);
-	const Distance maxShapeLocalRayDistance = length(shapeLocalRayVector);
-	const Direction<N> shapeLocalRayDirection = Direction<N>::reinterpret(shapeLocalRayVector / maxShapeLocalRayDistance);
+	const auto [maxShapeLocalRayDistance, shapeLocalRayDirection] = decomposeMagnitudeDirection(shapeLocalRayVector);
 	GREM_ASSERT(maxShapeLocalRayDistance > Distance{});
 	GREM_MATCH(shape->castLocalRay(shapeLocalRayOrigin, shapeLocalRayDirection, maxShapeLocalRayDistance)) {
 		GREM_CASE(const RayMiss& miss) return RayMiss{};
@@ -1418,8 +1417,7 @@ RaycastResult<N> CompoundColliderShape<N>::castLocalRay(Length<N> localRayOrigin
 			inverseTranslateRotateScale(subCollider.localOffset, subCollider.localOrientation, subCollider.localScale);
 		const Length<N> subLocalRayOrigin = inverseSubLocalTransformation(localRayOrigin);
 		const Length<N> subLocalRayVector = inverseSubLocalTransformation.getRelative(localRayDirection * maxLocalRayDistance);
-		const Distance maxSubLocalRayDistance = length(subLocalRayVector);
-		const Direction<N> subLocalRayDirection = Direction<N>::reinterpret(subLocalRayVector / maxSubLocalRayDistance);
+		const auto [maxSubLocalRayDistance, subLocalRayDirection] = decomposeMagnitudeDirection(subLocalRayVector);
 		GREM_ASSERT(maxSubLocalRayDistance > Distance{});
 		GREM_MATCH(subCollider.collider.shape.castLocalRay(subLocalRayOrigin, subLocalRayDirection, maxSubLocalRayDistance)) {
 			GREM_CASE(const RayMiss& miss) break;

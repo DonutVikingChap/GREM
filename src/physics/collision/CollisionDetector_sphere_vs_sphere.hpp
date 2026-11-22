@@ -77,7 +77,7 @@ public:
 			const Distance combinedScaledRadius = scaledRadiusA + scaledRadiusB;
 			const Length1D signedDistance = originDistance - combinedScaledRadius;
 			if (signedDistance <= options.maxCollisionTouchingDistance) {
-				const Direction<N> normal = (originDistance > 0) ? Direction<N>::reinterpret(originDifference / originDistance) : Y_AXIS<N>;
+				const Direction<N> normal = (originDistance > Distance::MACHINE_EPSILON) ? Direction<N>::reinterpret(originDifference / originDistance) : Y_AXIS<N>;
 				const InverseTransformation<N> inverseTransformationA = inverse(transformationA);
 				const InverseTransformation<N> inverseTransformationB = inverse(transformationB);
 				const Position<N> pointA = transformationA.getOrigin() + normal * scaledRadiusA;

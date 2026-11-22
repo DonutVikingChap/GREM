@@ -515,9 +515,11 @@ void runPredictionUntil(Audio& audio, Graphics& graphics, GameState& gameState, 
 				const phys::Scale3D expandedPlayerScale =
 					*playerScale * playerScaleExpansionFactor + select(isfinite(playerAdditionalExpansionFactor), playerAdditionalExpansionFactor, phys::Scale3D{});
 				const phys::Transformation3D transformation = translateRotateScale(*playerPosition, *playerOrientation, expandedPlayerScale);
-				const phys::Speed speed = length(*playerLinearVelocity);
-				if (speed > phys::Speed::MACHINE_EPSILON && playerCollider->shape.isConvexShapeType()) {
-					const phys::Direction3D direction = phys::Direction3D::reinterpret(*playerLinearVelocity / speed);
+				const Optional<phys::DecomposeMagnitudeDirectionResult<3, phys::Speed::Unit>> decomposedPlayerLinearVelocity =
+					tryDecomposeMagnitudeDirection(*playerLinearVelocity);
+				if (decomposedPlayerLinearVelocity && playerCollider->shape.isConvexShapeType()) {
+					const phys::Speed speed = decomposedPlayerLinearVelocity->magnitude;
+					const phys::Direction3D direction = decomposedPlayerLinearVelocity->direction;
 					const phys::Distance maxDistance = speed * (static_cast<Duration::rep>(newTickIndex - tickIndex) * tickInterval);
 					broadphase.shapecast(
 						phys::ConvexShapeView3D{playerCollider->shape}, playerCollider->filter, transformation, direction, maxDistance, registry,

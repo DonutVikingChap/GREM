@@ -112,8 +112,8 @@ template <size_t N>
 	const InverseTransformation<N> inverseTransformationB = inverse(transformationB);
 	const Length<N> localRayOriginB = inverseTransformationB(rayA.origin);
 	const Length<N> localRayVectorB = inverseTransformationB.getRelative(rayA.direction * rayA.maxDistance);
-	const Distance maxLocalRayDistanceB = length(localRayVectorB);
-	const Direction<N> localRayDirectionB = Direction<N>::reinterpret(localRayVectorB / maxLocalRayDistanceB);
+	const auto [maxLocalRayDistanceB, localRayDirectionB] = decomposeMagnitudeDirection(localRayVectorB);
+	GREM_ASSERT(maxLocalRayDistanceB > Distance{});
 	GREM_MATCH(colliderB.shape.castLocalRay(localRayOriginB, localRayDirectionB, maxLocalRayDistanceB)) {
 		GREM_CASE(const RayMiss& miss) return {RayMiss{}, {}};
 		GREM_CASE(const RayHit<N>& hit) {
@@ -183,10 +183,11 @@ template <size_t N>
 			const Span<const TriangleMeshVertexIndex> indices = mesh.getIndices();
 			const Optional<Box<N>> meshLocalBounds = convexShapeA.getBoundingBox(Transformation<N>{0, inverseTransformationB * transformationA});
 			const Length<N> meshLocalRayVector = inverseTransformationB.getRelative(direction * maxDistance);
-			const Distance meshLocalMaxRayDistance = length(meshLocalRayVector);
+			const auto [meshLocalMaxRayDistance, meshLocalRayDirection] = decomposeMagnitudeDirection(meshLocalRayVector);
+			GREM_ASSERT(meshLocalMaxRayDistance > Distance{});
 			const Ray<N> meshLocalRay{
 				.origin = (meshLocalBounds) ? midpoint(meshLocalBounds->min, meshLocalBounds->max) : Position<N>{},
-				.direction = Direction<N>::reinterpret(meshLocalRayVector / meshLocalMaxRayDistance),
+				.direction = meshLocalRayDirection,
 				.maxDistance = meshLocalMaxRayDistance,
 			};
 			const Length<N> meshLocalRayExpansion =
