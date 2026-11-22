@@ -388,7 +388,12 @@ public:
 		platformIO.Platform_DestroyWindow = [](ImGuiViewport* viewport) -> void {
 			GREM_PROFILE_BLOCK("ImGui Platform_DestroyWindow");
 			if (viewport->PlatformHandle && viewport->PlatformUserData) {
-				delete static_cast<graphics::Window*>(viewport->PlatformHandle); // NOLINT(cppcoreguidelines-owning-memory)
+				graphics::Window* const window = static_cast<graphics::Window*>(viewport->PlatformHandle);
+				Implementation& gui = *static_cast<Implementation*>(ImGui::GetIO().BackendPlatformUserData);
+				if (gui.imeWindow == window) {
+					gui.imeWindow = nullptr;
+				}
+				delete window; // NOLINT(cppcoreguidelines-owning-memory)
 			}
 			viewport->PlatformHandle = nullptr;
 			viewport->PlatformUserData = nullptr;
