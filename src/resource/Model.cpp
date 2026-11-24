@@ -4425,15 +4425,10 @@ void Model::load(const Filesystem& filesystem, CStringView filepath, const Model
 	try {
 		const String fileContentsAsString = filesystem.readInputFileString(filepath);
 		try {
-			String filepathPrefix{filepath};
-			if (const size_t filepathLastSlashPosition = filepathPrefix.find_last_of("/\\"); filepathLastSlashPosition != String::npos) {
-				filepathPrefix.erase(filepathLastSlashPosition + 1, String::npos);
-			} else {
-				filepathPrefix.clear();
-			}
+			const StringView filepathPrefix = filepath.substr(0, filepath.find_last_of("/\\") + 1);
 
 			const auto loadImage = [&](CStringView relativeFilepath, const ImageOptions& options) -> Image {
-				const String fullFilepath = filepathPrefix + relativeFilepath.c_str();
+				const String fullFilepath = String{filepathPrefix} + relativeFilepath.c_str();
 				if (filesystem.inputFileExists(fullFilepath)) {
 					return resource::Image{filesystem, fullFilepath, options};
 				}
@@ -4441,7 +4436,7 @@ void Model::load(const Filesystem& filesystem, CStringView filepath, const Model
 			};
 
 			const auto loadBufferData = [&](CStringView relativeFilepath) -> Variant<Allocation<byte>, Span<const byte>> {
-				const String fullFilepath = filepathPrefix + relativeFilepath.c_str();
+				const String fullFilepath = String{filepathPrefix} + relativeFilepath.c_str();
 				if (filesystem.inputFileExists(fullFilepath)) {
 					return filesystem.readInputFile(fullFilepath);
 				}
@@ -4456,7 +4451,7 @@ void Model::load(const Filesystem& filesystem, CStringView filepath, const Model
 					const obj::Asset objAsset = obj::Asset::parse(fileContentsAsString);
 					obj::mtl::Library materialLibrary{};
 					for (const String& materialLibraryFilename : objAsset.materialLibraryFilenames) {
-						materialLibrary.load(filesystem.readInputFileString(filepathPrefix + materialLibraryFilename));
+						materialLibrary.load(filesystem.readInputFileString(String{filepathPrefix} + materialLibraryFilename));
 					}
 					OBJModelLoader{*this, objAsset, materialLibrary, loadImage, options}.load();
 					break;
