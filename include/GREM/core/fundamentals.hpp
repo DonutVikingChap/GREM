@@ -74,7 +74,7 @@ struct ValueRepresentation {
 };
 
 using bool8_t = bool;
-enum : bool8_t { false8 = false, true8 = true };
+enum : bool8_t { false8 = false, true8 = true }; // NOLINT(cppcoreguidelines-use-enum-class)
 static_assert(sizeof(bool8_t) == 1);
 
 template <>
